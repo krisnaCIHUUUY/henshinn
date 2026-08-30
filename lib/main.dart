@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:henshin/app.dart';
+import 'package:henshin/core/router/app_router.dart';
+// import 'package:henshin/app.dart';
 import 'package:henshin/core/theme/app_theme.dart';
+
+// import 'package:henshin/features/product/presentation/screens/product_list_screen.dart';
+// import 'package:henshin/features/product/presentation/bloc/product_bloc.dart';
 
 void main() {
   runApp(const MyApp());
@@ -11,11 +15,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
+      routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
       title: 'Henshin',
       theme: AppTheme.light,
-      home: const AppScreen(),
     );
   }
 }
