@@ -66,6 +66,48 @@ final List<_DummyProduct> _dummyProducts = [
     stock: 0,
     categoryId: 2,
   ),
+  const _DummyProduct(
+    id: 4,
+    name: 'Chocolate Cake',
+    price: 35000,
+    stock: 0,
+    categoryId: 2,
+  ),
+  const _DummyProduct(
+    id: 4,
+    name: 'Chocolate Cake',
+    price: 35000,
+    stock: 0,
+    categoryId: 2,
+  ),
+  const _DummyProduct(
+    id: 4,
+    name: 'Chocolate Cake',
+    price: 35000,
+    stock: 0,
+    categoryId: 2,
+  ),
+  const _DummyProduct(
+    id: 4,
+    name: 'Chocolate Cake',
+    price: 35000,
+    stock: 0,
+    categoryId: 2,
+  ),
+  const _DummyProduct(
+    id: 4,
+    name: 'Chocolate Cake',
+    price: 35000,
+    stock: 0,
+    categoryId: 2,
+  ),
+  const _DummyProduct(
+    id: 4,
+    name: 'Chocolate Cake',
+    price: 35000,
+    stock: 0,
+    categoryId: 2,
+  ),
 ];
 
 class ProductListScreen extends StatelessWidget {
@@ -73,66 +115,70 @@ class ProductListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.gutter,
-            vertical: AppSpacing.sm,
-          ),
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: () {},
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.unit,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColor.surfaceContainerHighest,
-                    borderRadius: AppRadius.mdAll,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.tune,
-                        color: AppColor.onSurfaceVariant,
-                        size: 20,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text("Kategori", style: AppTextStyle.bodyMd),
-                    ],
+    // Fix: sama seperti transaction_history_screen.dart:12
+    // Hilangkan Column + Expanded karena parent (StatefulNavigationShell / IndexedStack)
+    // bukan Flex sehingga Expanded memicu "Incorrect use of ParentDataWidget".
+    // Solusi tanpa Scaffold: gunakan CustomScrollView + Slivers.
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.gutter,
+              vertical: AppSpacing.sm,
+            ),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () {},
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.unit,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColor.surfaceContainerHighest,
+                      borderRadius: AppRadius.mdAll,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.tune,
+                          color: AppColor.onSurfaceVariant,
+                          size: 20,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text("Kategori", style: AppTextStyle.bodyMd),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-
-              const Spacer(),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add, color: AppColor.onPrimary),
-                label: const Text(
-                  'Tambah',
-                  style: TextStyle(color: AppColor.onPrimary),
+                const Spacer(),
+                ElevatedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.add, color: AppColor.onPrimary),
+                  label: const Text(
+                    'Tambah',
+                    style: TextStyle(color: AppColor.onPrimary),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColor.primaryContainer,
+                    foregroundColor: AppColor.onPrimaryContainer,
+                  ),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColor.primaryContainer,
-                  foregroundColor: AppColor.onPrimaryContainer,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-        SizedBox(height: AppSpacing.lg),
-        Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.gutter,
-              0,
-              AppSpacing.gutter,
-              AppSpacing.gutter,
-            ),
+        SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.gutter,
+            0,
+            AppSpacing.gutter,
+            AppSpacing.gutter,
+          ),
+          sliver: SliverList.separated(
             itemCount: _dummyProducts.length,
             separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) =>

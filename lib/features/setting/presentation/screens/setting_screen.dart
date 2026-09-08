@@ -5,6 +5,6 @@ class SettingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(child: Center(child: Text("halaman setting")));
+    return const Center(child: Text("halaman setting"));
   }
 }
