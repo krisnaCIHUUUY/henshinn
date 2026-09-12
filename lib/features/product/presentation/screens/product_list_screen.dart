@@ -2,11 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:henshin/core/theme/app_color.dart';
 import 'package:henshin/core/theme/app_radius.dart';
 import 'package:henshin/core/theme/app_spacing.dart';
-import 'package:henshin/core/theme/app_text_style.dart';
 import 'package:henshin/core/theme/app_theme.dart';
+import 'package:henshin/core/theme/app_text_style.dart';
 import 'package:intl/intl.dart';
 
-const Map<int, String> _categoryNameById = {1: 'Minuman', 2: 'Makanan'};
+
+final Map<int, String> _categories = {
+  1: 'Semua',
+  2: 'Minuman',
+  3: 'Makanan',
+  4: 'Merchandise',
+};
 
 final NumberFormat _priceFmt = NumberFormat.currency(
   locale: 'id_ID',
@@ -67,143 +73,234 @@ final List<_DummyProduct> _dummyProducts = [
     categoryId: 2,
   ),
   const _DummyProduct(
-    id: 4,
-    name: 'Chocolate Cake',
-    price: 35000,
-    stock: 0,
+    id: 5,
+    name: 'Nasi Goreng',
+    price: 28000,
+    stock: 12,
     categoryId: 2,
   ),
   const _DummyProduct(
-    id: 4,
-    name: 'Chocolate Cake',
-    price: 35000,
-    stock: 0,
-    categoryId: 2,
+    id: 6,
+    name: 'Teh Botol',
+    price: 8000,
+    stock: 50,
+    categoryId: 1,
   ),
   const _DummyProduct(
-    id: 4,
-    name: 'Chocolate Cake',
-    price: 35000,
-    stock: 0,
-    categoryId: 2,
-  ),
-  const _DummyProduct(
-    id: 4,
-    name: 'Chocolate Cake',
-    price: 35000,
-    stock: 0,
-    categoryId: 2,
-  ),
-  const _DummyProduct(
-    id: 4,
-    name: 'Chocolate Cake',
-    price: 35000,
-    stock: 0,
-    categoryId: 2,
-  ),
-  const _DummyProduct(
-    id: 4,
-    name: 'Chocolate Cake',
-    price: 35000,
-    stock: 0,
-    categoryId: 2,
+    id: 7,
+    name: 'Kaos Henshin',
+    price: 95000,
+    stock: 15,
+    categoryId: 4,
   ),
 ];
 
-class ProductListScreen extends StatelessWidget {
+class ProductListScreen extends StatefulWidget {
   const ProductListScreen({super.key});
 
   @override
+  State<ProductListScreen> createState() => _ProductListScreenState();
+}
+
+class _ProductListScreenState extends State<ProductListScreen> {
+  int _selectedCategoryIndex = 0;
+  @override
   Widget build(BuildContext context) {
-    // Fix: sama seperti transaction_history_screen.dart:12
-    // Hilangkan Column + Expanded karena parent (StatefulNavigationShell / IndexedStack)
-    // bukan Flex sehingga Expanded memicu "Incorrect use of ParentDataWidget".
-    // Solusi tanpa Scaffold: gunakan CustomScrollView + Slivers.
-    return CustomScrollView(
-      slivers: [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.gutter,
-              vertical: AppSpacing.sm,
+    return Scaffold(
+      backgroundColor: AppColor.background,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _HeaderRow(
+                    onAddPressed: () {
+                      // navigasi ke Add/Edit product screen
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.lg - 4),
+                  _CategoryTabs(
+                    categories: _categories.values.toList(),
+                    selectedIndex: _selectedCategoryIndex,
+                    onSelected: (index) {
+                      setState(() => _selectedCategoryIndex = index);
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+              ),
             ),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: () {},
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.unit,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColor.surfaceContainerHighest,
-                      borderRadius: AppRadius.mdAll,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.tune,
-                          color: AppColor.onSurfaceVariant,
-                          size: 20,
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text("Kategori", style: AppTextStyle.bodyMd),
-                      ],
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.add, color: AppColor.onPrimary),
-                  label: const Text(
-                    'Tambah',
-                    style: TextStyle(color: AppColor.onPrimary),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColor.primaryContainer,
-                    foregroundColor: AppColor.onPrimaryContainer,
-                  ),
-                ),
-              ],
+            Expanded(
+              child: ListView.separated(
+                itemCount: _dummyProducts.length,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                separatorBuilder: (_, index) =>
+                    const SizedBox(height: AppSpacing.sm),
+                itemBuilder: (context, index) {
+                  final product = _dummyProducts[index];
+                  return _ProductTile(
+                    imagePath: product.imagePath,
+                    name: product.name,
+                    price: product.price,
+                    category: product.categoryId,
+                    stock: product.stock,
+                    isLowStock: product.isLowStock,
+                    isOutOfStock: product.isOutOfStock,
+                  );
+                },
+              ),
             ),
-          ),
+          ],
         ),
-        SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.gutter,
-            0,
-            AppSpacing.gutter,
-            AppSpacing.gutter,
+      ),
+    );
+  }
+}
+
+// HEADER ROW 
+
+class _HeaderRow extends StatelessWidget {
+  final VoidCallback onAddPressed;
+  const _HeaderRow({required this.onAddPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'Produk',
+          style: AppTextStyle.headlineLg.copyWith(color: AppColor.onSurface),
+        ),
+        // GestureDetector(
+        //   onTap: onAddPressed,
+        //   child: Container(
+        //     width: AppSpacing.touchTargetMin,
+        //     height: AppSpacing.touchTargetMin,
+        //     decoration: BoxDecoration(
+        //       color: AppColor.surfaceContainerLowest,
+        //       borderRadius: AppRadius.mdAll,
+        //       border: Border.all(color: AppColor.outlineVariant),
+        //     ),
+        //     child: Icon(Icons.add, color: AppColor.onSurface),
+        //   ),
+        // ),
+        ElevatedButton(
+          onPressed: onAddPressed,
+          style: ElevatedButton.styleFrom(
+            foregroundColor: AppColor.onSurface,
+            backgroundColor: AppColor.surfaceContainerLowest,
+            fixedSize: Size(AppSpacing.touchTargetMin, AppSpacing.touchTargetMin),
+            padding: EdgeInsets.zero,
+            shape: CircleBorder(
+              side: BorderSide(color: AppColor.outlineVariant),
+            ),
           ),
-          sliver: SliverList.separated(
-            itemCount: _dummyProducts.length,
-            separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-            itemBuilder: (context, index) =>
-                _ProductCard(product: _dummyProducts[index]),
-          ),
+          child: Icon(Icons.add, color: AppColor.onSurface),
         ),
       ],
     );
   }
 }
 
-class _ProductCard extends StatelessWidget {
-  const _ProductCard({required this.product});
+//  CATEGORY TABS
 
-  final _DummyProduct product;
+class _CategoryTabs extends StatelessWidget {
+  final List<String> categories;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  const _CategoryTabs({
+    required this.categories,
+    required this.selectedIndex,
+    required this.onSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final String? categoryName = _categoryNameById[product.categoryId];
-    final bool isOutOfStock = product.isOutOfStock;
-    final bool isLowStock = product.isLowStock;
+    return SizedBox(
+      height: AppSpacing.touchTargetMin,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm + 2),
+        itemBuilder: (context, index) {
+          final selected = index == selectedIndex;
+          return GestureDetector(
+            onTap: () => onSelected(index),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: selected
+                    ? AppColor.onSurface
+                    : AppColor.surfaceContainerLowest,
+                borderRadius: AppRadius.mdAll,
+                border: Border.all(
+                  color: selected
+                      ? AppColor.onSurface
+                      : AppColor.outlineVariant,
+                ),
+              ),
+              child: Text(
+                categories[index],
+                style: AppTextStyle.labelSm.copyWith(
+                  color: selected ? AppColor.onPrimary : AppColor.onSurface,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// PRODUCT TILE 
+
+class _ProductTile extends StatelessWidget {
+  const _ProductTile({
+    required this.imagePath,
+    required this.name,
+    required this.price,
+    required this.category,
+    required this.stock,
+    required this.isLowStock,
+    required this.isOutOfStock,
+    this.onEdit,
+    this.onDelete,
+  });
+
+  final String? imagePath;
+  final String name;
+  final int price;
+  final int category;
+  final int? stock; // null = stok tanpa batas
+  final bool isLowStock;
+  final bool isOutOfStock;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
     final Color stockColor = isOutOfStock || isLowStock
         ? AppColor.error
         : AppColor.onSurface;
-    final String stockText = isOutOfStock ? 'Habis' : product.stock.toString();
+    final String stockText = isOutOfStock
+        ? 'Habis'
+        : stock == null
+        ? 'Tanpa batas'
+        : stock.toString();
 
     return Container(
       decoration: BoxDecoration(
@@ -212,11 +309,11 @@ class _ProductCard extends StatelessWidget {
         boxShadow: AppTheme.elevation1,
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md - 4),
         child: Row(
           children: [
-            _ProductImage(imagePath: product.imagePath),
-            const SizedBox(width: 12),
+            _ProductImage(imagePath: imagePath),
+            const SizedBox(width: AppSpacing.md - 4),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -225,7 +322,7 @@ class _ProductCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          product.name,
+                          name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyle.bodyMd.copyWith(
@@ -234,21 +331,19 @@ class _ProductCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (categoryName != null) ...[
-                        const SizedBox(width: 8),
-                        _CategoryBadge(label: categoryName),
-                      ],
+                      const SizedBox(width: AppSpacing.sm),
+                      _CategoryBadge(label: _categories[category] ?? 'Lainnya'),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: AppSpacing.xs + 2),
                   Text(
-                    _priceFmt.format(product.price),
+                    _priceFmt.format(price),
                     style: AppTextStyle.bodyMd.copyWith(
                       fontWeight: FontWeight.w700,
                       color: AppColor.primary,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: AppSpacing.xs + 2),
                   Text(
                     'Stok: $stockText',
                     style: AppTextStyle.labelSm.copyWith(color: stockColor),
@@ -256,29 +351,26 @@ class _ProductCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             Column(
               children: [
-                GestureDetector(
-                  onTap: () {},
-                  child: const CircleAvatar(
-                    radius: 16,
-                    backgroundColor: AppColor.surfaceContainerLow,
-                    child: Icon(Icons.edit, size: 14, color: AppColor.outline),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    
+                    disabledBackgroundColor: AppColor.surfaceContainerLow,
+                    shape: CircleBorder()
                   ),
+                  onPressed: onEdit,
+                  child: Icon(Icons.edit, size: 14, color: AppColor.outline),
                 ),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () {},
-                  child: const CircleAvatar(
-                    radius: 16,
-                    backgroundColor: AppColor.surfaceContainerLow,
-                    child: Icon(
-                      Icons.delete_outline,
-                      size: 14,
-                      color: AppColor.outline,
-                    ),
+                const SizedBox(height: AppSpacing.sm),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    disabledBackgroundColor: AppColor.surfaceContainerLow,
+                    shape: CircleBorder()
                   ),
+                  onPressed: onDelete,
+                  child: Icon(Icons.delete_outline, size: 14, color: AppColor.outline),
                 ),
               ],
             ),
@@ -348,9 +440,10 @@ class _CategoryBadge extends StatelessWidget {
         : AppColor.onSecondaryContainer;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
       decoration: BoxDecoration(color: bg, borderRadius: AppRadius.fullAll),
       child: Text(label, style: AppTextStyle.labelSm.copyWith(color: fg)),
     );
   }
 }
+
