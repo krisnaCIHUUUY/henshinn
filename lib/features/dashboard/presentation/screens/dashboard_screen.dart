@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:henshin/core/theme/app_color.dart';
 import 'package:henshin/core/theme/app_radius.dart';
 import 'package:henshin/core/theme/app_spacing.dart';
 import 'package:henshin/core/theme/app_text_style.dart';
+import 'package:henshin/core/utils/page_routes.dart';
 
 class DashboardScreen extends StatelessWidget {
   const new({super.key});
@@ -29,10 +31,6 @@ class DashboardScreen extends StatelessWidget {
               _RevenueCard(),
               const SizedBox(height: AppSpacing.md),
               _StatsRow(),
-              const SizedBox(height: AppSpacing.lg + 4),
-              _SectionTitle(title: 'Perlu restok'),
-              const SizedBox(height: AppSpacing.sm),
-              _RestockList(),
               const SizedBox(height: AppSpacing.lg + 4),
               _SectionTitle(title: 'Produk terlaris'),
               const SizedBox(height: AppSpacing.xs),
@@ -76,36 +74,6 @@ class _GreetingHeader extends StatelessWidget {
               ),
             ],
           ),
-        ),
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              width: AppSpacing.touchTargetMin,
-              height: AppSpacing.touchTargetMin,
-              decoration: BoxDecoration(
-                color: AppColor.surfaceContainerLowest,
-                borderRadius: AppRadius.mdAll,
-                border: Border.all(color: AppColor.outlineVariant),
-              ),
-              child: Icon(
-                Icons.notifications_none_rounded,
-                color: AppColor.onSurface,
-              ),
-            ),
-            Positioned(
-              top: AppSpacing.sm,
-              right: AppSpacing.sm,
-              child: Container(
-                width: AppSpacing.sm,
-                height: AppSpacing.sm,
-                decoration: const BoxDecoration(
-                  color: AppColor.error,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-          ],
         ),
       ],
     );
@@ -321,117 +289,117 @@ class _SectionTitle extends StatelessWidget {
 
 // ================= RESTOCK LIST =================
 
-class _RestockList extends StatelessWidget {
-  const _RestockList();
+// class _RestockList extends StatelessWidget {
+//   const _RestockList();
 
-  @override
-  Widget build(BuildContext context) {
-    final items = [
-      _RestockItem(
-        initial: 'K',
-        name: 'Kopi Susu Henshin',
-        category: 'Minuman',
-        remaining: 'Sisa 3',
-      ),
-      _RestockItem(
-        initial: 'S',
-        name: 'Stiker Henshin',
-        category: 'Merchandise',
-        remaining: 'Sisa 2',
-      ),
-    ];
+//   @override
+//   Widget build(BuildContext context) {
+//     final items = [
+//       _RestockItem(
+//         initial: 'K',
+//         name: 'Kopi Susu Henshin',
+//         category: 'Minuman',
+//         remaining: 'Sisa 3',
+//       ),
+//       _RestockItem(
+//         initial: 'S',
+//         name: 'Stiker Henshin',
+//         category: 'Merchandise',
+//         remaining: 'Sisa 2',
+//       ),
+//     ];
 
-    return Column(
-      children: [
-        for (int i = 0; i < items.length; i++) ...[
-          _RestockTile(item: items[i]),
-          if (i != items.length - 1)
-            Divider(height: 1, color: AppColor.divider),
-        ],
-      ],
-    );
-  }
-}
+//     return Column(
+//       children: [
+//         for (int i = 0; i < items.length; i++) ...[
+//           _RestockTile(item: items[i]),
+//           if (i != items.length - 1)
+//             Divider(height: 1, color: AppColor.divider),
+//         ],
+//       ],
+//     );
+//   }
+// }
 
-class _RestockItem {
-  final String initial;
-  final String name;
-  final String category;
-  final String remaining;
+// class _RestockItem {
+//   final String initial;
+//   final String name;
+//   final String category;
+//   final String remaining;
 
-  _RestockItem({
-    required this.initial,
-    required this.name,
-    required this.category,
-    required this.remaining,
-  });
-}
+//   _RestockItem({
+//     required this.initial,
+//     required this.name,
+//     required this.category,
+//     required this.remaining,
+//   });
+// }
 
-class _RestockTile extends StatelessWidget {
-  final _RestockItem item;
-  const _RestockTile({required this.item});
+// class _RestockTile extends StatelessWidget {
+//   final _RestockItem item;
+//   const _RestockTile({required this.item});
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md - 2),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: AppColor.surfaceContainerHigh,
-            child: Text(
-              item.initial,
-              style: AppTextStyle.labelSm.copyWith(
-                color: AppColor.onSurface,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md - 2),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.name,
-                  style: AppTextStyle.bodyMd.copyWith(
-                    color: AppColor.onSurface,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs - 2),
-                Text(
-                  item.category,
-                  style: AppTextStyle.labelSm.copyWith(
-                    color: AppColor.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md - 4,
-              vertical: AppSpacing.xs + 2,
-            ),
-            decoration: const BoxDecoration(
-              color: AppColor.tertiaryFixedDim,
-              borderRadius: AppRadius.fullAll,
-            ),
-            child: Text(
-              item.remaining,
-              style: AppTextStyle.labelSm.copyWith(
-                color: AppColor.onTertiaryFixed,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Padding(
+//       padding: const EdgeInsets.symmetric(vertical: AppSpacing.md - 2),
+//       child: Row(
+//         children: [
+//           CircleAvatar(
+//             radius: 20,
+//             backgroundColor: AppColor.surfaceContainerHigh,
+//             child: Text(
+//               item.initial,
+//               style: AppTextStyle.labelSm.copyWith(
+//                 color: AppColor.onSurface,
+//                 fontWeight: FontWeight.w600,
+//               ),
+//             ),
+//           ),
+//           const SizedBox(width: AppSpacing.md - 2),
+//           Expanded(
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               children: [
+//                 Text(
+//                   item.name,
+//                   style: AppTextStyle.bodyMd.copyWith(
+//                     color: AppColor.onSurface,
+//                     fontWeight: FontWeight.w600,
+//                   ),
+//                 ),
+//                 const SizedBox(height: AppSpacing.xs - 2),
+//                 Text(
+//                   item.category,
+//                   style: AppTextStyle.labelSm.copyWith(
+//                     color: AppColor.onSurfaceVariant,
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//           Container(
+//             padding: const EdgeInsets.symmetric(
+//               horizontal: AppSpacing.md - 4,
+//               vertical: AppSpacing.xs + 2,
+//             ),
+//             decoration: const BoxDecoration(
+//               color: AppColor.tertiaryFixedDim,
+//               borderRadius: AppRadius.fullAll,
+//             ),
+//             child: Text(
+//               item.remaining,
+//               style: AppTextStyle.labelSm.copyWith(
+//                 color: AppColor.onTertiaryFixed,
+//                 fontWeight: FontWeight.w600,
+//               ),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
 
 // ================= BEST SELLER LIST =================
 
@@ -533,6 +501,7 @@ class _StartTransactionButton extends StatelessWidget {
       child: ElevatedButton.icon(
         onPressed: () {
           // navigasi ke flow kasir
+          context.go(PageRoutes.mulaiTransaksi);
         },
         icon: const Icon(Icons.add, color: AppColor.onPrimary),
         label: Text(

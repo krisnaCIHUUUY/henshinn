@@ -17,15 +17,6 @@ class AppScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(
-      //   title: Padding(
-      //     padding: const EdgeInsets.only(left: 20.0),
-      //     child: Text(
-      //       'Henshin',
-      //       style: AppTextStyle.headlineMd.copyWith(color: AppColor.primary),
-      //     ),
-      //   ),
-      // ),
       body: navigationShell,
       bottomNavigationBar: _BottomNavBar(
         currentIndex: navigationShell.currentIndex,
@@ -39,16 +30,13 @@ class _BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
 
-  const _BottomNavBar({
-    required this.currentIndex,
-    required this.onTap,
-  });
+  const _BottomNavBar({required this.currentIndex, required this.onTap});
 
   static const _items = [
-    _NavItemData(icon: Icons.show_chart, label: 'Dasbor'),
-    _NavItemData(icon: Icons.menu, label: 'Produk'),
+    _NavItemData(icon: Icons.home, label: 'Dasbor'),
+    _NavItemData(icon: Icons.production_quantity_limits, label: 'Produk'),
     _NavItemData(icon: Icons.access_time, label: 'Riwayat'),
-    _NavItemData(icon: Icons.wb_sunny_outlined, label: 'Pengaturan'),
+    _NavItemData(icon: Icons.settings_outlined, label: 'Pengaturan'),
   ];
 
   @override

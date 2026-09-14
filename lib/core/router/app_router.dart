@@ -5,8 +5,7 @@ import 'package:henshin/features/dashboard/presentation/screens/dashboard_screen
 import 'package:henshin/features/product/presentation/screens/product_list_screen.dart';
 import 'package:henshin/features/setting/presentation/screens/setting_screen.dart';
 import 'package:henshin/features/transaction/presentation/screens/transaction_history_screen.dart';
-
-// bikin app routernya nanti di lanjutin
+import 'package:henshin/features/transaction/presentation/screens/transaction_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: PageRoutes.dashboard,
@@ -64,5 +63,11 @@ final GoRouter appRouter = GoRouter(
     ),
 
     // branch dll.
+    // 
+    GoRoute(
+      path: PageRoutes.mulaiTransaksi,
+      name: PageRoutes.mulaiTransaksiName,
+      builder: (context, state) => TransactionScreen(),
+    ),
   ],
 );

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:henshin/core/theme/app_color.dart';
 import 'package:henshin/core/theme/app_radius.dart';
 import 'package:henshin/core/theme/app_spacing.dart';
-import 'package:henshin/core/theme/app_theme.dart';
 import 'package:henshin/core/theme/app_text_style.dart';
 import 'package:intl/intl.dart';
 
+import 'dart:developer';
 
 final Map<int, String> _categories = {
   1: 'Semua',
@@ -47,7 +47,7 @@ final List<_DummyProduct> _dummyProducts = [
     name: 'Cappuccino',
     price: 25000,
     stock: 45,
-    categoryId: 1,
+    categoryId: 2,
     imagePath: 'assets/images/placeholder_product.png',
   ),
   const _DummyProduct(
@@ -55,7 +55,7 @@ final List<_DummyProduct> _dummyProducts = [
     name: 'Iced Matcha Latte',
     price: 28000,
     stock: 30,
-    categoryId: 1,
+    categoryId: 2,
     imagePath: 'assets/images/placeholder_product.png',
   ),
   const _DummyProduct(
@@ -63,28 +63,28 @@ final List<_DummyProduct> _dummyProducts = [
     name: 'Croissant Butter',
     price: 22000,
     stock: 5,
-    categoryId: 2,
+    categoryId: 3,
   ),
   const _DummyProduct(
     id: 4,
     name: 'Chocolate Cake',
     price: 35000,
     stock: 0,
-    categoryId: 2,
+    categoryId: 3,
   ),
   const _DummyProduct(
     id: 5,
     name: 'Nasi Goreng',
     price: 28000,
     stock: 12,
-    categoryId: 2,
+    categoryId: 3,
   ),
   const _DummyProduct(
     id: 6,
     name: 'Teh Botol',
     price: 8000,
     stock: 50,
-    categoryId: 1,
+    categoryId: 2,
   ),
   const _DummyProduct(
     id: 7,
@@ -148,13 +148,18 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 itemBuilder: (context, index) {
                   final product = _dummyProducts[index];
                   return _ProductTile(
+                    onDelete: () {
+                      log('delete kepencet');
+                    },
+                    onEdit: () {
+                      log('edit kepencet');
+                    },
                     imagePath: product.imagePath,
                     name: product.name,
                     price: product.price,
                     category: product.categoryId,
                     stock: product.stock,
-                    isLowStock: product.isLowStock,
-                    isOutOfStock: product.isOutOfStock,
+                    hpp: 0,
                   );
                 },
               ),
@@ -166,7 +171,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
   }
 }
 
-// HEADER ROW 
+// HEADER ROW
 
 class _HeaderRow extends StatelessWidget {
   final VoidCallback onAddPressed;
@@ -181,25 +186,15 @@ class _HeaderRow extends StatelessWidget {
           'Produk',
           style: AppTextStyle.headlineLg.copyWith(color: AppColor.onSurface),
         ),
-        // GestureDetector(
-        //   onTap: onAddPressed,
-        //   child: Container(
-        //     width: AppSpacing.touchTargetMin,
-        //     height: AppSpacing.touchTargetMin,
-        //     decoration: BoxDecoration(
-        //       color: AppColor.surfaceContainerLowest,
-        //       borderRadius: AppRadius.mdAll,
-        //       border: Border.all(color: AppColor.outlineVariant),
-        //     ),
-        //     child: Icon(Icons.add, color: AppColor.onSurface),
-        //   ),
-        // ),
         ElevatedButton(
           onPressed: onAddPressed,
           style: ElevatedButton.styleFrom(
             foregroundColor: AppColor.onSurface,
             backgroundColor: AppColor.surfaceContainerLowest,
-            fixedSize: Size(AppSpacing.touchTargetMin, AppSpacing.touchTargetMin),
+            fixedSize: Size(
+              AppSpacing.touchTargetMin,
+              AppSpacing.touchTargetMin,
+            ),
             padding: EdgeInsets.zero,
             shape: CircleBorder(
               side: BorderSide(color: AppColor.outlineVariant),
@@ -232,7 +227,7 @@ class _CategoryTabs extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm + 2),
+        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm + 2),
         itemBuilder: (context, index) {
           final selected = index == selectedIndex;
           return GestureDetector(
@@ -266,17 +261,16 @@ class _CategoryTabs extends StatelessWidget {
   }
 }
 
-// PRODUCT TILE 
+// PRODUCT TILE
 
 class _ProductTile extends StatelessWidget {
   const _ProductTile({
     required this.imagePath,
     required this.name,
     required this.price,
-    required this.category,
+    required this.hpp,
     required this.stock,
-    required this.isLowStock,
-    required this.isOutOfStock,
+    required this.category,
     this.onEdit,
     this.onDelete,
   });
@@ -284,166 +278,130 @@ class _ProductTile extends StatelessWidget {
   final String? imagePath;
   final String name;
   final int price;
+  final int hpp;
+  final int? stock; // null = tanpa batas
   final int category;
-  final int? stock; // null = stok tanpa batas
-  final bool isLowStock;
-  final bool isOutOfStock;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
-    final Color stockColor = isOutOfStock || isLowStock
-        ? AppColor.error
-        : AppColor.onSurface;
-    final String stockText = isOutOfStock
-        ? 'Habis'
-        : stock == null
-        ? 'Tanpa batas'
-        : stock.toString();
+    final String stockText = stock == null ? 'Tanpa Batas' : stock.toString();
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColor.surfaceContainerLowest,
-        borderRadius: AppRadius.lgAll,
-        boxShadow: AppTheme.elevation1,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md - 4),
-        child: Row(
-          children: [
-            _ProductImage(imagePath: imagePath),
-            const SizedBox(width: AppSpacing.md - 4),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyle.bodyMd.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColor.onSurface,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      _CategoryBadge(label: _categories[category] ?? 'Lainnya'),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xs + 2),
-                  Text(
-                    _priceFmt.format(price),
-                    style: AppTextStyle.bodyMd.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColor.primary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs + 2),
-                  Text(
-                    'Stok: $stockText',
-                    style: AppTextStyle.labelSm.copyWith(color: stockColor),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Column(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: imagePath != null && imagePath!.isNotEmpty
+                ? Image.asset(
+                    imagePath!,
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _PlaceholderImage(),
+                  )
+                : _PlaceholderImage(),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    
-                    disabledBackgroundColor: AppColor.surfaceContainerLow,
-                    shape: CircleBorder()
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
                   ),
-                  onPressed: onEdit,
-                  child: Icon(Icons.edit, size: 14, color: AppColor.outline),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    disabledBackgroundColor: AppColor.surfaceContainerLow,
-                    shape: CircleBorder()
-                  ),
-                  onPressed: onDelete,
-                  child: Icon(Icons.delete_outline, size: 14, color: AppColor.outline),
+                const SizedBox(height: 2),
+                Text(
+                  _priceFmt.format(price),
+                  style: const TextStyle(fontSize: 15, color: Colors.black54),
                 ),
+                const SizedBox(height: 2),
+                Text(
+                  'HPP: ${_priceFmt.format(hpp)} | Stok: $stockText',
+                  style: const TextStyle(fontSize: 13, color: Colors.black45),
+                ),
+                const SizedBox(height: 8),
+
+                _CategoryBadge(category: category),
               ],
             ),
-          ],
-        ),
+          ),
+          Column(
+            children: [
+              GestureDetector(
+                onTap: onEdit,
+                child: const Padding(
+                  padding: EdgeInsets.all(6),
+                  child: Icon(
+                    Icons.edit_outlined,
+                    size: 18,
+                    color: Colors.black45,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              GestureDetector(
+                onTap: onDelete,
+                child: const Padding(
+                  padding: EdgeInsets.all(6),
+                  child: Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                    color: Colors.black45,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-class _ProductImage extends StatelessWidget {
-  const _ProductImage({required this.imagePath});
-
-  final String? imagePath;
-
+class _PlaceholderImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    const double size = 68;
-    final String? path = imagePath;
-
-    if (path == null || path.isEmpty) {
-      return Container(
-        width: size,
-        height: size,
-        decoration: const BoxDecoration(
-          color: AppColor.surfaceContainerLow,
-          borderRadius: AppRadius.mdAll,
-        ),
-        child: const Icon(Icons.image_outlined, color: AppColor.outline),
-      );
-    }
-
-    return ClipRRect(
-      borderRadius: AppRadius.mdAll,
-      child: Image.asset(
-        path,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => Container(
-          width: size,
-          height: size,
-          decoration: const BoxDecoration(
-            color: AppColor.surfaceContainerLow,
-            borderRadius: AppRadius.mdAll,
-          ),
-          child: const Icon(Icons.image_outlined, color: AppColor.outline),
-        ),
-      ),
+    return Container(
+      width: 56,
+      height: 56,
+      color: const Color(0xFFF0F0F0),
+      child: const Icon(Icons.image_outlined, color: Colors.black26),
     );
   }
 }
 
 class _CategoryBadge extends StatelessWidget {
-  const _CategoryBadge({required this.label});
+  const _CategoryBadge({required this.category});
 
-  final String label;
+  final int category;
 
   @override
   Widget build(BuildContext context) {
-    final bool isMakanan = label.toLowerCase() == 'makanan';
-    final Color bg = isMakanan
-        ? AppColor.tertiaryFixed
-        : AppColor.secondaryContainer;
-    final Color fg = isMakanan
-        ? AppColor.onTertiaryFixed
-        : AppColor.onSecondaryContainer;
+    final String label = _categories[category] ?? 'Lainnya';
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-      decoration: BoxDecoration(color: bg, borderRadius: AppRadius.fullAll),
-      child: Text(label, style: AppTextStyle.labelSm.copyWith(color: fg)),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColor.discountBadge,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 13,
+          color: AppColor.onSurface,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
     );
   }
 }
-
