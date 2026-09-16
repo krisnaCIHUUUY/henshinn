@@ -168,10 +168,9 @@ class _SettingsRow extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.trailing,
-    this.titleColor,
     this.onTap,
     this.isLast = false,
-  });
+  }) : titleColor = null;
 
   final String title;
   final String? subtitle;

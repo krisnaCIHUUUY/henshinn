@@ -47,6 +47,10 @@ dependencies:
   freezed_annotation: ^3.1.0
   intl: ^0.20.3
   google_fonts: ^8.2.1
+  # mobile_number: ^3.0.0
+  mobile_scanner: ^7.4.2
+  vibration: ^3.2.1
+  permission_handler: ^13.0.2
 
 dev_dependencies:
   flutter_test:
