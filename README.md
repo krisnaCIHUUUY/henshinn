@@ -119,7 +119,3 @@ Kontribusi terbuka untuk siapa saja yang ingin membantu mengembangkan Henshin.
 - Gunakan `Either<Failure, T>` untuk error handling di repository layer
 - Setiap usecase baru sebaiknya punya satu tanggung jawab yang jelas
 - Untuk perubahan skema database, tambahkan migration di `AppDatabase.migration`, jangan langsung ubah `schemaVersion` tanpa migration strategy
-
-## Lisensi
-
-Belum ditentukan — tambahkan lisensi pilihan Anda di sini (misalnya MIT, Apache 2.0) sebelum merilis secara publik.
