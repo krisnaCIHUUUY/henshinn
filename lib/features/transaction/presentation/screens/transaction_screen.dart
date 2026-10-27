@@ -21,13 +21,13 @@ class _TransactionScreenState extends State<TransactionScreen>
   @override
   void initState() {
     super.initState();
-    // WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addObserver(this);
 
-    // // Kunci orientasi ke landscape khusus halaman ini
-    // SystemChrome.setPreferredOrientations([
-    //   DeviceOrientation.landscapeLeft,
-    //   DeviceOrientation.landscapeRight,
-    // ]);
+    // Kunci orientasi ke landscape khusus halaman ini
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
 
     _controller = MobileScannerController(
       formats: const [
@@ -49,11 +49,11 @@ class _TransactionScreenState extends State<TransactionScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
 
-    // // Kembalikan orientasi ke portrait saat keluar halaman
-    // SystemChrome.setPreferredOrientations([
-    //   DeviceOrientation.portraitUp,
-    //   DeviceOrientation.portraitDown,
-    // ]);
+    // Kembalikan orientasi ke portrait saat keluar halaman
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
 
     _controller.dispose();
     super.dispose();
@@ -108,12 +108,6 @@ class _TransactionScreenState extends State<TransactionScreen>
 
     return Scaffold(
       backgroundColor: Colors.black,
-      // appBar: AppBar(
-      //   leading: IconButton(
-      //     icon: const Icon(Icons.chevron_left),
-      //     onPressed: () => context.go(PageRoutes.dashboard),
-      //   ),
-      // ),
       body: Stack(
         fit: StackFit.expand,
         children: [
