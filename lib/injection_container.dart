@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:henshin/core/database/app_database.dart';
 import 'package:henshin/core/database/dao/category_dao.dart';
 import 'package:henshin/core/database/dao/product_dao.dart';
+import 'package:henshin/core/database/dao/settings_dao.dart';
 import 'package:henshin/core/database/dao/transaction_dao.dart';
 import 'package:henshin/features/product/data/repositories/product_repository_impl.dart';
 import 'package:henshin/features/product/domain/repositories/product_repository.dart';
@@ -15,7 +16,11 @@ import 'package:henshin/features/product/domain/usecases/get_product_by_barcode.
 import 'package:henshin/features/product/domain/usecases/update_product.dart';
 import 'package:henshin/features/product/presentation/bloc/product_bloc.dart';
 import 'package:henshin/features/setting/data/repositories/pin_repository_impl.dart';
+import 'package:henshin/features/setting/data/repositories/settings_repository_impl.dart';
+import 'package:henshin/features/setting/domain/repositories/settings_repository.dart';
 import 'package:henshin/features/transaction/data/repositories/transaction_repository_impl.dart';
+import 'package:henshin/features/transaction/data/services/pdf_printer_service.dart';
+import 'package:henshin/features/transaction/domain/services/printer_service.dart';
 import 'package:henshin/features/transaction/domain/repositories/transaction_repository.dart';
 import 'package:henshin/features/transaction/domain/usecases/create_sale.dart';
 import 'package:henshin/features/transaction/presentation/bloc/cart_bloc.dart';
@@ -47,6 +52,7 @@ void initDependencies() {
   sl.registerLazySingleton<ProductDao>(() => ProductDao(sl()));
   sl.registerLazySingleton<CategoryDao>(() => CategoryDao(sl()));
   sl.registerLazySingleton<TransactionDao>(() => TransactionDao(sl()));
+  sl.registerLazySingleton<SettingsDao>(() => SettingsDao(sl()));
 
   // ===== product =====
   sl.registerLazySingleton<ProductRepository>(
@@ -69,11 +75,19 @@ void initDependencies() {
 
   // ===== transaction =====
   sl.registerLazySingleton<TransactionRepository>(
-    () => TransactionRepositoryImpl(sl()),
+    () => TransactionRepositoryImpl(sl(), sl()),
   );
+  // Selama printer thermal belum ada, PDF/share yang jadi implementasinya
+  // (PRD §2.8). Tukar baris ini saat impl ESC/POS siap — lihat ADR-023.
+  sl.registerLazySingleton<PrinterService>(() => PdfPrinterService());
   sl.registerLazySingleton<CreateSale>(() => CreateSale(sl()));
   // factory, bukan singleton: tiap kunjungan ke kasir mulai dengan keranjang kosong
   sl.registerFactory<CartBloc>(() => CartBloc(createSale: sl()));
+
+  // ===== setting =====
+  sl.registerLazySingleton<SettingsRepository>(
+    () => SettingsRepositoryImpl(sl()),
+  );
 
   // ===== setting / PIN =====
   // Opsi Android default v10: RSA OAEP + AES-GCM lewat keystore.

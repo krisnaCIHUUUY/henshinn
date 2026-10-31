@@ -15,6 +15,7 @@ import 'package:henshin/features/transaction/presentation/bloc/cart_bloc.dart';
 import 'package:henshin/features/transaction/presentation/bloc/cart_event.dart';
 import 'package:henshin/features/transaction/presentation/bloc/cart_state.dart';
 import 'package:henshin/features/transaction/presentation/screens/barcode_scanner_screen.dart';
+import 'package:henshin/features/transaction/presentation/screens/receipt_preview_screen.dart';
 import 'package:henshin/injection_container.dart';
 
 /// Kasir: pilih produk → keranjang → bayar. Keranjangnya di memori sampai
@@ -95,7 +96,7 @@ class _CashierViewState extends State<_CashierView> {
     return confirmed ?? false;
   }
 
-  void _onPaid(BuildContext context, CartState state) {
+  Future<void> _onPaid(BuildContext context, CartState state) async {
     if (state.status == CartStatus.failure) {
       ScaffoldMessenger.of(
         context,
@@ -104,13 +105,15 @@ class _CashierViewState extends State<_CashierView> {
     }
     if (state.status != CartStatus.saved) return;
 
+    final transactionId = state.lastTransactionId;
     _payment.clear();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Transaksi #${state.lastTransactionId} tersimpan. '
-          'Kembalian ${formatRupiah(state.change)}',
-        ),
+
+    // Transaksi sudah tersimpan; struk hanya tampilan di atasnya. Kalau kasir
+    // menutupnya tanpa mencetak, penjualannya tetap utuh (US-1.4).
+    if (transactionId == null) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => ReceiptPreviewScreen(transactionId: transactionId),
       ),
     );
   }

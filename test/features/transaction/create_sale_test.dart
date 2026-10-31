@@ -6,10 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:henshin/core/database/app_database.dart';
 import 'package:henshin/core/database/dao/category_dao.dart';
 import 'package:henshin/core/database/dao/product_dao.dart';
+import 'package:henshin/core/database/dao/settings_dao.dart';
 import 'package:henshin/core/database/dao/transaction_dao.dart';
 import 'package:henshin/core/errors/failures.dart';
 import 'package:henshin/features/product/data/repositories/product_repository_impl.dart';
 import 'package:henshin/features/product/domain/entities/product.dart';
+import 'package:henshin/features/setting/data/repositories/settings_repository_impl.dart';
 import 'package:henshin/features/transaction/data/repositories/transaction_repository_impl.dart';
 import 'package:henshin/features/transaction/domain/entities/cart_item.dart';
 import 'package:path/path.dart' as p;
@@ -47,7 +49,10 @@ void main() {
   void wire(AppDatabase database) {
     db = database;
     products = ProductRepositoryImpl(ProductDao(db), CategoryDao(db));
-    sales = TransactionRepositoryImpl(TransactionDao(db));
+    sales = TransactionRepositoryImpl(
+      TransactionDao(db),
+      SettingsRepositoryImpl(SettingsDao(db)),
+    );
   }
 
   setUp(() async {

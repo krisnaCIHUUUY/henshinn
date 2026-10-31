@@ -57,6 +57,11 @@ docs/struktur_folder.md        # ASPIRATIONAL — differs from code, do not foll
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs   # required after Drift/Freezed edits
 flutter run          # barcode/Bluetooth features need a physical Android device
+# Stale-build rules (have misled debugging three times — see ADR-025):
+#   Dart code changed        -> hot reload (r)
+#   initDependencies changed -> hot RESTART (R); main() does not re-run on reload
+#   pubspec package added    -> full `flutter run`; native side is not recompiled
+#                               by a restart (symptom: MissingPluginException)
 flutter analyze
 flutter test test/drift test/features test/injection_container_test.dart   # the real suite
 flutter test test/some_file_test.dart   # single file; bare `flutter test` fails on widget_test.dart

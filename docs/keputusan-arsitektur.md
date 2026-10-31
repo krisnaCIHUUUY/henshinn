@@ -311,3 +311,133 @@ menghapusnya. `PopScope` dengan `canPop: cart.items.isEmpty` membuat tombol
 AppBar dan back fisik sama-sama lewat satu konfirmasi. Konsekuensi lain dari
 `push`: dashboard tetap hidup di belakang kasir dan tidak dilepas selama
 transaksi berjalan.
+
+## ADR-021 — `ReceiptFormatter` adalah satu-satunya tata letak struk
+
+`Receipt` (data) dan `ReceiptFormatter` (tata letak 32 karakter) dipisah.
+Formatter menghasilkan `List<String>`; preview, PDF, dan nanti byte ESC/POS
+semuanya merender daftar baris yang sama.
+
+**Alasan:** PRD §2.8 mewajibkan satu model untuk tiga keluaran. Kalau tiap
+keluaran menata sendiri, struk di layar akan berbeda dengan yang tercetak dan
+bug tata letak harus diperbaiki tiga kali.
+
+**Aturan:** jangan pernah menyusun teks struk di layar atau di service
+printer. Tambah/ubah tata letak hanya di `ReceiptFormatter`, dan tesnya
+menjaga tidak ada baris yang melebihi lebar kertas.
+
+## ADR-022 — Struk dibangun dari snapshot, dan hanya setelah transaksi tersimpan
+
+`buildReceipt(transactionId)` membaca `transactions` + `transaction_items`,
+bukan keranjang. Layar struk selalu dibuka **setelah** penjualan tersimpan.
+
+**Alasan:** US-1.4 mewajibkan transaksi tetap tersimpan walau cetak gagal.
+Karena struk dibangun dari data yang sudah ada di DB, tidak ada jalur di mana
+kegagalan cetak bisa membatalkan penjualan — `PrinterService` sama sekali tidak
+menyentuh database. Nilai item juga dari snapshot, jadi cetak ulang struk lama
+identik dengan aslinya (US-3.4).
+
+## ADR-023 — Plugin printer: `esc_pos_bluetooth` ditolak
+
+Pemeriksaan pub.dev yang PRD §4 minta ("periksa status maintenance tiap plugin
+sebelum dikunci"):
+
+| Paket | Versi | Rilis terakhir |
+|---|---|---|
+| `esc_pos_bluetooth` (disebut rencana) | 0.4.1 | **2021-10-06** |
+| `esc_pos_utils` | 1.1.0 | 2021-09-21 |
+| `blue_thermal_printer` | 1.2.3 | 2022-07-19 |
+| `print_bluetooth_thermal` | 1.2.5 | 2026-09-28 |
+| `flutter_thermal_printer` | 2.3.0 | 2026-09-10 |
+| `esc_pos_utils_plus` | 2.0.4 | 2024-09-01 |
+
+**Keputusan:** saat printer tiba, pakai **`print_bluetooth_thermal`** untuk
+transport Bluetooth + **`esc_pos_utils_plus`** untuk membuat byte ESC/POS.
+Jangan pakai `esc_pos_bluetooth`/`esc_pos_utils`: ditinggalkan sejak 2021 dan
+mendahului model izin Bluetooth Android 12+.
+
+Keduanya **belum ditambahkan ke pubspec** — dependency yang belum dipakai
+hanya menambah risiko build. Tambahkan saat impl-nya ditulis.
+
+## ADR-024 — Impl Bluetooth ditunda sampai printer ada
+
+Langkah 9 berhenti di `PrinterService` + `PdfPrinterService`. Impl ESC/POS
+Bluetooth belum ditulis.
+
+**Alasan:** PRD §2.8 memang meresepkan ini ("selama printer belum ada,
+pengembangan memakai preview dan PDF, logika cetak di balik interface
+`PrinterService`"), §3.4 merencanakan spike 1 hari saat printer tiba, dan §3.2
+menetapkan PDF/share sebagai garis potong yang sah. Menulis ratusan baris
+Bluetooth yang tidak bisa dijalankan — izin Android 12+, pairing, retry,
+perilaku beda per merk 58mm — berarti kode yang pasti harus ditulis ulang
+setelah bertemu printer sungguhan.
+
+**Saat printer tiba:** tambahkan `EscPosPrinterService` yang mengirim keluaran
+`ReceiptFormatter` sebagai byte, lalu tukar satu baris registrasi
+`PrinterService` di `injection_container.dart`. Tidak ada pemanggil yang perlu
+berubah.
+
+## ADR-025 — Pemuatan async di `initState` wajib ber-try/catch
+
+Setiap layar yang memuat data di `initState` harus membungkusnya dengan
+try/catch dan mematikan flag loading-nya di `catch`, bukan hanya menangani
+`Left` dari `Either`.
+
+**Alasan — ini perbaikan bug yang dilaporkan pemilik.** `StoreInfoScreen`
+macet di spinner selamanya: `sl<SettingsRepository>()` melempar (DI stale),
+exception-nya lolos dari `_load()`, `_loading` tidak pernah dimatikan, dan
+tidak ada pesan maupun jalan keluar. Menangani `Left` saja tidak cukup —
+`Left` hanya muncul kalau repository-nya **sempat dipanggil**.
+
+Pola yang sama ada di `ReceiptPreviewScreen` dan `SettingScreen`; ketiganya
+sudah diperbaiki.
+
+**Aturan:** `_loading = false` (atau penanda error) harus terjadi di **semua**
+jalur keluar. Layar yang bisa gagal total menampilkan pesan + tombol "Coba
+lagi"; layar yang masih berguna tanpa data itu kembali ke nilai default dan
+tidak melempar.
+
+**Catatan terkait — gejala "build stale" sudah tiga kali menyesatkan.**
+Aturannya:
+
+| Yang diubah | Yang dibutuhkan | Gejala kalau salah |
+|---|---|---|
+| Kode Dart biasa | hot reload (`r`) | — |
+| Registrasi DI (`initDependencies`) | hot **restart** (`R`) | `GetIt: ... is not registered`, atau `NoSuchMethodError` dari konstruktor |
+| Menambah/menghapus package di `pubspec.yaml` | **`flutter run` dari nol** | `MissingPluginException(No implementation found for method X on channel Y)` |
+
+`initDependencies()` hanya jalan di `main()`, dan hot restart tidak mengompilasi
+ulang sisi native — plugin baru butuh build penuh. Sebelum menduga ada bug,
+bandingkan waktu build APK dengan waktu `pubspec.yaml` diubah.
+
+## ADR-026 — Direktori sementara selalu dari `path_provider`
+
+File sementara (PDF struk, dan nanti file backup) ditulis ke
+`getTemporaryDirectory()` dari `path_provider`, **bukan**
+`Directory.systemTemp`.
+
+**Alasan — ini perbaikan bug yang dilaporkan pemilik.** `Directory.systemTemp`
+di Android menunjuk `/tmp` yang tidak ada dan tidak bisa ditulis aplikasi,
+sehingga "Bagikan PDF" selalu gagal di HP. Tes di desktop **lolos** karena di
+Windows/Linux `systemTemp` memang valid — jadi tesnya memberi rasa aman yang
+palsu. Pelajarannya: API dart:io yang bergantung pada lingkungan OS tidak
+terbukti oleh tes desktop.
+
+**Aturan:** jangan pakai `Directory.systemTemp` di kode produksi. Di tes,
+suntik direktorinya lewat parameter (seperti `PdfPrinterService.outputDirectory`)
+supaya default produksinya tidak ikut diuji dengan jalur yang salah.
+
+## ADR-027 — Teks struk dibatasi Latin-1 di keluaran PDF
+
+`PdfPrinterService` memetakan karakter di atas U+00FF menjadi `?` sebelum
+dirender.
+
+**Alasan:** font Courier bawaan PDF hanya mendukung Latin-1 (dart_pdf
+memperingatkan "Courier has no Unicode support"). Nama produk dengan karakter
+di luar itu bisa tergambar kosong atau menggagalkan pembuatan dokumen, dan
+gejalanya muncul ke pemilik sebagai "gagal membagikan".
+
+**shortcut:** kalau nanti katalog memakai karakter non-Latin, ganti dengan font
+monospace Unicode sebagai aset — jangan hapus pemetaan ini tanpa menggantinya.
+Pembatasan ini **hanya** di keluaran PDF; `ReceiptFormatter` tetap menghasilkan
+teks asli untuk preview dan salin-teks.

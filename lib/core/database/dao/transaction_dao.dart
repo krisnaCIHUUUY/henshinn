@@ -53,6 +53,12 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
         .get();
   }
 
+  Future<Transaction?> getTransactionById(int id) {
+    return (select(
+      transactions,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+  }
+
   // Detail item dalam satu transaksi
   Future<List<TransactionItem>> getItemsByTransactionId(int transactionId) {
     return (select(

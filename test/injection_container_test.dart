@@ -6,7 +6,11 @@ import 'package:henshin/core/database/app_database.dart';
 import 'package:henshin/features/product/domain/repositories/product_repository.dart';
 import 'package:henshin/features/product/presentation/bloc/product_bloc.dart';
 import 'package:henshin/features/setting/domain/repositories/pin_repository.dart';
+import 'package:henshin/features/setting/domain/repositories/settings_repository.dart';
 import 'package:henshin/features/setting/presentation/bloc/pin_bloc.dart';
+import 'package:henshin/features/transaction/domain/repositories/transaction_repository.dart';
+import 'package:henshin/features/transaction/domain/services/printer_service.dart';
+import 'package:henshin/features/transaction/presentation/bloc/cart_bloc.dart';
 import 'package:henshin/injection_container.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -60,6 +64,10 @@ void main() {
     expect(sl<ProductBloc>(), isNotNull);
     expect(sl<PinRepository>(), isNotNull);
     expect(sl<PinBloc>(), isNotNull);
+    expect(sl<SettingsRepository>(), isNotNull);
+    expect(sl<TransactionRepository>(), isNotNull);
+    expect(sl<CartBloc>(), isNotNull);
+    expect(sl<PrinterService>(), isNotNull);
   });
 
   test('database yang di-wire benar-benar bisa dibuka dan di-query', () async {

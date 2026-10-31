@@ -1,6 +1,6 @@
 # Progress Henshin POS
 
-Status eksekusi `docs/implementasi.md`. Diperbarui 2026-10-31 (langkah 1–7).
+Status eksekusi `docs/implementasi.md`. Diperbarui 2026-10-31 (langkah 1–9).
 
 Keputusan arsitektur yang diambil selama eksekusi dicatat terpisah di
 `docs/keputusan-arsitektur.md`.
@@ -16,14 +16,23 @@ Keputusan arsitektur yang diambil selama eksekusi dicatat terpisah di
 | 5 | Restok + ledger `stock_movements` + peringatan stok menipis | ✅ selesai |
 | 6 | Keranjang + bayar + kembalian + simpan atomik | ✅ selesai |
 | 7 | Scan barcode kamera + fallback | ✅ kode selesai, **uji device fisik belum** |
-| 8–15 | Struk, printer, riwayat/void, laporan, backup, hardening | ⬜ belum |
+| 8 | Model `Receipt` + preview + PDF/share | ✅ selesai |
+| 9 | Cetak ESC/POS Bluetooth | 🟡 **sebagian**: `PrinterService` + impl PDF selesai; impl Bluetooth ditunda sampai printer tiba |
+| 10–15 | Riwayat/void, laporan, backup, hardening | ⬜ belum |
 
-Fondasi (1–3), F2 Produk & Stok (4–5), dan F1 Kasir + scan (6–7) selesai di
-sisi kode. Berikutnya langkah 8: model `Receipt` + preview + PDF/share.
+Fondasi (1–3), F2 Produk & Stok (4–5), dan F1 Kasir + scan + struk (6–8)
+selesai di sisi kode. Langkah 9 sengaja berhenti di interface + fallback PDF
+sesuai PRD §2.8 ("selama printer belum ada, pengembangan memakai preview dan
+PDF"); impl ESC/POS menunggu printer fisik + spike 1 hari (PRD §3.4).
+Berikutnya langkah 10: riwayat + detail + cetak ulang.
 
-**Verifikasi saat ini:** 84 tes lolos, `flutter analyze` bersih. Alur langkah
-1–5 sudah dicoba manual di device fisik oleh pemilik repo; **langkah 6 dan 7
-belum** — kasir dan scanner masih menunggu uji di HP.
+**Verifikasi saat ini:** 107 tes lolos, `flutter analyze` bersih.
+
+Uji manual di device oleh pemilik repo: langkah 1–5 ✅; langkah 6 (kasir) dan 8
+(struk) sebagian — empat bug ditemukan dan sudah diperbaiki, lihat "Perbaikan
+setelah verifikasi manual". **Belum pernah diuji di HP:** scanner barcode
+(langkah 7) dan share sheet PDF — keduanya ikut terkubur di APK lama, jadi
+butuh `flutter run` penuh, bukan hot restart.
 
 ---
 
@@ -127,11 +136,59 @@ belum** — kasir dan scanner masih menunggu uji di HP.
 - Tombol/ikon Scan ditambahkan di layar kasir. Scanner di-push dengan
   `BlocProvider.value`, bukan rute sendiri (lihat ADR-017).
 
+## Langkah 8 — Model `Receipt` + preview + PDF/share
+
+- `Receipt` + `ReceiptLine` (entity) dan `ReceiptFormatter` yang merender
+  baris teks selebar 32 karakter (58mm, PRD §2.8). **Formatter ini satu-satunya
+  tempat tata letak struk ditentukan** — preview, PDF, dan nanti ESC/POS
+  memakai keluaran yang sama, jadi struk di layar tidak bisa beda dengan yang
+  tercetak.
+- `TransactionRepository.buildReceipt()` menyusun struk dari transaksi
+  tersimpan, memakai snapshot `transaction_items` — cetak ulang struk lama
+  tetap sama walau harga produk berubah (US-3.4).
+- `ReceiptPreviewScreen`: menampilkan baris struk apa adanya dengan font
+  monospace, plus tombol bagikan dan salin teks. Dibuka otomatis setelah bayar.
+- **Info toko disambungkan**: `SettingsDao` + `SettingsRepository` +
+  `StoreInfo` + `StoreInfoScreen`. Tabel `settings` dari langkah 2 berhenti
+  jadi tabel mati, dan baris dummy "Nama toko: Henshin Store" di Pengaturan
+  diganti data sungguhan.
+- 23 tes: lebar baris tidak pernah lewat 32 karakter (termasuk kata yang lebih
+  panjang dari kertas), angka rata kanan tidak pernah terpotong, penanda VOID
+  dan CETAK ULANG, struk dari transaksi nyata, PDF benar-benar terbentuk
+  (header `%PDF-`), nama produk non-Latin1 tidak menggagalkan PDF, dan info
+  toko tersimpan/terbaca.
+
+## Langkah 9 — Cetak ESC/POS (sebagian)
+
+- `PrinterService` (interface) + `PdfPrinterService` (impl PDF/share dengan
+  `PdfPageFormat.roll57` dan font Courier bawaan — tanpa aset font).
+- `PrintFailure` ditambahkan: gagal cetak **tidak pernah** berarti transaksi
+  gagal, karena penjualan selalu tersimpan lebih dulu (US-1.4).
+- **Impl Bluetooth belum dibuat.** Plugin yang dikunci untuk nanti:
+  `print_bluetooth_thermal` + `esc_pos_utils_plus`. `esc_pos_bluetooth` yang
+  disebut rencana **ditolak** karena rilis terakhirnya 2021-10-06. Lihat
+  ADR-023.
+
 ## Perbaikan setelah verifikasi manual
 
 - **Form tambah produk tidak pernah tertutup setelah simpan sukses** (dilaporkan
   pemilik). `ProductState.writeCount` ditambahkan sebagai penanda selesainya
   operasi tulis; `status` saja tidak cukup. Lihat ADR-013.
+- **"Bagikan PDF" gagal di HP — dua penyebab terpisah** (dilaporkan pemilik).
+  (1) File ditulis ke `Directory.systemTemp`, yang di Android menunjuk `/tmp`
+  dan tidak bisa ditulis aplikasi; diganti `getTemporaryDirectory()`. Tes
+  desktop lolos sepanjang waktu karena `systemTemp` valid di Windows —
+  ADR-026. (2) Lalu muncul `MissingPluginException` pada channel
+  `dev.fluttercommunity.plus/share`: **bukan** bug `share_plus` dan bukan
+  kode Dart (API v13-nya sudah benar), tapi APK di device dibuild 18:19
+  sementara `share_plus` baru masuk `pubspec.yaml` 21:22 — sisi native-nya
+  belum ada di binary. Butuh `flutter run` penuh. Kegagalan cetak sekarang
+  ikut di-`debugPrint` supaya bisa diambil lewat adb, tidak hanya muncul di
+  snackbar.
+- **`StoreInfoScreen` macet di spinner selamanya** (dilaporkan pemilik).
+  Pemuatan async di `initState` tidak ber-try/catch, jadi satu exception
+  membuat flag loading tidak pernah dimatikan — tanpa pesan, tanpa jalan
+  keluar. Diperbaiki di tiga layar yang berpola sama. Lihat ADR-025.
 - **Layar kasir tidak punya tombol keluar** (dilaporkan pemilik). Dashboard
   membukanya dengan `context.go` yang mengganti stack navigasi, jadi AppBar
   tidak memunculkan tombol kembali **dan** tombol back fisik keluar dari
@@ -144,7 +201,7 @@ belum** — kasir dan scanner masih menunggu uji di HP.
 
 | Hal | Dampak |
 |---|---|
-| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (84 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
+| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (107 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
 | `settings.schemaVersion` hanya diisi saat seed | Jadi basi setelah bump versi berikutnya. Ditandai `shortcut:` di kode |
 | `decrementStock`/`incrementStock` lama di `ProductDao` tidak menulis ledger dan **tidak dipakai siapa pun** | Langkah 6 tidak memakainya (penjualan lewat `TransactionDao.createSale`). Jebakan untuk langkah 11 (void) — pakai `TransactionDao.voidTransaction`. Kandidat dihapus |
 | `setting_screen.dart` memuat baris dummy "Pajak (PPN) 11%" dan "Export laporan CSV" | Keduanya di luar scope (AGENTS.md §5), perlu dibersihkan sebelum rilis |
@@ -152,3 +209,7 @@ belum** — kasir dan scanner masih menunggu uji di HP.
 | Layar `StockSheet`, `LowStockScreen`, jalur PinGate-saat-ubah-harga, dan alur simpan form sampai layarnya tertutup belum punya tes | Terverifikasi manual, bukan otomatis. Celah inilah yang melewatkan bug ADR-013. Lihat ADR-012 |
 | `.claude/` belum masuk `.gitignore` | Konfigurasi lokal berisiko ikut ter-commit |
 | Scanner belum pernah dijalankan di device fisik | Metrik PRD "produk masuk keranjang ≤2 detik" belum terukur. Emulator tidak cukup (PRD §1.6) |
+| Impl cetak ESC/POS Bluetooth belum ada | Langkah 9 belum tuntas. Butuh printer 58mm fisik + spike 1 hari (PRD §3.4). Metrik "50× cetak ≥95% sukses" belum terukur |
+| Share sheet PDF belum terkonfirmasi berhasil di device | Dua perbaikan (ADR-026 + rebuild penuh) belum pernah berjalan bersamaan di HP. `SharePlus.instance.share` sendiri belum pernah dikonfirmasi jalan di Android |
+| Peringatan `Courier has no Unicode support` di log | Hanya informatif; karakter non-Latin1 dipetakan ke `?` di PDF (ADR-027). Ganti font Unicode kalau katalog butuh |
+| `ReceiptPreviewScreen` dan `StoreInfoScreen` belum punya tes | Sama seperti layar lain (ADR-012) |

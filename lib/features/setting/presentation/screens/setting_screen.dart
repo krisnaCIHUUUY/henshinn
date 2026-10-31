@@ -4,7 +4,10 @@ import 'package:henshin/core/theme/app_color.dart';
 import 'package:henshin/core/theme/app_radius.dart';
 import 'package:henshin/core/theme/app_text_style.dart';
 import 'package:henshin/core/utils/page_routes.dart';
+import 'package:henshin/features/setting/domain/entities/store_info.dart';
 import 'package:henshin/features/setting/domain/repositories/pin_repository.dart';
+import 'package:henshin/features/setting/domain/repositories/settings_repository.dart';
+import 'package:henshin/features/setting/presentation/screens/store_info_screen.dart';
 import 'package:henshin/features/setting/presentation/pin_gate.dart';
 import 'package:henshin/injection_container.dart';
 
@@ -18,16 +21,45 @@ class SettingScreen extends StatefulWidget {
 class _SettingScreenState extends State<SettingScreen> {
   bool _switchValue = false;
   bool _hasPin = false;
+  StoreInfo _store = const StoreInfo();
 
   @override
   void initState() {
     super.initState();
     _loadPinStatus();
+    _loadStoreInfo();
+  }
+
+  /// Gagal baca bukan masalah fatal di layar ini: barisnya cukup menampilkan
+  /// "Belum diisi". Yang penting tidak jadi unhandled exception.
+  Future<void> _loadStoreInfo() async {
+    try {
+      final info = (await sl<SettingsRepository>().getStoreInfo()).getOrElse(
+        () => const StoreInfo(),
+      );
+      if (mounted) setState(() => _store = info);
+    } catch (_) {
+      if (mounted) setState(() => _store = const StoreInfo());
+    }
+  }
+
+  Future<void> _openStoreInfo() async {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const StoreInfoScreen()),
+    );
+    await _loadStoreInfo();
   }
 
   Future<void> _loadPinStatus() async {
-    final hasPin = (await sl<PinRepository>().hasPin()).getOrElse(() => false);
-    if (mounted) setState(() => _hasPin = hasPin);
+    try {
+      final hasPin = (await sl<PinRepository>().hasPin()).getOrElse(
+        () => false,
+      );
+      if (mounted) setState(() => _hasPin = hasPin);
+    } catch (_) {
+      // Anggap belum ada PIN; barisnya mengajak membuat PIN.
+      if (mounted) setState(() => _hasPin = false);
+    }
   }
 
   Future<void> _openPinScreen() async {
@@ -67,13 +99,15 @@ class _SettingScreenState extends State<SettingScreen> {
             _SettingsGroup(
               children: [
                 _SettingsRow(
-                  title: 'Nama toko',
-                  subtitle: 'Henshin Store',
-                  trailing: const Icon(Icons.chevron_right,
-                      color: AppColor.outline),
-                  onTap: () {
-                    // navigasi ke edit nama toko
-                  },
+                  title: 'Info toko',
+                  subtitle: _store.name.isEmpty
+                      ? 'Belum diisi — tidak muncul di struk'
+                      : _store.name,
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: AppColor.outline,
+                  ),
+                  onTap: _openStoreInfo,
                 ),
                 _SettingsRow(
                   title: 'Pajak (PPN)',
