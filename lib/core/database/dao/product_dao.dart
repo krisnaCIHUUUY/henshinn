@@ -3,11 +3,9 @@ import 'package:henshin/core/database/app_database.dart';
 
 part 'product_dao.g.dart';
 
-@DriftAccessor(tables: [Products, Categories])
+@DriftAccessor(tables: [Products, Categories, StockMovements])
 class ProductDao extends DatabaseAccessor<AppDatabase> with _$ProductDaoMixin {
   ProductDao(super.db);
-
-  // Tambahkan method ini di ProductDao yang sudah dibuat sebelumnya
 
   Future<Product?> getProductById(int id) {
     return (select(products)..where((p) => p.id.equals(id))).getSingleOrNull();
@@ -34,21 +32,97 @@ class ProductDao extends DatabaseAccessor<AppDatabase> with _$ProductDaoMixin {
     )..where((p) => p.barcode.equals(barcode))).getSingleOrNull();
   }
 
-  // Produk dengan stok menipis (misal <= threshold)
-  Stream<List<Product>> watchLowStockProducts(int threshold) {
-    return (select(
-      products,
-    )..where((p) => p.stock.isSmallerOrEqualValue(threshold))).watch();
+  /// Produk yang perlu direstok. Batasnya per produk (`lowStockThreshold`),
+  /// bukan satu angka global — dua kolom dibandingkan langsung di SQL.
+  Stream<List<Product>> watchLowStockProducts() {
+    return (select(products)
+          ..where((p) => p.stock.isSmallerOrEqual(p.lowStockThreshold))
+          ..where((p) => p.isActive.equals(true))
+          ..orderBy([(p) => OrderingTerm.asc(p.stock)]))
+        .watch();
   }
 
-  Future<int> addProduct(ProductsCompanion product) =>
-      into(products).insert(product);
+  /// Insert produk + baris ledger untuk stok awal, dalam satu transaksi.
+  /// Stok awal pun perubahan stok, jadi tetap tercatat (PRD §2.6).
+  Future<int> addProduct(ProductsCompanion product) {
+    return transaction(() async {
+      final id = await into(products).insert(product);
 
-  Future<bool> updateProduct(ProductsCompanion product) =>
-      update(products).replace(product);
+      final initialStock = product.stock.present ? product.stock.value : 0;
+      if (initialStock != 0) {
+        await into(stockMovements).insert(
+          StockMovementsCompanion.insert(
+            productId: id,
+            type: 'in',
+            quantity: initialStock,
+            note: const Value('Stok awal'),
+          ),
+        );
+      }
 
-  Future<int> deleteProduct(int id) =>
-      (delete(products)..where((p) => p.id.equals(id))).go();
+      return id;
+    });
+  }
+
+  /// Sengaja tidak menyentuh kolom `stock`: satu-satunya jalan mengubah stok
+  /// adalah [restock] / [adjustStock], supaya ledger tidak pernah bolong.
+  Future<bool> updateProductDetails(int id, ProductsCompanion details) async {
+    final rows = await (update(products)..where((p) => p.id.equals(id))).write(
+      details.copyWith(id: const Value.absent(), stock: const Value.absent()),
+    );
+    return rows > 0;
+  }
+
+  /// Ledger stok hanya milik produk ini, jadi ikut terhapus. FK dari
+  /// `transaction_items` tetap menghalangi produk yang sudah pernah terjual,
+  /// dan karena satu transaksi, penghapusan ledger ikut dibatalkan kalau gagal.
+  Future<int> deleteProduct(int id) {
+    return transaction(() async {
+      await (delete(stockMovements)..where((m) => m.productId.equals(id))).go();
+      return (delete(products)..where((p) => p.id.equals(id))).go();
+    });
+  }
+
+  /// Barang masuk. Menambah stok + menulis 1 baris ledger, atomik.
+  Future<void> restock(int productId, int qty, {String? note}) {
+    return transaction(() async {
+      await (update(products)..where((p) => p.id.equals(productId))).write(
+        ProductsCompanion.custom(stock: products.stock + Variable(qty)),
+      );
+      await into(stockMovements).insert(
+        StockMovementsCompanion.insert(
+          productId: productId,
+          type: 'in',
+          quantity: qty,
+          note: Value(note),
+        ),
+      );
+    });
+  }
+
+  /// Koreksi stok ke angka hasil hitung fisik. Ledger mencatat selisihnya,
+  /// bukan angka akhirnya, supaya penjumlahan ledger tetap cocok dengan stok.
+  Future<void> adjustStock(int productId, int newStock, {String? note}) {
+    return transaction(() async {
+      final current = await getProductById(productId);
+      if (current == null) return;
+
+      final delta = newStock - current.stock;
+      if (delta == 0) return;
+
+      await (update(products)..where((p) => p.id.equals(productId))).write(
+        ProductsCompanion(stock: Value(newStock)),
+      );
+      await into(stockMovements).insert(
+        StockMovementsCompanion.insert(
+          productId: productId,
+          type: 'adjustment',
+          quantity: delta,
+          note: Value(note),
+        ),
+      );
+    });
+  }
 
   // Kurangi stok (dipanggil saat transaksi)
   Future<void> decrementStock(int productId, int qty) async {

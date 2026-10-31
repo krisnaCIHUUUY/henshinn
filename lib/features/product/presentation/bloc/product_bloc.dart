@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:dartz/dartz.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:henshin/core/errors/failures.dart';
 import 'package:henshin/features/product/domain/repositories/product_repository.dart';
 import 'package:henshin/features/product/domain/usecases/add_product.dart';
 import 'package:henshin/features/product/domain/usecases/delete_product.dart';
@@ -23,11 +25,15 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     required this._deleteProduct,
   }) : super(const ProductState()) {
     on<ProductSubscriptionRequested>(_onSubscriptionRequested);
+    on<ProductCategoriesRequested>(_onCategoriesRequested);
     on<ProductByCategoryRequested>(_onByCategoryRequested);
     on<ProductSearchQueryChanged>(_onSearchQueryChanged);
     on<ProductAdded>(_onAdded);
     on<ProductUpdated>(_onUpdated);
     on<ProductDeleted>(_onDeleted);
+    on<ProductLowStockRequested>(_onLowStockRequested);
+    on<ProductRestocked>(_onRestocked);
+    on<ProductStockAdjusted>(_onStockAdjusted);
     on<ProductBarcodeScanned>(_onBarcodeScanned);
   }
 
@@ -41,6 +47,22 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
       _repository.watchAllProducts(),
       onData: (products) =>
           state.copyWith(status: ProductStatus.success, products: products),
+      onError: (error, stackTrace) => state.copyWith(
+        status: ProductStatus.failure,
+        errorMessage: error.toString(),
+      ),
+    );
+  }
+
+  /// Handler terpisah dari produk supaya dua stream bisa jalan bersamaan;
+  /// `emit.forEach` menahan handler-nya sampai stream selesai.
+  Future<void> _onCategoriesRequested(
+    ProductCategoriesRequested event,
+    Emitter<ProductState> emit,
+  ) async {
+    await emit.forEach(
+      _repository.watchCategories(),
+      onData: (categories) => state.copyWith(categories: categories),
       onError: (error, stackTrace) => state.copyWith(
         status: ProductStatus.failure,
         errorMessage: error.toString(),
@@ -123,6 +145,59 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     Emitter<ProductState> emit,
   ) async {
     final result = await _deleteProduct(event.productId);
+    result.fold(
+      (failure) => emit(
+        state.copyWith(
+          status: ProductStatus.failure,
+          errorMessage: failure.message,
+        ),
+      ),
+      (_) => emit(state.copyWith(status: ProductStatus.success)),
+    );
+  }
+
+  Future<void> _onLowStockRequested(
+    ProductLowStockRequested event,
+    Emitter<ProductState> emit,
+  ) async {
+    await emit.forEach(
+      _repository.watchLowStockProducts(),
+      onData: (products) => state.copyWith(lowStockProducts: products),
+      onError: (error, stackTrace) => state.copyWith(
+        status: ProductStatus.failure,
+        errorMessage: error.toString(),
+      ),
+    );
+  }
+
+  Future<void> _onRestocked(
+    ProductRestocked event,
+    Emitter<ProductState> emit,
+  ) async {
+    final result = await _repository.restock(
+      event.productId,
+      event.qty,
+      note: event.note,
+    );
+    _emitResult(result, emit);
+  }
+
+  Future<void> _onStockAdjusted(
+    ProductStockAdjusted event,
+    Emitter<ProductState> emit,
+  ) async {
+    final result = await _repository.adjustStock(
+      event.productId,
+      event.newStock,
+      note: event.note,
+    );
+    _emitResult(result, emit);
+  }
+
+  void _emitResult(
+    Either<Failure, void> result,
+    Emitter<ProductState> emit,
+  ) {
     result.fold(
       (failure) => emit(
         state.copyWith(

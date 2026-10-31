@@ -19,3 +19,17 @@ class NotFoundFailure extends Failure {
 class ValidationFailure extends Failure {
   const ValidationFailure(super.message);
 }
+
+class StorageFailure extends Failure {
+  const StorageFailure(super.message);
+}
+
+/// Terlalu banyak PIN salah — pemanggil harus menunggu `remaining` dulu.
+class PinLockedFailure extends Failure {
+  final Duration remaining;
+
+  const PinLockedFailure(super.message, this.remaining);
+
+  @override
+  List<Object?> get props => [message, remaining];
+}

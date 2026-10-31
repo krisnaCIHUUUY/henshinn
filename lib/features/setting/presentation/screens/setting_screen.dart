@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:henshin/core/theme/app_color.dart';
 import 'package:henshin/core/theme/app_radius.dart';
 import 'package:henshin/core/theme/app_text_style.dart';
+import 'package:henshin/core/utils/page_routes.dart';
+import 'package:henshin/features/setting/domain/repositories/pin_repository.dart';
+import 'package:henshin/features/setting/presentation/pin_gate.dart';
+import 'package:henshin/injection_container.dart';
 
 class SettingScreen extends StatefulWidget {
   const SettingScreen({super.key});
@@ -12,6 +17,34 @@ class SettingScreen extends StatefulWidget {
 
 class _SettingScreenState extends State<SettingScreen> {
   bool _switchValue = false;
+  bool _hasPin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPinStatus();
+  }
+
+  Future<void> _loadPinStatus() async {
+    final hasPin = (await sl<PinRepository>().hasPin()).getOrElse(() => false);
+    if (mounted) setState(() => _hasPin = hasPin);
+  }
+
+  Future<void> _openPinScreen() async {
+    // Sudah ada PIN: buktikan dulu pemegangnya sebelum boleh menggantinya.
+    if (_hasPin &&
+        !await PinGate.require(
+          context,
+          reason: 'Diperlukan untuk mengganti PIN',
+        )) {
+      return;
+    }
+    if (!mounted) return;
+
+    await context.push<bool>(PageRoutes.aturPin);
+    await _loadPinStatus();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -64,6 +97,25 @@ class _SettingScreenState extends State<SettingScreen> {
                   onTap: () {
                     // navigasi ke pengaturan printer
                   },
+                  isLast: true,
+                ),
+              ],
+            ),
+            const SizedBox(height: 28),
+            const _SectionLabel(label: 'Keamanan'),
+            const SizedBox(height: 10),
+            _SettingsGroup(
+              children: [
+                _SettingsRow(
+                  title: _hasPin ? 'Ganti PIN' : 'Buat PIN',
+                  subtitle: _hasPin
+                      ? 'Melindungi void, restore, ubah harga, dan laba'
+                      : 'Belum diatur — void dan restore belum terlindungi',
+                  trailing: _hasPin
+                      ? const _StatusBadge(label: 'Aktif')
+                      : const Icon(Icons.chevron_right,
+                          color: AppColor.outline),
+                  onTap: _openPinScreen,
                   isLast: true,
                 ),
               ],

@@ -10,8 +10,12 @@ abstract class ProductRepository {
   /// Stream produk berdasarkan kategori tertentu.
   Stream<List<ProductEntity>> watchProductsByCategory(int categoryId);
 
-  /// Stream produk dengan stok di bawah/sama dengan threshold.
-  Stream<List<ProductEntity>> watchLowStockProducts(int threshold);
+  /// Stream kategori untuk pilihan di form produk. Ikut di repository ini
+  /// karena kategori belum punya CRUD sendiri — baru dipakai baca-saja.
+  Stream<List<CategoryEntity>> watchCategories();
+
+  /// Stream produk aktif yang stoknya <= batas per produk sendiri.
+  Stream<List<ProductEntity>> watchLowStockProducts();
 
   Future<Either<Failure, List<ProductEntity>>> searchProducts(String keyword);
 
@@ -24,4 +28,14 @@ abstract class ProductRepository {
   Future<Either<Failure, void>> updateProduct(ProductEntity product);
 
   Future<Either<Failure, void>> deleteProduct(int id);
+
+  /// Barang masuk: stok naik + 1 baris `stock_movements`, atomik.
+  Future<Either<Failure, void>> restock(int productId, int qty, {String? note});
+
+  /// Koreksi ke hasil hitung fisik; ledger mencatat selisihnya.
+  Future<Either<Failure, void>> adjustStock(
+    int productId,
+    int newStock, {
+    String? note,
+  });
 }

@@ -51,10 +51,19 @@ dependencies:
   mobile_scanner: ^7.4.2
   vibration: ^3.2.1
   permission_handler: ^13.0.2
+  get_it: ^9.3.0
+  flutter_secure_storage: ^10.0.0
+  crypto: ^3.0.6
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  # dipakai tes PIN untuk mengganti secure storage dengan fake berbasis Map
+  flutter_secure_storage_platform_interface: ^2.1.1
+  # dipakai tes DI untuk memalsukan direktori penyimpanan DB
+  path_provider_platform_interface: ^2.1.2
+  plugin_platform_interface: ^2.1.8
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

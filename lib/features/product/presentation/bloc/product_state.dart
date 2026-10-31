@@ -10,6 +10,8 @@ abstract class ProductState with _$ProductState {
     @Default(ProductStatus.initial) ProductStatus status,
     @Default([]) List<ProductEntity> products,
     @Default([]) List<ProductEntity> searchResults,
+    @Default([]) List<CategoryEntity> categories,
+    @Default([]) List<ProductEntity> lowStockProducts,
     @Default('') String errorMessage,
     ProductEntity? scannedProduct,
   }) = _ProductState;

@@ -226,6 +226,18 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _costPriceMeta = const VerificationMeta(
+    'costPrice',
+  );
+  @override
+  late final GeneratedColumn<int> costPrice = GeneratedColumn<int>(
+    'cost_price',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _stockMeta = const VerificationMeta('stock');
   @override
   late final GeneratedColumn<int> stock = GeneratedColumn<int>(
@@ -235,6 +247,33 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _lowStockThresholdMeta = const VerificationMeta(
+    'lowStockThreshold',
+  );
+  @override
+  late final GeneratedColumn<int> lowStockThreshold = GeneratedColumn<int>(
+    'low_stock_threshold',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(5),
+  );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
   );
   static const VerificationMeta _categoryIdMeta = const VerificationMeta(
     'categoryId',
@@ -277,7 +316,10 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     id,
     name,
     price,
+    costPrice,
     stock,
+    lowStockThreshold,
+    isActive,
     categoryId,
     barcode,
     imagePath,
@@ -313,10 +355,31 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     } else if (isInserting) {
       context.missing(_priceMeta);
     }
+    if (data.containsKey('cost_price')) {
+      context.handle(
+        _costPriceMeta,
+        costPrice.isAcceptableOrUnknown(data['cost_price']!, _costPriceMeta),
+      );
+    }
     if (data.containsKey('stock')) {
       context.handle(
         _stockMeta,
         stock.isAcceptableOrUnknown(data['stock']!, _stockMeta),
+      );
+    }
+    if (data.containsKey('low_stock_threshold')) {
+      context.handle(
+        _lowStockThresholdMeta,
+        lowStockThreshold.isAcceptableOrUnknown(
+          data['low_stock_threshold']!,
+          _lowStockThresholdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
       );
     }
     if (data.containsKey('category_id')) {
@@ -360,9 +423,21 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         DriftSqlType.int,
         data['${effectivePrefix}price'],
       )!,
+      costPrice: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cost_price'],
+      )!,
       stock: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}stock'],
+      )!,
+      lowStockThreshold: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}low_stock_threshold'],
+      )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
       )!,
       categoryId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -389,7 +464,10 @@ class Product extends DataClass implements Insertable<Product> {
   final int id;
   final String name;
   final int price;
+  final int costPrice;
   final int stock;
+  final int lowStockThreshold;
+  final bool isActive;
   final int categoryId;
   final String? barcode;
   final String? imagePath;
@@ -397,7 +475,10 @@ class Product extends DataClass implements Insertable<Product> {
     required this.id,
     required this.name,
     required this.price,
+    required this.costPrice,
     required this.stock,
+    required this.lowStockThreshold,
+    required this.isActive,
     required this.categoryId,
     this.barcode,
     this.imagePath,
@@ -408,7 +489,10 @@ class Product extends DataClass implements Insertable<Product> {
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
     map['price'] = Variable<int>(price);
+    map['cost_price'] = Variable<int>(costPrice);
     map['stock'] = Variable<int>(stock);
+    map['low_stock_threshold'] = Variable<int>(lowStockThreshold);
+    map['is_active'] = Variable<bool>(isActive);
     map['category_id'] = Variable<int>(categoryId);
     if (!nullToAbsent || barcode != null) {
       map['barcode'] = Variable<String>(barcode);
@@ -424,7 +508,10 @@ class Product extends DataClass implements Insertable<Product> {
       id: Value(id),
       name: Value(name),
       price: Value(price),
+      costPrice: Value(costPrice),
       stock: Value(stock),
+      lowStockThreshold: Value(lowStockThreshold),
+      isActive: Value(isActive),
       categoryId: Value(categoryId),
       barcode: barcode == null && nullToAbsent
           ? const Value.absent()
@@ -444,7 +531,10 @@ class Product extends DataClass implements Insertable<Product> {
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       price: serializer.fromJson<int>(json['price']),
+      costPrice: serializer.fromJson<int>(json['costPrice']),
       stock: serializer.fromJson<int>(json['stock']),
+      lowStockThreshold: serializer.fromJson<int>(json['lowStockThreshold']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
       categoryId: serializer.fromJson<int>(json['categoryId']),
       barcode: serializer.fromJson<String?>(json['barcode']),
       imagePath: serializer.fromJson<String?>(json['imagePath']),
@@ -457,7 +547,10 @@ class Product extends DataClass implements Insertable<Product> {
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
       'price': serializer.toJson<int>(price),
+      'costPrice': serializer.toJson<int>(costPrice),
       'stock': serializer.toJson<int>(stock),
+      'lowStockThreshold': serializer.toJson<int>(lowStockThreshold),
+      'isActive': serializer.toJson<bool>(isActive),
       'categoryId': serializer.toJson<int>(categoryId),
       'barcode': serializer.toJson<String?>(barcode),
       'imagePath': serializer.toJson<String?>(imagePath),
@@ -468,7 +561,10 @@ class Product extends DataClass implements Insertable<Product> {
     int? id,
     String? name,
     int? price,
+    int? costPrice,
     int? stock,
+    int? lowStockThreshold,
+    bool? isActive,
     int? categoryId,
     Value<String?> barcode = const Value.absent(),
     Value<String?> imagePath = const Value.absent(),
@@ -476,7 +572,10 @@ class Product extends DataClass implements Insertable<Product> {
     id: id ?? this.id,
     name: name ?? this.name,
     price: price ?? this.price,
+    costPrice: costPrice ?? this.costPrice,
     stock: stock ?? this.stock,
+    lowStockThreshold: lowStockThreshold ?? this.lowStockThreshold,
+    isActive: isActive ?? this.isActive,
     categoryId: categoryId ?? this.categoryId,
     barcode: barcode.present ? barcode.value : this.barcode,
     imagePath: imagePath.present ? imagePath.value : this.imagePath,
@@ -486,7 +585,12 @@ class Product extends DataClass implements Insertable<Product> {
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       price: data.price.present ? data.price.value : this.price,
+      costPrice: data.costPrice.present ? data.costPrice.value : this.costPrice,
       stock: data.stock.present ? data.stock.value : this.stock,
+      lowStockThreshold: data.lowStockThreshold.present
+          ? data.lowStockThreshold.value
+          : this.lowStockThreshold,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
       categoryId: data.categoryId.present
           ? data.categoryId.value
           : this.categoryId,
@@ -501,7 +605,10 @@ class Product extends DataClass implements Insertable<Product> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('price: $price, ')
+          ..write('costPrice: $costPrice, ')
           ..write('stock: $stock, ')
+          ..write('lowStockThreshold: $lowStockThreshold, ')
+          ..write('isActive: $isActive, ')
           ..write('categoryId: $categoryId, ')
           ..write('barcode: $barcode, ')
           ..write('imagePath: $imagePath')
@@ -510,8 +617,18 @@ class Product extends DataClass implements Insertable<Product> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, price, stock, categoryId, barcode, imagePath);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    price,
+    costPrice,
+    stock,
+    lowStockThreshold,
+    isActive,
+    categoryId,
+    barcode,
+    imagePath,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -519,7 +636,10 @@ class Product extends DataClass implements Insertable<Product> {
           other.id == this.id &&
           other.name == this.name &&
           other.price == this.price &&
+          other.costPrice == this.costPrice &&
           other.stock == this.stock &&
+          other.lowStockThreshold == this.lowStockThreshold &&
+          other.isActive == this.isActive &&
           other.categoryId == this.categoryId &&
           other.barcode == this.barcode &&
           other.imagePath == this.imagePath);
@@ -529,7 +649,10 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   final Value<int> id;
   final Value<String> name;
   final Value<int> price;
+  final Value<int> costPrice;
   final Value<int> stock;
+  final Value<int> lowStockThreshold;
+  final Value<bool> isActive;
   final Value<int> categoryId;
   final Value<String?> barcode;
   final Value<String?> imagePath;
@@ -537,7 +660,10 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.price = const Value.absent(),
+    this.costPrice = const Value.absent(),
     this.stock = const Value.absent(),
+    this.lowStockThreshold = const Value.absent(),
+    this.isActive = const Value.absent(),
     this.categoryId = const Value.absent(),
     this.barcode = const Value.absent(),
     this.imagePath = const Value.absent(),
@@ -546,7 +672,10 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.id = const Value.absent(),
     required String name,
     required int price,
+    this.costPrice = const Value.absent(),
     this.stock = const Value.absent(),
+    this.lowStockThreshold = const Value.absent(),
+    this.isActive = const Value.absent(),
     required int categoryId,
     this.barcode = const Value.absent(),
     this.imagePath = const Value.absent(),
@@ -557,7 +686,10 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Expression<int>? id,
     Expression<String>? name,
     Expression<int>? price,
+    Expression<int>? costPrice,
     Expression<int>? stock,
+    Expression<int>? lowStockThreshold,
+    Expression<bool>? isActive,
     Expression<int>? categoryId,
     Expression<String>? barcode,
     Expression<String>? imagePath,
@@ -566,7 +698,10 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (price != null) 'price': price,
+      if (costPrice != null) 'cost_price': costPrice,
       if (stock != null) 'stock': stock,
+      if (lowStockThreshold != null) 'low_stock_threshold': lowStockThreshold,
+      if (isActive != null) 'is_active': isActive,
       if (categoryId != null) 'category_id': categoryId,
       if (barcode != null) 'barcode': barcode,
       if (imagePath != null) 'image_path': imagePath,
@@ -577,7 +712,10 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Value<int>? id,
     Value<String>? name,
     Value<int>? price,
+    Value<int>? costPrice,
     Value<int>? stock,
+    Value<int>? lowStockThreshold,
+    Value<bool>? isActive,
     Value<int>? categoryId,
     Value<String?>? barcode,
     Value<String?>? imagePath,
@@ -586,7 +724,10 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       id: id ?? this.id,
       name: name ?? this.name,
       price: price ?? this.price,
+      costPrice: costPrice ?? this.costPrice,
       stock: stock ?? this.stock,
+      lowStockThreshold: lowStockThreshold ?? this.lowStockThreshold,
+      isActive: isActive ?? this.isActive,
       categoryId: categoryId ?? this.categoryId,
       barcode: barcode ?? this.barcode,
       imagePath: imagePath ?? this.imagePath,
@@ -605,8 +746,17 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     if (price.present) {
       map['price'] = Variable<int>(price.value);
     }
+    if (costPrice.present) {
+      map['cost_price'] = Variable<int>(costPrice.value);
+    }
     if (stock.present) {
       map['stock'] = Variable<int>(stock.value);
+    }
+    if (lowStockThreshold.present) {
+      map['low_stock_threshold'] = Variable<int>(lowStockThreshold.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
     }
     if (categoryId.present) {
       map['category_id'] = Variable<int>(categoryId.value);
@@ -626,7 +776,10 @@ class ProductsCompanion extends UpdateCompanion<Product> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('price: $price, ')
+          ..write('costPrice: $costPrice, ')
           ..write('stock: $stock, ')
+          ..write('lowStockThreshold: $lowStockThreshold, ')
+          ..write('isActive: $isActive, ')
           ..write('categoryId: $categoryId, ')
           ..write('barcode: $barcode, ')
           ..write('imagePath: $imagePath')
@@ -1841,6 +1994,423 @@ class StockMovementsCompanion extends UpdateCompanion<StockMovement> {
   }
 }
 
+class $SettingsTable extends Settings with TableInfo<$SettingsTable, Setting> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SettingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _storeNameMeta = const VerificationMeta(
+    'storeName',
+  );
+  @override
+  late final GeneratedColumn<String> storeName = GeneratedColumn<String>(
+    'store_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _storeAddressMeta = const VerificationMeta(
+    'storeAddress',
+  );
+  @override
+  late final GeneratedColumn<String> storeAddress = GeneratedColumn<String>(
+    'store_address',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _receiptMessageMeta = const VerificationMeta(
+    'receiptMessage',
+  );
+  @override
+  late final GeneratedColumn<String> receiptMessage = GeneratedColumn<String>(
+    'receipt_message',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _lastBackupAtMeta = const VerificationMeta(
+    'lastBackupAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastBackupAt = GeneratedColumn<DateTime>(
+    'last_backup_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _schemaVersionMeta = const VerificationMeta(
+    'schemaVersion',
+  );
+  @override
+  late final GeneratedColumn<int> schemaVersion = GeneratedColumn<int>(
+    'schema_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    storeName,
+    storeAddress,
+    receiptMessage,
+    lastBackupAt,
+    schemaVersion,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'settings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Setting> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('store_name')) {
+      context.handle(
+        _storeNameMeta,
+        storeName.isAcceptableOrUnknown(data['store_name']!, _storeNameMeta),
+      );
+    }
+    if (data.containsKey('store_address')) {
+      context.handle(
+        _storeAddressMeta,
+        storeAddress.isAcceptableOrUnknown(
+          data['store_address']!,
+          _storeAddressMeta,
+        ),
+      );
+    }
+    if (data.containsKey('receipt_message')) {
+      context.handle(
+        _receiptMessageMeta,
+        receiptMessage.isAcceptableOrUnknown(
+          data['receipt_message']!,
+          _receiptMessageMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_backup_at')) {
+      context.handle(
+        _lastBackupAtMeta,
+        lastBackupAt.isAcceptableOrUnknown(
+          data['last_backup_at']!,
+          _lastBackupAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('schema_version')) {
+      context.handle(
+        _schemaVersionMeta,
+        schemaVersion.isAcceptableOrUnknown(
+          data['schema_version']!,
+          _schemaVersionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_schemaVersionMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Setting map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Setting(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      storeName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}store_name'],
+      )!,
+      storeAddress: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}store_address'],
+      )!,
+      receiptMessage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}receipt_message'],
+      )!,
+      lastBackupAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_backup_at'],
+      ),
+      schemaVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}schema_version'],
+      )!,
+    );
+  }
+
+  @override
+  $SettingsTable createAlias(String alias) {
+    return $SettingsTable(attachedDatabase, alias);
+  }
+}
+
+class Setting extends DataClass implements Insertable<Setting> {
+  final int id;
+  final String storeName;
+  final String storeAddress;
+  final String receiptMessage;
+  final DateTime? lastBackupAt;
+  final int schemaVersion;
+  const Setting({
+    required this.id,
+    required this.storeName,
+    required this.storeAddress,
+    required this.receiptMessage,
+    this.lastBackupAt,
+    required this.schemaVersion,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['store_name'] = Variable<String>(storeName);
+    map['store_address'] = Variable<String>(storeAddress);
+    map['receipt_message'] = Variable<String>(receiptMessage);
+    if (!nullToAbsent || lastBackupAt != null) {
+      map['last_backup_at'] = Variable<DateTime>(lastBackupAt);
+    }
+    map['schema_version'] = Variable<int>(schemaVersion);
+    return map;
+  }
+
+  SettingsCompanion toCompanion(bool nullToAbsent) {
+    return SettingsCompanion(
+      id: Value(id),
+      storeName: Value(storeName),
+      storeAddress: Value(storeAddress),
+      receiptMessage: Value(receiptMessage),
+      lastBackupAt: lastBackupAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastBackupAt),
+      schemaVersion: Value(schemaVersion),
+    );
+  }
+
+  factory Setting.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Setting(
+      id: serializer.fromJson<int>(json['id']),
+      storeName: serializer.fromJson<String>(json['storeName']),
+      storeAddress: serializer.fromJson<String>(json['storeAddress']),
+      receiptMessage: serializer.fromJson<String>(json['receiptMessage']),
+      lastBackupAt: serializer.fromJson<DateTime?>(json['lastBackupAt']),
+      schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'storeName': serializer.toJson<String>(storeName),
+      'storeAddress': serializer.toJson<String>(storeAddress),
+      'receiptMessage': serializer.toJson<String>(receiptMessage),
+      'lastBackupAt': serializer.toJson<DateTime?>(lastBackupAt),
+      'schemaVersion': serializer.toJson<int>(schemaVersion),
+    };
+  }
+
+  Setting copyWith({
+    int? id,
+    String? storeName,
+    String? storeAddress,
+    String? receiptMessage,
+    Value<DateTime?> lastBackupAt = const Value.absent(),
+    int? schemaVersion,
+  }) => Setting(
+    id: id ?? this.id,
+    storeName: storeName ?? this.storeName,
+    storeAddress: storeAddress ?? this.storeAddress,
+    receiptMessage: receiptMessage ?? this.receiptMessage,
+    lastBackupAt: lastBackupAt.present ? lastBackupAt.value : this.lastBackupAt,
+    schemaVersion: schemaVersion ?? this.schemaVersion,
+  );
+  Setting copyWithCompanion(SettingsCompanion data) {
+    return Setting(
+      id: data.id.present ? data.id.value : this.id,
+      storeName: data.storeName.present ? data.storeName.value : this.storeName,
+      storeAddress: data.storeAddress.present
+          ? data.storeAddress.value
+          : this.storeAddress,
+      receiptMessage: data.receiptMessage.present
+          ? data.receiptMessage.value
+          : this.receiptMessage,
+      lastBackupAt: data.lastBackupAt.present
+          ? data.lastBackupAt.value
+          : this.lastBackupAt,
+      schemaVersion: data.schemaVersion.present
+          ? data.schemaVersion.value
+          : this.schemaVersion,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Setting(')
+          ..write('id: $id, ')
+          ..write('storeName: $storeName, ')
+          ..write('storeAddress: $storeAddress, ')
+          ..write('receiptMessage: $receiptMessage, ')
+          ..write('lastBackupAt: $lastBackupAt, ')
+          ..write('schemaVersion: $schemaVersion')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    storeName,
+    storeAddress,
+    receiptMessage,
+    lastBackupAt,
+    schemaVersion,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Setting &&
+          other.id == this.id &&
+          other.storeName == this.storeName &&
+          other.storeAddress == this.storeAddress &&
+          other.receiptMessage == this.receiptMessage &&
+          other.lastBackupAt == this.lastBackupAt &&
+          other.schemaVersion == this.schemaVersion);
+}
+
+class SettingsCompanion extends UpdateCompanion<Setting> {
+  final Value<int> id;
+  final Value<String> storeName;
+  final Value<String> storeAddress;
+  final Value<String> receiptMessage;
+  final Value<DateTime?> lastBackupAt;
+  final Value<int> schemaVersion;
+  const SettingsCompanion({
+    this.id = const Value.absent(),
+    this.storeName = const Value.absent(),
+    this.storeAddress = const Value.absent(),
+    this.receiptMessage = const Value.absent(),
+    this.lastBackupAt = const Value.absent(),
+    this.schemaVersion = const Value.absent(),
+  });
+  SettingsCompanion.insert({
+    this.id = const Value.absent(),
+    this.storeName = const Value.absent(),
+    this.storeAddress = const Value.absent(),
+    this.receiptMessage = const Value.absent(),
+    this.lastBackupAt = const Value.absent(),
+    required int schemaVersion,
+  }) : schemaVersion = Value(schemaVersion);
+  static Insertable<Setting> custom({
+    Expression<int>? id,
+    Expression<String>? storeName,
+    Expression<String>? storeAddress,
+    Expression<String>? receiptMessage,
+    Expression<DateTime>? lastBackupAt,
+    Expression<int>? schemaVersion,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (storeName != null) 'store_name': storeName,
+      if (storeAddress != null) 'store_address': storeAddress,
+      if (receiptMessage != null) 'receipt_message': receiptMessage,
+      if (lastBackupAt != null) 'last_backup_at': lastBackupAt,
+      if (schemaVersion != null) 'schema_version': schemaVersion,
+    });
+  }
+
+  SettingsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? storeName,
+    Value<String>? storeAddress,
+    Value<String>? receiptMessage,
+    Value<DateTime?>? lastBackupAt,
+    Value<int>? schemaVersion,
+  }) {
+    return SettingsCompanion(
+      id: id ?? this.id,
+      storeName: storeName ?? this.storeName,
+      storeAddress: storeAddress ?? this.storeAddress,
+      receiptMessage: receiptMessage ?? this.receiptMessage,
+      lastBackupAt: lastBackupAt ?? this.lastBackupAt,
+      schemaVersion: schemaVersion ?? this.schemaVersion,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (storeName.present) {
+      map['store_name'] = Variable<String>(storeName.value);
+    }
+    if (storeAddress.present) {
+      map['store_address'] = Variable<String>(storeAddress.value);
+    }
+    if (receiptMessage.present) {
+      map['receipt_message'] = Variable<String>(receiptMessage.value);
+    }
+    if (lastBackupAt.present) {
+      map['last_backup_at'] = Variable<DateTime>(lastBackupAt.value);
+    }
+    if (schemaVersion.present) {
+      map['schema_version'] = Variable<int>(schemaVersion.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SettingsCompanion(')
+          ..write('id: $id, ')
+          ..write('storeName: $storeName, ')
+          ..write('storeAddress: $storeAddress, ')
+          ..write('receiptMessage: $receiptMessage, ')
+          ..write('lastBackupAt: $lastBackupAt, ')
+          ..write('schemaVersion: $schemaVersion')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1851,6 +2421,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $StockMovementsTable stockMovements = $StockMovementsTable(this);
+  late final $SettingsTable settings = $SettingsTable(this);
+  late final Index productsBarcodeUnique = Index(
+    'products_barcode_unique',
+    'CREATE UNIQUE INDEX products_barcode_unique ON products (barcode)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1861,6 +2436,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     transactions,
     transactionItems,
     stockMovements,
+    settings,
+    productsBarcodeUnique,
   ];
 }
 
@@ -2097,7 +2674,10 @@ typedef $$ProductsTableCreateCompanionBuilder = ProductsCompanion Function({
   Value<int> id,
   required String name,
   required int price,
+  Value<int> costPrice,
   Value<int> stock,
+  Value<int> lowStockThreshold,
+  Value<bool> isActive,
   required int categoryId,
   Value<String?> barcode,
   Value<String?> imagePath,
@@ -2106,7 +2686,10 @@ typedef $$ProductsTableUpdateCompanionBuilder = ProductsCompanion Function({
   Value<int> id,
   Value<String> name,
   Value<int> price,
+  Value<int> costPrice,
   Value<int> stock,
+  Value<int> lowStockThreshold,
+  Value<bool> isActive,
   Value<int> categoryId,
   Value<String?> barcode,
   Value<String?> imagePath,
@@ -2196,8 +2779,23 @@ class $$ProductsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get costPrice => $composableBuilder(
+    column: $table.costPrice,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get stock => $composableBuilder(
     column: $table.stock,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lowStockThreshold => $composableBuilder(
+    column: $table.lowStockThreshold,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2309,8 +2907,23 @@ class $$ProductsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get costPrice => $composableBuilder(
+    column: $table.costPrice,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get stock => $composableBuilder(
     column: $table.stock,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lowStockThreshold => $composableBuilder(
+    column: $table.lowStockThreshold,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2366,8 +2979,19 @@ class $$ProductsTableAnnotationComposer
   GeneratedColumn<int> get price =>
       $composableBuilder(column: $table.price, builder: (column) => column);
 
+  GeneratedColumn<int> get costPrice =>
+      $composableBuilder(column: $table.costPrice, builder: (column) => column);
+
   GeneratedColumn<int> get stock =>
       $composableBuilder(column: $table.stock, builder: (column) => column);
+
+  GeneratedColumn<int> get lowStockThreshold => $composableBuilder(
+    column: $table.lowStockThreshold,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
 
   GeneratedColumn<String> get barcode =>
       $composableBuilder(column: $table.barcode, builder: (column) => column);
@@ -2484,7 +3108,10 @@ class $$ProductsTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<int> price = const Value.absent(),
+                Value<int> costPrice = const Value.absent(),
                 Value<int> stock = const Value.absent(),
+                Value<int> lowStockThreshold = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
                 Value<int> categoryId = const Value.absent(),
                 Value<String?> barcode = const Value.absent(),
                 Value<String?> imagePath = const Value.absent(),
@@ -2492,7 +3119,10 @@ class $$ProductsTableTableManager
                 id: id,
                 name: name,
                 price: price,
+                costPrice: costPrice,
                 stock: stock,
+                lowStockThreshold: lowStockThreshold,
+                isActive: isActive,
                 categoryId: categoryId,
                 barcode: barcode,
                 imagePath: imagePath,
@@ -2502,7 +3132,10 @@ class $$ProductsTableTableManager
                 Value<int> id = const Value.absent(),
                 required String name,
                 required int price,
+                Value<int> costPrice = const Value.absent(),
                 Value<int> stock = const Value.absent(),
+                Value<int> lowStockThreshold = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
                 required int categoryId,
                 Value<String?> barcode = const Value.absent(),
                 Value<String?> imagePath = const Value.absent(),
@@ -2510,7 +3143,10 @@ class $$ProductsTableTableManager
                 id: id,
                 name: name,
                 price: price,
+                costPrice: costPrice,
                 stock: stock,
+                lowStockThreshold: lowStockThreshold,
+                isActive: isActive,
                 categoryId: categoryId,
                 barcode: barcode,
                 imagePath: imagePath,
@@ -3715,6 +4351,219 @@ typedef $$StockMovementsTableProcessedTableManager =
       StockMovement,
       PrefetchHooks Function({bool productId})
     >;
+typedef $$SettingsTableCreateCompanionBuilder = SettingsCompanion Function({
+  Value<int> id,
+  Value<String> storeName,
+  Value<String> storeAddress,
+  Value<String> receiptMessage,
+  Value<DateTime?> lastBackupAt,
+  required int schemaVersion,
+});
+typedef $$SettingsTableUpdateCompanionBuilder = SettingsCompanion Function({
+  Value<int> id,
+  Value<String> storeName,
+  Value<String> storeAddress,
+  Value<String> receiptMessage,
+  Value<DateTime?> lastBackupAt,
+  Value<int> schemaVersion,
+});
+
+class $$SettingsTableFilterComposer
+    extends Composer<_$AppDatabase, $SettingsTable> {
+  $$SettingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get storeName => $composableBuilder(
+    column: $table.storeName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get storeAddress => $composableBuilder(
+    column: $table.storeAddress,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get receiptMessage => $composableBuilder(
+    column: $table.receiptMessage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastBackupAt => $composableBuilder(
+    column: $table.lastBackupAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get schemaVersion => $composableBuilder(
+    column: $table.schemaVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SettingsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SettingsTable> {
+  $$SettingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get storeName => $composableBuilder(
+    column: $table.storeName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get storeAddress => $composableBuilder(
+    column: $table.storeAddress,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get receiptMessage => $composableBuilder(
+    column: $table.receiptMessage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastBackupAt => $composableBuilder(
+    column: $table.lastBackupAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get schemaVersion => $composableBuilder(
+    column: $table.schemaVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SettingsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SettingsTable> {
+  $$SettingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get storeName =>
+      $composableBuilder(column: $table.storeName, builder: (column) => column);
+
+  GeneratedColumn<String> get storeAddress => $composableBuilder(
+    column: $table.storeAddress,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get receiptMessage => $composableBuilder(
+    column: $table.receiptMessage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastBackupAt => $composableBuilder(
+    column: $table.lastBackupAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get schemaVersion => $composableBuilder(
+    column: $table.schemaVersion,
+    builder: (column) => column,
+  );
+}
+
+class $$SettingsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SettingsTable,
+          Setting,
+          $$SettingsTableFilterComposer,
+          $$SettingsTableOrderingComposer,
+          $$SettingsTableAnnotationComposer,
+          $$SettingsTableCreateCompanionBuilder,
+          $$SettingsTableUpdateCompanionBuilder,
+          (Setting, BaseReferences<_$AppDatabase, $SettingsTable, Setting>),
+          Setting,
+          PrefetchHooks Function()
+        > {
+  $$SettingsTableTableManager(_$AppDatabase db, $SettingsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SettingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SettingsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SettingsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> storeName = const Value.absent(),
+                Value<String> storeAddress = const Value.absent(),
+                Value<String> receiptMessage = const Value.absent(),
+                Value<DateTime?> lastBackupAt = const Value.absent(),
+                Value<int> schemaVersion = const Value.absent(),
+              }) => SettingsCompanion(
+                id: id,
+                storeName: storeName,
+                storeAddress: storeAddress,
+                receiptMessage: receiptMessage,
+                lastBackupAt: lastBackupAt,
+                schemaVersion: schemaVersion,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> storeName = const Value.absent(),
+                Value<String> storeAddress = const Value.absent(),
+                Value<String> receiptMessage = const Value.absent(),
+                Value<DateTime?> lastBackupAt = const Value.absent(),
+                required int schemaVersion,
+              }) => SettingsCompanion.insert(
+                id: id,
+                storeName: storeName,
+                storeAddress: storeAddress,
+                receiptMessage: receiptMessage,
+                lastBackupAt: lastBackupAt,
+                schemaVersion: schemaVersion,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SettingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SettingsTable,
+      Setting,
+      $$SettingsTableFilterComposer,
+      $$SettingsTableOrderingComposer,
+      $$SettingsTableAnnotationComposer,
+      $$SettingsTableCreateCompanionBuilder,
+      $$SettingsTableUpdateCompanionBuilder,
+      (Setting, BaseReferences<_$AppDatabase, $SettingsTable, Setting>),
+      Setting,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3729,4 +4578,6 @@ class $AppDatabaseManager {
       $$TransactionItemsTableTableManager(_db, _db.transactionItems);
   $$StockMovementsTableTableManager get stockMovements =>
       $$StockMovementsTableTableManager(_db, _db.stockMovements);
+  $$SettingsTableTableManager get settings =>
+      $$SettingsTableTableManager(_db, _db.settings);
 }

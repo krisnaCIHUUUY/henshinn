@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ProductState {
 
- ProductStatus get status; List<ProductEntity> get products; List<ProductEntity> get searchResults; String get errorMessage; ProductEntity? get scannedProduct;
+ ProductStatus get status; List<ProductEntity> get products; List<ProductEntity> get searchResults; List<CategoryEntity> get categories; List<ProductEntity> get lowStockProducts; String get errorMessage; ProductEntity? get scannedProduct;
 /// Create a copy of ProductState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -26,16 +26,16 @@ $ProductStateCopyWith<ProductState> get copyWith => _$ProductStateCopyWithImpl<P
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ProductState&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other.products, products)&&const DeepCollectionEquality().equals(other.searchResults, searchResults)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.scannedProduct, scannedProduct) || other.scannedProduct == scannedProduct));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ProductState&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other.products, products)&&const DeepCollectionEquality().equals(other.searchResults, searchResults)&&const DeepCollectionEquality().equals(other.categories, categories)&&const DeepCollectionEquality().equals(other.lowStockProducts, lowStockProducts)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.scannedProduct, scannedProduct) || other.scannedProduct == scannedProduct));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,status,const DeepCollectionEquality().hash(products),const DeepCollectionEquality().hash(searchResults),errorMessage,scannedProduct);
+int get hashCode => Object.hash(runtimeType,status,const DeepCollectionEquality().hash(products),const DeepCollectionEquality().hash(searchResults),const DeepCollectionEquality().hash(categories),const DeepCollectionEquality().hash(lowStockProducts),errorMessage,scannedProduct);
 
 @override
 String toString() {
-  return 'ProductState(status: $status, products: $products, searchResults: $searchResults, errorMessage: $errorMessage, scannedProduct: $scannedProduct)';
+  return 'ProductState(status: $status, products: $products, searchResults: $searchResults, categories: $categories, lowStockProducts: $lowStockProducts, errorMessage: $errorMessage, scannedProduct: $scannedProduct)';
 }
 
 
@@ -46,7 +46,7 @@ abstract mixin class $ProductStateCopyWith<$Res>  {
   factory $ProductStateCopyWith(ProductState value, $Res Function(ProductState) _then) = _$ProductStateCopyWithImpl;
 @useResult
 $Res call({
- ProductStatus status, List<ProductEntity> products, List<ProductEntity> searchResults, String errorMessage, ProductEntity? scannedProduct
+ ProductStatus status, List<ProductEntity> products, List<ProductEntity> searchResults, List<CategoryEntity> categories, List<ProductEntity> lowStockProducts, String errorMessage, ProductEntity? scannedProduct
 });
 
 
@@ -63,11 +63,13 @@ class _$ProductStateCopyWithImpl<$Res>
 
 /// Create a copy of ProductState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? products = null,Object? searchResults = null,Object? errorMessage = null,Object? scannedProduct = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? products = null,Object? searchResults = null,Object? categories = null,Object? lowStockProducts = null,Object? errorMessage = null,Object? scannedProduct = freezed,}) {
   return _then(ProductState(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as ProductStatus,products: null == products ? _self.products : products // ignore: cast_nullable_to_non_nullable
 as List<ProductEntity>,searchResults: null == searchResults ? _self.searchResults : searchResults // ignore: cast_nullable_to_non_nullable
+as List<ProductEntity>,categories: null == categories ? _self.categories : categories // ignore: cast_nullable_to_non_nullable
+as List<CategoryEntity>,lowStockProducts: null == lowStockProducts ? _self.lowStockProducts : lowStockProducts // ignore: cast_nullable_to_non_nullable
 as List<ProductEntity>,errorMessage: null == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
 as String,scannedProduct: freezed == scannedProduct ? _self.scannedProduct : scannedProduct // ignore: cast_nullable_to_non_nullable
 as ProductEntity?,
@@ -155,10 +157,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( ProductStatus status,  List<ProductEntity> products,  List<ProductEntity> searchResults,  String errorMessage,  ProductEntity? scannedProduct)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( ProductStatus status,  List<ProductEntity> products,  List<ProductEntity> searchResults,  List<CategoryEntity> categories,  List<ProductEntity> lowStockProducts,  String errorMessage,  ProductEntity? scannedProduct)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ProductState() when $default != null:
-return $default(_that.status,_that.products,_that.searchResults,_that.errorMessage,_that.scannedProduct);case _:
+return $default(_that.status,_that.products,_that.searchResults,_that.categories,_that.lowStockProducts,_that.errorMessage,_that.scannedProduct);case _:
   return orElse();
 
 }
@@ -176,10 +178,10 @@ return $default(_that.status,_that.products,_that.searchResults,_that.errorMessa
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( ProductStatus status,  List<ProductEntity> products,  List<ProductEntity> searchResults,  String errorMessage,  ProductEntity? scannedProduct)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( ProductStatus status,  List<ProductEntity> products,  List<ProductEntity> searchResults,  List<CategoryEntity> categories,  List<ProductEntity> lowStockProducts,  String errorMessage,  ProductEntity? scannedProduct)  $default,) {final _that = this;
 switch (_that) {
 case _ProductState():
-return $default(_that.status,_that.products,_that.searchResults,_that.errorMessage,_that.scannedProduct);case _:
+return $default(_that.status,_that.products,_that.searchResults,_that.categories,_that.lowStockProducts,_that.errorMessage,_that.scannedProduct);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -196,10 +198,10 @@ return $default(_that.status,_that.products,_that.searchResults,_that.errorMessa
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( ProductStatus status,  List<ProductEntity> products,  List<ProductEntity> searchResults,  String errorMessage,  ProductEntity? scannedProduct)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( ProductStatus status,  List<ProductEntity> products,  List<ProductEntity> searchResults,  List<CategoryEntity> categories,  List<ProductEntity> lowStockProducts,  String errorMessage,  ProductEntity? scannedProduct)?  $default,) {final _that = this;
 switch (_that) {
 case _ProductState() when $default != null:
-return $default(_that.status,_that.products,_that.searchResults,_that.errorMessage,_that.scannedProduct);case _:
+return $default(_that.status,_that.products,_that.searchResults,_that.categories,_that.lowStockProducts,_that.errorMessage,_that.scannedProduct);case _:
   return null;
 
 }
@@ -211,7 +213,7 @@ return $default(_that.status,_that.products,_that.searchResults,_that.errorMessa
 
 
 class _ProductState implements ProductState {
-  const _ProductState({this.status = ProductStatus.initial,  List<ProductEntity> products = const [],  List<ProductEntity> searchResults = const [], this.errorMessage = '', this.scannedProduct}): _products = products,_searchResults = searchResults;
+  const _ProductState({this.status = ProductStatus.initial,  List<ProductEntity> products = const [],  List<ProductEntity> searchResults = const [],  List<CategoryEntity> categories = const [],  List<ProductEntity> lowStockProducts = const [], this.errorMessage = '', this.scannedProduct}): _products = products,_searchResults = searchResults,_categories = categories,_lowStockProducts = lowStockProducts;
   
 
 @override@JsonKey() final  ProductStatus status;
@@ -229,6 +231,20 @@ class _ProductState implements ProductState {
   return EqualUnmodifiableListView(_searchResults);
 }
 
+ final  List<CategoryEntity> _categories;
+@override@JsonKey() List<CategoryEntity> get categories {
+  if (_categories is EqualUnmodifiableListView) return _categories;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_categories);
+}
+
+ final  List<ProductEntity> _lowStockProducts;
+@override@JsonKey() List<ProductEntity> get lowStockProducts {
+  if (_lowStockProducts is EqualUnmodifiableListView) return _lowStockProducts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_lowStockProducts);
+}
+
 @override@JsonKey() final  String errorMessage;
 @override final  ProductEntity? scannedProduct;
 
@@ -242,16 +258,16 @@ _$ProductStateCopyWith<_ProductState> get copyWith => __$ProductStateCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ProductState&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other._products, _products)&&const DeepCollectionEquality().equals(other._searchResults, _searchResults)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.scannedProduct, scannedProduct) || other.scannedProduct == scannedProduct));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ProductState&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other._products, _products)&&const DeepCollectionEquality().equals(other._searchResults, _searchResults)&&const DeepCollectionEquality().equals(other._categories, _categories)&&const DeepCollectionEquality().equals(other._lowStockProducts, _lowStockProducts)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.scannedProduct, scannedProduct) || other.scannedProduct == scannedProduct));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,status,const DeepCollectionEquality().hash(_products),const DeepCollectionEquality().hash(_searchResults),errorMessage,scannedProduct);
+int get hashCode => Object.hash(runtimeType,status,const DeepCollectionEquality().hash(_products),const DeepCollectionEquality().hash(_searchResults),const DeepCollectionEquality().hash(_categories),const DeepCollectionEquality().hash(_lowStockProducts),errorMessage,scannedProduct);
 
 @override
 String toString() {
-  return 'ProductState(status: $status, products: $products, searchResults: $searchResults, errorMessage: $errorMessage, scannedProduct: $scannedProduct)';
+  return 'ProductState(status: $status, products: $products, searchResults: $searchResults, categories: $categories, lowStockProducts: $lowStockProducts, errorMessage: $errorMessage, scannedProduct: $scannedProduct)';
 }
 
 
@@ -262,7 +278,7 @@ abstract mixin class _$ProductStateCopyWith<$Res> implements $ProductStateCopyWi
   factory _$ProductStateCopyWith(_ProductState value, $Res Function(_ProductState) _then) = __$ProductStateCopyWithImpl;
 @override @useResult
 $Res call({
- ProductStatus status, List<ProductEntity> products, List<ProductEntity> searchResults, String errorMessage, ProductEntity? scannedProduct
+ ProductStatus status, List<ProductEntity> products, List<ProductEntity> searchResults, List<CategoryEntity> categories, List<ProductEntity> lowStockProducts, String errorMessage, ProductEntity? scannedProduct
 });
 
 
@@ -279,11 +295,13 @@ class __$ProductStateCopyWithImpl<$Res>
 
 /// Create a copy of ProductState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? products = null,Object? searchResults = null,Object? errorMessage = null,Object? scannedProduct = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? products = null,Object? searchResults = null,Object? categories = null,Object? lowStockProducts = null,Object? errorMessage = null,Object? scannedProduct = freezed,}) {
   return _then(_ProductState(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as ProductStatus,products: null == products ? _self._products : products // ignore: cast_nullable_to_non_nullable
 as List<ProductEntity>,searchResults: null == searchResults ? _self._searchResults : searchResults // ignore: cast_nullable_to_non_nullable
+as List<ProductEntity>,categories: null == categories ? _self._categories : categories // ignore: cast_nullable_to_non_nullable
+as List<CategoryEntity>,lowStockProducts: null == lowStockProducts ? _self._lowStockProducts : lowStockProducts // ignore: cast_nullable_to_non_nullable
 as List<ProductEntity>,errorMessage: null == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
 as String,scannedProduct: freezed == scannedProduct ? _self.scannedProduct : scannedProduct // ignore: cast_nullable_to_non_nullable
 as ProductEntity?,

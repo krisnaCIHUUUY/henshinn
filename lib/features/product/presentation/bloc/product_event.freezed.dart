@@ -56,17 +56,21 @@ extension ProductEventPatterns on ProductEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( ProductStarted value)?  started,TResult Function( ProductSubscriptionRequested value)?  subscriptionRequested,TResult Function( ProductByCategoryRequested value)?  byCategoryRequested,TResult Function( ProductSearchQueryChanged value)?  searchQueryChanged,TResult Function( ProductAdded value)?  added,TResult Function( ProductUpdated value)?  updated,TResult Function( ProductDeleted value)?  deleted,TResult Function( ProductBarcodeScanned value)?  barcodeScanned,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( ProductStarted value)?  started,TResult Function( ProductSubscriptionRequested value)?  subscriptionRequested,TResult Function( ProductCategoriesRequested value)?  categoriesRequested,TResult Function( ProductByCategoryRequested value)?  byCategoryRequested,TResult Function( ProductSearchQueryChanged value)?  searchQueryChanged,TResult Function( ProductAdded value)?  added,TResult Function( ProductUpdated value)?  updated,TResult Function( ProductDeleted value)?  deleted,TResult Function( ProductLowStockRequested value)?  lowStockRequested,TResult Function( ProductRestocked value)?  restocked,TResult Function( ProductStockAdjusted value)?  stockAdjusted,TResult Function( ProductBarcodeScanned value)?  barcodeScanned,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case ProductStarted() when started != null:
 return started(_that);case ProductSubscriptionRequested() when subscriptionRequested != null:
-return subscriptionRequested(_that);case ProductByCategoryRequested() when byCategoryRequested != null:
+return subscriptionRequested(_that);case ProductCategoriesRequested() when categoriesRequested != null:
+return categoriesRequested(_that);case ProductByCategoryRequested() when byCategoryRequested != null:
 return byCategoryRequested(_that);case ProductSearchQueryChanged() when searchQueryChanged != null:
 return searchQueryChanged(_that);case ProductAdded() when added != null:
 return added(_that);case ProductUpdated() when updated != null:
 return updated(_that);case ProductDeleted() when deleted != null:
-return deleted(_that);case ProductBarcodeScanned() when barcodeScanned != null:
+return deleted(_that);case ProductLowStockRequested() when lowStockRequested != null:
+return lowStockRequested(_that);case ProductRestocked() when restocked != null:
+return restocked(_that);case ProductStockAdjusted() when stockAdjusted != null:
+return stockAdjusted(_that);case ProductBarcodeScanned() when barcodeScanned != null:
 return barcodeScanned(_that);case _:
   return orElse();
 
@@ -85,17 +89,21 @@ return barcodeScanned(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( ProductStarted value)  started,required TResult Function( ProductSubscriptionRequested value)  subscriptionRequested,required TResult Function( ProductByCategoryRequested value)  byCategoryRequested,required TResult Function( ProductSearchQueryChanged value)  searchQueryChanged,required TResult Function( ProductAdded value)  added,required TResult Function( ProductUpdated value)  updated,required TResult Function( ProductDeleted value)  deleted,required TResult Function( ProductBarcodeScanned value)  barcodeScanned,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( ProductStarted value)  started,required TResult Function( ProductSubscriptionRequested value)  subscriptionRequested,required TResult Function( ProductCategoriesRequested value)  categoriesRequested,required TResult Function( ProductByCategoryRequested value)  byCategoryRequested,required TResult Function( ProductSearchQueryChanged value)  searchQueryChanged,required TResult Function( ProductAdded value)  added,required TResult Function( ProductUpdated value)  updated,required TResult Function( ProductDeleted value)  deleted,required TResult Function( ProductLowStockRequested value)  lowStockRequested,required TResult Function( ProductRestocked value)  restocked,required TResult Function( ProductStockAdjusted value)  stockAdjusted,required TResult Function( ProductBarcodeScanned value)  barcodeScanned,}){
 final _that = this;
 switch (_that) {
 case ProductStarted():
 return started(_that);case ProductSubscriptionRequested():
-return subscriptionRequested(_that);case ProductByCategoryRequested():
+return subscriptionRequested(_that);case ProductCategoriesRequested():
+return categoriesRequested(_that);case ProductByCategoryRequested():
 return byCategoryRequested(_that);case ProductSearchQueryChanged():
 return searchQueryChanged(_that);case ProductAdded():
 return added(_that);case ProductUpdated():
 return updated(_that);case ProductDeleted():
-return deleted(_that);case ProductBarcodeScanned():
+return deleted(_that);case ProductLowStockRequested():
+return lowStockRequested(_that);case ProductRestocked():
+return restocked(_that);case ProductStockAdjusted():
+return stockAdjusted(_that);case ProductBarcodeScanned():
 return barcodeScanned(_that);case _:
   throw StateError('Unexpected subclass');
 
@@ -113,17 +121,21 @@ return barcodeScanned(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( ProductStarted value)?  started,TResult? Function( ProductSubscriptionRequested value)?  subscriptionRequested,TResult? Function( ProductByCategoryRequested value)?  byCategoryRequested,TResult? Function( ProductSearchQueryChanged value)?  searchQueryChanged,TResult? Function( ProductAdded value)?  added,TResult? Function( ProductUpdated value)?  updated,TResult? Function( ProductDeleted value)?  deleted,TResult? Function( ProductBarcodeScanned value)?  barcodeScanned,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( ProductStarted value)?  started,TResult? Function( ProductSubscriptionRequested value)?  subscriptionRequested,TResult? Function( ProductCategoriesRequested value)?  categoriesRequested,TResult? Function( ProductByCategoryRequested value)?  byCategoryRequested,TResult? Function( ProductSearchQueryChanged value)?  searchQueryChanged,TResult? Function( ProductAdded value)?  added,TResult? Function( ProductUpdated value)?  updated,TResult? Function( ProductDeleted value)?  deleted,TResult? Function( ProductLowStockRequested value)?  lowStockRequested,TResult? Function( ProductRestocked value)?  restocked,TResult? Function( ProductStockAdjusted value)?  stockAdjusted,TResult? Function( ProductBarcodeScanned value)?  barcodeScanned,}){
 final _that = this;
 switch (_that) {
 case ProductStarted() when started != null:
 return started(_that);case ProductSubscriptionRequested() when subscriptionRequested != null:
-return subscriptionRequested(_that);case ProductByCategoryRequested() when byCategoryRequested != null:
+return subscriptionRequested(_that);case ProductCategoriesRequested() when categoriesRequested != null:
+return categoriesRequested(_that);case ProductByCategoryRequested() when byCategoryRequested != null:
 return byCategoryRequested(_that);case ProductSearchQueryChanged() when searchQueryChanged != null:
 return searchQueryChanged(_that);case ProductAdded() when added != null:
 return added(_that);case ProductUpdated() when updated != null:
 return updated(_that);case ProductDeleted() when deleted != null:
-return deleted(_that);case ProductBarcodeScanned() when barcodeScanned != null:
+return deleted(_that);case ProductLowStockRequested() when lowStockRequested != null:
+return lowStockRequested(_that);case ProductRestocked() when restocked != null:
+return restocked(_that);case ProductStockAdjusted() when stockAdjusted != null:
+return stockAdjusted(_that);case ProductBarcodeScanned() when barcodeScanned != null:
 return barcodeScanned(_that);case _:
   return null;
 
@@ -141,16 +153,20 @@ return barcodeScanned(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  started,TResult Function()?  subscriptionRequested,TResult Function( int categoryId)?  byCategoryRequested,TResult Function( String keyword)?  searchQueryChanged,TResult Function( NewProduct product)?  added,TResult Function( ProductEntity product)?  updated,TResult Function( int productId)?  deleted,TResult Function( String barcode)?  barcodeScanned,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  started,TResult Function()?  subscriptionRequested,TResult Function()?  categoriesRequested,TResult Function( int categoryId)?  byCategoryRequested,TResult Function( String keyword)?  searchQueryChanged,TResult Function( NewProduct product)?  added,TResult Function( ProductEntity product)?  updated,TResult Function( int productId)?  deleted,TResult Function()?  lowStockRequested,TResult Function( int productId,  int qty,  String? note)?  restocked,TResult Function( int productId,  int newStock,  String? note)?  stockAdjusted,TResult Function( String barcode)?  barcodeScanned,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case ProductStarted() when started != null:
 return started();case ProductSubscriptionRequested() when subscriptionRequested != null:
-return subscriptionRequested();case ProductByCategoryRequested() when byCategoryRequested != null:
+return subscriptionRequested();case ProductCategoriesRequested() when categoriesRequested != null:
+return categoriesRequested();case ProductByCategoryRequested() when byCategoryRequested != null:
 return byCategoryRequested(_that.categoryId);case ProductSearchQueryChanged() when searchQueryChanged != null:
 return searchQueryChanged(_that.keyword);case ProductAdded() when added != null:
 return added(_that.product);case ProductUpdated() when updated != null:
 return updated(_that.product);case ProductDeleted() when deleted != null:
-return deleted(_that.productId);case ProductBarcodeScanned() when barcodeScanned != null:
+return deleted(_that.productId);case ProductLowStockRequested() when lowStockRequested != null:
+return lowStockRequested();case ProductRestocked() when restocked != null:
+return restocked(_that.productId,_that.qty,_that.note);case ProductStockAdjusted() when stockAdjusted != null:
+return stockAdjusted(_that.productId,_that.newStock,_that.note);case ProductBarcodeScanned() when barcodeScanned != null:
 return barcodeScanned(_that.barcode);case _:
   return orElse();
 
@@ -169,16 +185,20 @@ return barcodeScanned(_that.barcode);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  started,required TResult Function()  subscriptionRequested,required TResult Function( int categoryId)  byCategoryRequested,required TResult Function( String keyword)  searchQueryChanged,required TResult Function( NewProduct product)  added,required TResult Function( ProductEntity product)  updated,required TResult Function( int productId)  deleted,required TResult Function( String barcode)  barcodeScanned,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  started,required TResult Function()  subscriptionRequested,required TResult Function()  categoriesRequested,required TResult Function( int categoryId)  byCategoryRequested,required TResult Function( String keyword)  searchQueryChanged,required TResult Function( NewProduct product)  added,required TResult Function( ProductEntity product)  updated,required TResult Function( int productId)  deleted,required TResult Function()  lowStockRequested,required TResult Function( int productId,  int qty,  String? note)  restocked,required TResult Function( int productId,  int newStock,  String? note)  stockAdjusted,required TResult Function( String barcode)  barcodeScanned,}) {final _that = this;
 switch (_that) {
 case ProductStarted():
 return started();case ProductSubscriptionRequested():
-return subscriptionRequested();case ProductByCategoryRequested():
+return subscriptionRequested();case ProductCategoriesRequested():
+return categoriesRequested();case ProductByCategoryRequested():
 return byCategoryRequested(_that.categoryId);case ProductSearchQueryChanged():
 return searchQueryChanged(_that.keyword);case ProductAdded():
 return added(_that.product);case ProductUpdated():
 return updated(_that.product);case ProductDeleted():
-return deleted(_that.productId);case ProductBarcodeScanned():
+return deleted(_that.productId);case ProductLowStockRequested():
+return lowStockRequested();case ProductRestocked():
+return restocked(_that.productId,_that.qty,_that.note);case ProductStockAdjusted():
+return stockAdjusted(_that.productId,_that.newStock,_that.note);case ProductBarcodeScanned():
 return barcodeScanned(_that.barcode);case _:
   throw StateError('Unexpected subclass');
 
@@ -196,16 +216,20 @@ return barcodeScanned(_that.barcode);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  started,TResult? Function()?  subscriptionRequested,TResult? Function( int categoryId)?  byCategoryRequested,TResult? Function( String keyword)?  searchQueryChanged,TResult? Function( NewProduct product)?  added,TResult? Function( ProductEntity product)?  updated,TResult? Function( int productId)?  deleted,TResult? Function( String barcode)?  barcodeScanned,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  started,TResult? Function()?  subscriptionRequested,TResult? Function()?  categoriesRequested,TResult? Function( int categoryId)?  byCategoryRequested,TResult? Function( String keyword)?  searchQueryChanged,TResult? Function( NewProduct product)?  added,TResult? Function( ProductEntity product)?  updated,TResult? Function( int productId)?  deleted,TResult? Function()?  lowStockRequested,TResult? Function( int productId,  int qty,  String? note)?  restocked,TResult? Function( int productId,  int newStock,  String? note)?  stockAdjusted,TResult? Function( String barcode)?  barcodeScanned,}) {final _that = this;
 switch (_that) {
 case ProductStarted() when started != null:
 return started();case ProductSubscriptionRequested() when subscriptionRequested != null:
-return subscriptionRequested();case ProductByCategoryRequested() when byCategoryRequested != null:
+return subscriptionRequested();case ProductCategoriesRequested() when categoriesRequested != null:
+return categoriesRequested();case ProductByCategoryRequested() when byCategoryRequested != null:
 return byCategoryRequested(_that.categoryId);case ProductSearchQueryChanged() when searchQueryChanged != null:
 return searchQueryChanged(_that.keyword);case ProductAdded() when added != null:
 return added(_that.product);case ProductUpdated() when updated != null:
 return updated(_that.product);case ProductDeleted() when deleted != null:
-return deleted(_that.productId);case ProductBarcodeScanned() when barcodeScanned != null:
+return deleted(_that.productId);case ProductLowStockRequested() when lowStockRequested != null:
+return lowStockRequested();case ProductRestocked() when restocked != null:
+return restocked(_that.productId,_that.qty,_that.note);case ProductStockAdjusted() when stockAdjusted != null:
+return stockAdjusted(_that.productId,_that.newStock,_that.note);case ProductBarcodeScanned() when barcodeScanned != null:
 return barcodeScanned(_that.barcode);case _:
   return null;
 
@@ -270,6 +294,38 @@ int get hashCode => runtimeType.hashCode;
 @override
 String toString() {
   return 'ProductEvent.subscriptionRequested()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class ProductCategoriesRequested implements ProductEvent {
+  const ProductCategoriesRequested();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ProductCategoriesRequested);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+  return 'ProductEvent.categoriesRequested()';
 }
 
 
@@ -602,6 +658,178 @@ class _$ProductDeletedCopyWithImpl<$Res>
   return _then(ProductDeleted(
 null == productId ? _self.productId : productId // ignore: cast_nullable_to_non_nullable
 as int,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class ProductLowStockRequested implements ProductEvent {
+  const ProductLowStockRequested();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ProductLowStockRequested);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+  return 'ProductEvent.lowStockRequested()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class ProductRestocked implements ProductEvent {
+  const ProductRestocked(this.productId, this.qty, {this.note});
+  
+
+ final  int productId;
+ final  int qty;
+ final  String? note;
+
+/// Create a copy of ProductEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ProductRestockedCopyWith<ProductRestocked> get copyWith => _$ProductRestockedCopyWithImpl<ProductRestocked>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ProductRestocked&&(identical(other.productId, productId) || other.productId == productId)&&(identical(other.qty, qty) || other.qty == qty)&&(identical(other.note, note) || other.note == note));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,productId,qty,note);
+
+@override
+String toString() {
+  return 'ProductEvent.restocked(productId: $productId, qty: $qty, note: $note)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ProductRestockedCopyWith<$Res> implements $ProductEventCopyWith<$Res> {
+  factory $ProductRestockedCopyWith(ProductRestocked value, $Res Function(ProductRestocked) _then) = _$ProductRestockedCopyWithImpl;
+@useResult
+$Res call({
+ int productId, int qty, String? note
+});
+
+
+
+
+}
+/// @nodoc
+class _$ProductRestockedCopyWithImpl<$Res>
+    implements $ProductRestockedCopyWith<$Res> {
+  _$ProductRestockedCopyWithImpl(this._self, this._then);
+
+  final ProductRestocked _self;
+  final $Res Function(ProductRestocked) _then;
+
+/// Create a copy of ProductEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? productId = null,Object? qty = null,Object? note = freezed,}) {
+  return _then(ProductRestocked(
+null == productId ? _self.productId : productId // ignore: cast_nullable_to_non_nullable
+as int,null == qty ? _self.qty : qty // ignore: cast_nullable_to_non_nullable
+as int,note: freezed == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class ProductStockAdjusted implements ProductEvent {
+  const ProductStockAdjusted(this.productId, this.newStock, {this.note});
+  
+
+ final  int productId;
+ final  int newStock;
+ final  String? note;
+
+/// Create a copy of ProductEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ProductStockAdjustedCopyWith<ProductStockAdjusted> get copyWith => _$ProductStockAdjustedCopyWithImpl<ProductStockAdjusted>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ProductStockAdjusted&&(identical(other.productId, productId) || other.productId == productId)&&(identical(other.newStock, newStock) || other.newStock == newStock)&&(identical(other.note, note) || other.note == note));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,productId,newStock,note);
+
+@override
+String toString() {
+  return 'ProductEvent.stockAdjusted(productId: $productId, newStock: $newStock, note: $note)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ProductStockAdjustedCopyWith<$Res> implements $ProductEventCopyWith<$Res> {
+  factory $ProductStockAdjustedCopyWith(ProductStockAdjusted value, $Res Function(ProductStockAdjusted) _then) = _$ProductStockAdjustedCopyWithImpl;
+@useResult
+$Res call({
+ int productId, int newStock, String? note
+});
+
+
+
+
+}
+/// @nodoc
+class _$ProductStockAdjustedCopyWithImpl<$Res>
+    implements $ProductStockAdjustedCopyWith<$Res> {
+  _$ProductStockAdjustedCopyWithImpl(this._self, this._then);
+
+  final ProductStockAdjusted _self;
+  final $Res Function(ProductStockAdjusted) _then;
+
+/// Create a copy of ProductEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? productId = null,Object? newStock = null,Object? note = freezed,}) {
+  return _then(ProductStockAdjusted(
+null == productId ? _self.productId : productId // ignore: cast_nullable_to_non_nullable
+as int,null == newStock ? _self.newStock : newStock // ignore: cast_nullable_to_non_nullable
+as int,note: freezed == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
