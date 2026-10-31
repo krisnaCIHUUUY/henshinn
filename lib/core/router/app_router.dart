@@ -2,7 +2,10 @@ import 'package:go_router/go_router.dart';
 import 'package:henshin/app.dart';
 import 'package:henshin/core/utils/page_routes.dart';
 import 'package:henshin/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:henshin/features/product/presentation/screens/low_stock_screen.dart';
 import 'package:henshin/features/product/presentation/screens/product_list_screen.dart';
+import 'package:henshin/features/setting/presentation/screens/pin_create_screen.dart';
+import 'package:henshin/features/setting/presentation/screens/pin_verify_screen.dart';
 import 'package:henshin/features/setting/presentation/screens/setting_screen.dart';
 import 'package:henshin/features/transaction/presentation/screens/transaction_history_screen.dart';
 import 'package:henshin/features/transaction/presentation/screens/transaction_screen.dart';
@@ -68,6 +71,26 @@ final GoRouter appRouter = GoRouter(
       path: PageRoutes.mulaiTransaksi,
       name: PageRoutes.mulaiTransaksiName,
       builder: (context, state) => TransactionScreen(),
+    ),
+
+    GoRoute(
+      path: PageRoutes.perluRestok,
+      name: PageRoutes.perluRestokName,
+      builder: (context, state) => const LowStockScreen(),
+    ),
+
+    GoRoute(
+      path: PageRoutes.aturPin,
+      name: PageRoutes.aturPinName,
+      builder: (context, state) => const PinCreateScreen(),
+    ),
+
+    // dipanggil lewat PinGate.require, bukan langsung
+    GoRoute(
+      path: PageRoutes.verifikasiPin,
+      name: PageRoutes.verifikasiPinName,
+      builder: (context, state) =>
+          PinVerifyScreen(reason: state.uri.queryParameters['reason']),
     ),
   ],
 );
