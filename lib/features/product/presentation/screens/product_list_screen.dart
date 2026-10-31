@@ -86,9 +86,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
               current.status == ProductStatus.failure &&
               previous.errorMessage != current.errorMessage,
           listener: (context, state) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage)),
-            );
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text(state.errorMessage)));
           },
           builder: (context, state) {
             final products = _selectedCategoryId == null
@@ -388,7 +387,10 @@ class _ProductTile extends StatelessWidget {
                   ),
                   onSelected: (action) => action?.call(),
                   itemBuilder: (_) => [
-                    PopupMenuItem(value: onRestock, child: const Text('Restok')),
+                    PopupMenuItem(
+                      value: onRestock,
+                      child: const Text('Restok'),
+                    ),
                     PopupMenuItem(
                       value: onAdjust,
                       child: const Text('Koreksi stok'),

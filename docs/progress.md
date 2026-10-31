@@ -19,7 +19,7 @@ Keputusan arsitektur yang diambil selama eksekusi dicatat terpisah di
 Fondasi (1–3) dan F2 Produk & Stok (4–5) selesai. Berikutnya langkah 6:
 keranjang + bayar + simpan atomik — ditandai **⚠ RISIKO TINGGI** di rencana.
 
-**Verifikasi saat ini:** 58 tes lolos, `flutter analyze` bersih, dan alur
+**Verifikasi saat ini:** 60 tes lolos, `flutter analyze` bersih, dan alur
 langkah 1–5 sudah dicoba manual di device fisik oleh pemilik repo.
 
 ---
@@ -85,6 +85,12 @@ langkah 1–5 sudah dicoba manual di device fisik oleh pemilik repo.
 - **Bug diperbaiki:** produk sempat tidak bisa dihapus sama sekali setelah stok
   awal ikut dicatat. Lihat ADR-011.
 
+## Perbaikan setelah verifikasi manual
+
+- **Form tambah produk tidak pernah tertutup setelah simpan sukses** (dilaporkan
+  pemilik). `ProductState.writeCount` ditambahkan sebagai penanda selesainya
+  operasi tulis; `status` saja tidak cukup. Lihat ADR-013.
+
 ---
 
 ## Utang teknis yang masih terbuka
@@ -96,5 +102,5 @@ langkah 1–5 sudah dicoba manual di device fisik oleh pemilik repo.
 | `decrementStock`/`incrementStock` lama di `ProductDao` tidak menulis ledger | Kalau langkah 6 memakainya, ledger bolong. Pakai `TransactionDao.createTransactionWithItems` |
 | `setting_screen.dart` memuat baris dummy "Pajak (PPN) 11%" dan "Export laporan CSV" | Keduanya di luar scope (AGENTS.md §5), perlu dibersihkan sebelum rilis |
 | Riwayat pergerakan stok belum punya tampilan | Ledger ditulis tapi belum bisa dilihat pemilik. Bahan langkah 10 |
-| Layar `StockSheet`, `LowStockScreen`, dan jalur PinGate-saat-ubah-harga belum punya tes | Terverifikasi manual, bukan otomatis. Lihat ADR-012 |
+| Layar `StockSheet`, `LowStockScreen`, jalur PinGate-saat-ubah-harga, dan alur simpan form sampai layarnya tertutup belum punya tes | Terverifikasi manual, bukan otomatis. Celah inilah yang melewatkan bug ADR-013. Lihat ADR-012 |
 | `.claude/` belum masuk `.gitignore` | Konfigurasi lokal berisiko ikut ter-commit |

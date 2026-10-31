@@ -132,7 +132,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   Widget build(BuildContext context) {
     return BlocListener<ProductBloc, ProductState>(
       listenWhen: (previous, current) =>
-          _saving && previous.status != current.status,
+          _saving && previous.writeCount != current.writeCount,
       listener: (context, state) {
         if (state.status == ProductStatus.failure) {
           setState(() => _saving = false);

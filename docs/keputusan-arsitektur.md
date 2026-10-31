@@ -180,5 +180,38 @@ Pembagiannya:
 - Layar tes dibesarkan ke 1080×2400; default 800×600 memotong form dan
   `ListView` tidak membangun widget di luar layar.
 
-**Konsekuensi:** jalur PinGate-saat-ubah-harga dan isi `StockSheet`/
-`LowStockScreen` tidak punya tes otomatis — hanya terverifikasi manual.
+Dua jebakan yang sudah memakan waktu, jangan diulang:
+
+- **Objek berisi stream tidak boleh dibuat di `setUp`** untuk `testWidgets`.
+  `setUp` berjalan di luar zona fake-async, jadi event dari `StreamController`
+  (atau Drift) yang dibuat di sana tidak pernah sampai ke dalam tes. Buat di
+  dalam body tes dan daftarkan pembersihannya lewat `addTearDown`.
+- **Urutan pembersihan**: tutup stream/DB dulu supaya `emit.forEach` di bloc
+  selesai, baru `bloc.close()`. Terbalik membuat `bloc.close()` menggantung.
+
+**Konsekuensi:** jalur PinGate-saat-ubah-harga, isi `StockSheet`/
+`LowStockScreen`, dan **alur simpan dari form sampai layarnya tertutup** tidak
+punya tes otomatis — hanya terverifikasi manual. Percobaan menutupnya dengan
+repository palsu masih menggantung dan sudah dibatalkan; bug "form tidak
+tertutup" (ADR-013) lolos ke tangan pemilik karena celah ini.
+
+## ADR-013 — Hasil operasi tulis dibedakan dengan `writeCount`, bukan `status`
+
+`ProductState.writeCount` naik setiap satu operasi tulis selesai (sukses maupun
+gagal), di-emit bersama `status` dari satu tempat: `ProductBloc._emitResult`.
+Layar form memakai perubahan `writeCount` sebagai penanda "simpanan saya
+selesai".
+
+**Alasan — ini perbaikan bug yang dilaporkan pemilik.** Form sebelumnya memakai
+`listenWhen: previous.status != current.status`. Karena layar list sudah
+berlangganan stream dan membuat `status` bernilai `success`, emisi `success`
+kedua dari operasi simpan **tidak terlihat sebagai perubahan**, sehingga
+`Navigator.pop` tidak pernah dipanggil dan form tidak pernah tertutup.
+
+**Aturan:** jangan pakai `status` saja sebagai penanda selesainya satu aksi di
+bloc yang juga menyiarkan state langganan stream. Kalau nanti ada bloc lain
+dengan pola campuran yang sama, pakai penanda terpisah seperti ini.
+
+**Catatan:** produk baru muncul di list lewat emisi stream **setelah**
+`writeCount` naik, bukan di emisi yang sama — jadi form boleh langsung menutup
+tanpa menunggu list ter-update.

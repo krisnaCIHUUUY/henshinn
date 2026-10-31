@@ -99,6 +99,39 @@ void main() {
     expect(state.products, isEmpty);
   });
 
+  test('simpan sukses tetap terdeteksi walau status sudah success', () async {
+    // Regresi: layar form memakai perubahan state sebagai penanda "simpanan
+    // saya selesai". Karena list sudah success dari langganan stream, emisi
+    // success kedua tidak terlihat sebagai perubahan dan form tidak tertutup.
+    bloc.add(const ProductEvent.subscriptionRequested());
+    final before = await waitFor((s) => s.status == ProductStatus.success);
+    expect(before.writeCount, 0);
+
+    bloc.add(const ProductEvent.added(draft));
+    final after = await waitFor((s) => s.writeCount == 1);
+
+    expect(after.status, ProductStatus.success);
+
+    // Produknya menyusul lewat emisi stream, bukan di emisi yang sama —
+    // karena itu form boleh langsung menutup tanpa menunggu list.
+    expect((await waitFor((s) => s.products.isNotEmpty)).products, hasLength(1));
+  });
+
+  test('simpan gagal juga menaikkan writeCount, bukan menggantung', () async {
+    bloc.add(const ProductEvent.subscriptionRequested());
+    await waitFor((s) => s.status == ProductStatus.success);
+
+    bloc.add(
+      const ProductEvent.added(
+        NewProduct(name: '  ', price: 1000, categoryId: 1),
+      ),
+    );
+    final after = await waitFor((s) => s.writeCount == 1);
+
+    expect(after.status, ProductStatus.failure);
+    expect(after.errorMessage, 'Nama produk tidak boleh kosong');
+  });
+
   test('barcode kembar membuat status failure dengan pesan jelas', () async {
     bloc.add(const ProductEvent.subscriptionRequested());
     await waitFor((s) => s.status == ProductStatus.success);
