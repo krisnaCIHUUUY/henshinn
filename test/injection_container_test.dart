@@ -45,6 +45,8 @@ void main() {
   });
 
   tearDown(() async {
+    // reset menutup AppDatabase lewat dispose-nya; file harus tertutup dulu
+    // sebelum foldernya dihapus (Windows melarang hapus file yang terbuka).
     await sl.reset();
     tempDir.deleteSync(recursive: true);
   });
@@ -66,11 +68,13 @@ void main() {
     // Membuka file sungguhan di folder temp, menjalankan migrasi + seed.
     final categories = await db.select(db.categories).get();
     expect(categories.map((c) => c.name), [kDefaultCategoryName]);
-    expect(db.schemaVersion, 3);
+
+    // Baris settings ikut ter-seed dengan versi skema yang berlaku, apa pun
+    // angkanya — sengaja tidak dipatok supaya tidak putus tiap bump migrasi.
+    final settings = await db.select(db.settings).getSingle();
+    expect(settings.schemaVersion, db.schemaVersion);
 
     // Repository di atas DB yang sama ikut terbaca.
     expect(await sl<ProductRepository>().watchAllProducts().first, isEmpty);
-
-    await db.close();
   });
 }

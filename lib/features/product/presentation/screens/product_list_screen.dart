@@ -434,8 +434,8 @@ class _StockBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, color) = switch (product) {
       _ when !product.isActive => ('Nonaktif', AppColor.outlineVariant),
-      _ when product.isOutOfStock => ('Stok habis', AppColor.errorContainer),
-      _ when product.isLowStock => ('Stok menipis', AppColor.discountBadge),
+      _ when product.isOutOfStock => ('Stok habis', AppColor.onErrorContainer),
+      _ when product.isLowStock => ('Stok menipis', AppColor.warningColor),
       _ => ('Stok aman', AppColor.discountBadge),
     };
 
@@ -449,7 +449,7 @@ class _StockBadge extends StatelessWidget {
         label,
         style: TextStyle(
           fontSize: 13,
-          color: AppColor.onSurface,
+          color: product.isOutOfStock ? AppColor.onError : AppColor.onSurface,
           fontWeight: FontWeight.w500,
         ),
       ),

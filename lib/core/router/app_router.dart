@@ -8,7 +8,7 @@ import 'package:henshin/features/setting/presentation/screens/pin_create_screen.
 import 'package:henshin/features/setting/presentation/screens/pin_verify_screen.dart';
 import 'package:henshin/features/setting/presentation/screens/setting_screen.dart';
 import 'package:henshin/features/transaction/presentation/screens/transaction_history_screen.dart';
-import 'package:henshin/features/transaction/presentation/screens/transaction_screen.dart';
+import 'package:henshin/features/transaction/presentation/screens/cashier_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: PageRoutes.dashboard,
@@ -67,11 +67,14 @@ final GoRouter appRouter = GoRouter(
 
     // branch dll.
     // 
+    // Kasir: keranjang + bayar. Scanner di-push dari dalam sini dengan
+    // BlocProvider.value, bukan rute sendiri, karena butuh CartBloc yang sama.
     GoRoute(
       path: PageRoutes.mulaiTransaksi,
       name: PageRoutes.mulaiTransaksiName,
-      builder: (context, state) => TransactionScreen(),
+      builder: (context, state) => const CashierScreen(),
     ),
+
 
     GoRoute(
       path: PageRoutes.perluRestok,

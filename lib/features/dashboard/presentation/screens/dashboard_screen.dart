@@ -501,7 +501,9 @@ class _StartTransactionButton extends StatelessWidget {
       child: ElevatedButton.icon(
         onPressed: () {
           // navigasi ke flow kasir
-          context.go(PageRoutes.mulaiTransaksi);
+          // push, bukan go: kasir ditumpuk di atas dashboard supaya tombol
+          // kembali di AppBar dan tombol back fisik sama-sama berfungsi.
+          context.push(PageRoutes.mulaiTransaksi);
         },
         icon: const Icon(Icons.add, color: AppColor.onPrimary),
         label: Text(

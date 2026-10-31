@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' hide isNull;
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:henshin/core/database/app_database.dart';
@@ -199,6 +199,38 @@ void main() {
       final product = (await repository.watchAllProducts().first).single;
       expect(product.name, 'Teh Botol');
       expect(product.barcode, '333');
+    });
+  });
+
+  group('cari produk via barcode (dasar alur scan)', () {
+    // Scanner tidak bisa diuji otomatis (butuh kamera fisik), tapi pencarian
+    // yang dipakainya bisa — ini yang menentukan "dikenal" vs "fallback".
+    test('barcode terdaftar mengembalikan produknya', () async {
+      await repository.addProduct(draft(barcode: '8991234567890'));
+
+      final result = await repository.getProductByBarcode('8991234567890');
+      expect(result.getOrElse(() => null)?.name, 'Cappuccino');
+    });
+
+    test('barcode asing mengembalikan null, bukan error', () async {
+      await repository.addProduct(draft(barcode: '111'));
+
+      final result = await repository.getProductByBarcode('tidak-ada');
+      expect(failureOf(result), isNull);
+      expect(result.getOrElse(() => null), isNull);
+    });
+
+    test('produk nonaktif tetap ditemukan — penyaringan ada di pemanggil',
+        () async {
+      await repository.addProduct(
+        draft(name: 'Nonaktif', barcode: '222', isActive: false),
+      );
+
+      final product = (await repository.getProductByBarcode(
+        '222',
+      )).getOrElse(() => null);
+      expect(product, isNotNull);
+      expect(product!.isActive, isFalse);
     });
   });
 
