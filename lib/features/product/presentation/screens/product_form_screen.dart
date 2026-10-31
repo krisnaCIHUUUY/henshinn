@@ -16,9 +16,13 @@ import 'package:henshin/features/setting/presentation/pin_gate.dart';
 /// Memakai `ProductBloc` dari ancestor — bukan instance baru — supaya list di
 /// belakangnya ikut ter-update lewat stream yang sama.
 class ProductFormScreen extends StatefulWidget {
-  const ProductFormScreen({super.key, this.product});
+  const ProductFormScreen({super.key, this.product, this.initialBarcode});
 
   final ProductEntity? product;
+
+  /// Mengisi field barcode untuk produk baru — dipakai saat scan menemukan
+  /// barcode yang belum terdaftar.
+  final String? initialBarcode;
 
   @override
   State<ProductFormScreen> createState() => _ProductFormScreenState();
@@ -45,7 +49,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     super.initState();
     final p = widget.product;
     _name = TextEditingController(text: p?.name ?? '');
-    _barcode = TextEditingController(text: p?.barcode ?? '');
+    _barcode = TextEditingController(
+      text: p?.barcode ?? widget.initialBarcode ?? '',
+    );
     _price = TextEditingController(text: p == null ? '' : '${p.price}');
     _costPrice = TextEditingController(text: p == null ? '' : '${p.costPrice}');
     _stock = TextEditingController(text: p == null ? '0' : '${p.stock}');
@@ -132,7 +138,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   Widget build(BuildContext context) {
     return BlocListener<ProductBloc, ProductState>(
       listenWhen: (previous, current) =>
-          _saving && previous.status != current.status,
+          _saving && previous.writeCount != current.writeCount,
       listener: (context, state) {
         if (state.status == ProductStatus.failure) {
           setState(() => _saving = false);

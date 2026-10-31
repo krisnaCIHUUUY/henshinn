@@ -12,6 +12,11 @@ abstract class ProductState with _$ProductState {
     @Default([]) List<ProductEntity> searchResults,
     @Default([]) List<CategoryEntity> categories,
     @Default([]) List<ProductEntity> lowStockProducts,
+    // Naik tiap satu operasi tulis selesai (sukses maupun gagal). Layar form
+    // memakai ini sebagai penanda "simpanan saya selesai": `status` saja tidak
+    // cukup karena list sudah bernilai success dari langganan stream, jadi
+    // emisi success kedua tidak terlihat sebagai perubahan.
+    @Default(0) int writeCount,
     @Default('') String errorMessage,
     ProductEntity? scannedProduct,
   }) = _ProductState;

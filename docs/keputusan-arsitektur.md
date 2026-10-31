@@ -180,5 +180,134 @@ Pembagiannya:
 - Layar tes dibesarkan ke 1080×2400; default 800×600 memotong form dan
   `ListView` tidak membangun widget di luar layar.
 
-**Konsekuensi:** jalur PinGate-saat-ubah-harga dan isi `StockSheet`/
-`LowStockScreen` tidak punya tes otomatis — hanya terverifikasi manual.
+Dua jebakan yang sudah memakan waktu, jangan diulang:
+
+- **Objek berisi stream tidak boleh dibuat di `setUp`** untuk `testWidgets`.
+  `setUp` berjalan di luar zona fake-async, jadi event dari `StreamController`
+  (atau Drift) yang dibuat di sana tidak pernah sampai ke dalam tes. Buat di
+  dalam body tes dan daftarkan pembersihannya lewat `addTearDown`.
+- **Urutan pembersihan**: tutup stream/DB dulu supaya `emit.forEach` di bloc
+  selesai, baru `bloc.close()`. Terbalik membuat `bloc.close()` menggantung.
+
+**Konsekuensi:** jalur PinGate-saat-ubah-harga, isi `StockSheet`/
+`LowStockScreen`, dan **alur simpan dari form sampai layarnya tertutup** tidak
+punya tes otomatis — hanya terverifikasi manual. Percobaan menutupnya dengan
+repository palsu masih menggantung dan sudah dibatalkan; bug "form tidak
+tertutup" (ADR-013) lolos ke tangan pemilik karena celah ini.
+
+## ADR-013 — Hasil operasi tulis dibedakan dengan `writeCount`, bukan `status`
+
+`ProductState.writeCount` naik setiap satu operasi tulis selesai (sukses maupun
+gagal), di-emit bersama `status` dari satu tempat: `ProductBloc._emitResult`.
+Layar form memakai perubahan `writeCount` sebagai penanda "simpanan saya
+selesai".
+
+**Alasan — ini perbaikan bug yang dilaporkan pemilik.** Form sebelumnya memakai
+`listenWhen: previous.status != current.status`. Karena layar list sudah
+berlangganan stream dan membuat `status` bernilai `success`, emisi `success`
+kedua dari operasi simpan **tidak terlihat sebagai perubahan**, sehingga
+`Navigator.pop` tidak pernah dipanggil dan form tidak pernah tertutup.
+
+**Aturan:** jangan pakai `status` saja sebagai penanda selesainya satu aksi di
+bloc yang juga menyiarkan state langganan stream. Kalau nanti ada bloc lain
+dengan pola campuran yang sama, pakai penanda terpisah seperti ini.
+
+**Catatan:** produk baru muncul di list lewat emisi stream **setelah**
+`writeCount` naik, bukan di emisi yang sama — jadi form boleh langsung menutup
+tanpa menunggu list ter-update.
+
+## ADR-014 — Snapshot item transaksi lengkap sejak langkah 6
+
+`transaction_items` menyimpan `productName`, `priceAtSale`, dan
+`costPriceAtSale` (migrasi v4).
+
+**Alasan:** laba kotor (langkah 12) dihitung dari selisih dua kolom harga di
+baris transaksi, bukan dari produk yang berlaku sekarang. Kalau kolom modal
+ditambahkan belakangan, setiap transaksi yang sudah tercatat **permanen** tidak
+punya data modal dan laporan labanya salah selamanya untuk data itu. Nama ikut
+di-snapshot supaya struk lama tetap menyebut nama saat transaksi.
+
+**Aturan:** laporan laba **tidak boleh** mengambil `costPrice` dari tabel
+`products`. Selalu dari `transaction_items.costPriceAtSale`.
+
+## ADR-015 — Total dan snapshot diambil dari DB, bukan dari UI
+
+`TransactionDao.createSale` hanya menerima `(productId, qty)` per baris. Harga,
+modal, dan nama dibaca ulang dari tabel `products` **di dalam** transaksi, dan
+total dihitung di sana.
+
+**Alasan:** entity di keranjang bisa basi (harga berubah saat keranjang masih
+terbuka) atau salah. Menghitung di DB membuat satu sumber kebenaran dan
+menutup celah "UI mengirim harga 1 rupiah". Ada tesnya.
+
+## ADR-016 — Stok kurang menolak dan membatalkan seluruh penjualan
+
+Cek stok dilakukan per baris **di dalam** `transaction()`; kalau kurang,
+`InsufficientStockException` dilempar sehingga Drift me-rollback semuanya —
+tidak ada header, item, pengurangan stok, maupun ledger yang tersimpan.
+
+**Alternatif ditolak:** mengizinkan stok negatif dengan peringatan.
+
+**Alasan:** PRD menargetkan akurasi stok ≤5%; stok negatif merusak metrik itu
+dan merembet ke daftar restok serta laporan. **Konsekuensi yang harus
+diterima:** kalau stok di aplikasi lebih rendah dari stok di rak, penjualan
+nyata jadi terhalang sampai pemilik melakukan Koreksi Stok (ADR-011).
+Keranjang menandai baris yang melebihi stok lebih awal, tapi penolakan
+sebenarnya tetap di DB — UI tidak boleh jadi satu-satunya penjaga.
+
+## ADR-017 — Scanner di-push dari kasir, bukan rute top-level
+
+`BarcodeScannerScreen` dibuka dengan `MaterialPageRoute` +
+`BlocProvider.value(value: cartBloc)` dari `CashierScreen`. Rute `/scan` yang
+sempat dibuat di langkah 6 **dihapus** karena jadi mati.
+
+**Alasan:** scan berturut berarti scanner menambah ke keranjang berkali-kali,
+jadi ia butuh `CartBloc` yang sama. `CartBloc` hidup di scope `CashierScreen`,
+dan rute top-level go_router dibangun di luar subtree itu — `context.read`
+tidak akan menemukannya. Pola ini sama dengan cara `ProductFormScreen` dibuka
+dari daftar produk.
+
+**Konsekuensi:** scanner tidak bisa dibuka lewat deep link. Kalau nanti ada
+pemanggil lain (mis. mengisi barcode di form produk), buat mode terpisah yang
+mengembalikan barcode lewat `pop`, jangan paksa rute top-level memakai CartBloc.
+
+## ADR-018 — `permission_handler` hanya untuk membuka pengaturan
+
+`mobile_scanner` meminta izin kamera sendiri dan melaporkan penolakan lewat
+`MobileScannerErrorCode.permissionDenied`. Jadi tidak ada lapisan permintaan
+izin kedua.
+
+`permission_handler` dipakai **hanya** untuk `openAppSettings()` saat izin
+ditolak permanen — satu-satunya jalan pulih tanpa menginstal ulang. Jangan
+tambahkan alur `Permission.camera.request()` di atas mobile_scanner: dua
+peminta izin pada satu kamera membuat dialog muncul dua kali.
+
+## ADR-019 — Barcode yang sama memakai jeda, bukan blokir permanen
+
+Barcode identik diterima lagi setelah 1,5 detik.
+
+**Alasan:** kode awal memblokir barcode yang sama selamanya, sehingga kasir
+tidak bisa men-scan dua botol yang sama berturut-turut — qty-nya akan selalu 1.
+Jeda singkat menahan pembacaan ganda dari satu barang tanpa menghalangi barang
+kedua yang identik.
+
+## ADR-020 — Layar penuh di-`push`, jangan di-`go`
+
+Rute layar penuh (kasir, dan layar penuh berikutnya) dibuka dengan
+`context.push`, bukan `context.go`.
+
+**Alasan — ini perbaikan bug yang dilaporkan pemilik.** `context.go`
+**mengganti** stack navigasi, sehingga `Navigator.canPop` bernilai false:
+AppBar tidak memunculkan tombol kembali otomatis, dan tombol back fisik Android
+keluar dari aplikasi alih-alih kembali ke dashboard. Layar kasir sempat benar-benar
+tidak bisa ditinggalkan.
+
+**Aturan:** pakai `go` hanya untuk perpindahan tab di `StatefulShellRoute`.
+Layar yang ditumpuk di atasnya memakai `push`, dan sediakan `leading` eksplisit
+kalau tombol otomatisnya tidak muncul.
+
+**Catatan:** keranjang hanya hidup di memori, jadi keluar dari kasir
+menghapusnya. `PopScope` dengan `canPop: cart.items.isEmpty` membuat tombol
+AppBar dan back fisik sama-sama lewat satu konfirmasi. Konsekuensi lain dari
+`push`: dashboard tetap hidup di belakang kasir dan tidak dilepas selama
+transaksi berjalan.

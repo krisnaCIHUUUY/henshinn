@@ -1287,6 +1287,18 @@ class $TransactionItemsTable extends TransactionItems
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _productNameMeta = const VerificationMeta(
+    'productName',
+  );
+  @override
+  late final GeneratedColumn<String> productName = GeneratedColumn<String>(
+    'product_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _priceAtSaleMeta = const VerificationMeta(
     'priceAtSale',
   );
@@ -1298,13 +1310,27 @@ class $TransactionItemsTable extends TransactionItems
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _costPriceAtSaleMeta = const VerificationMeta(
+    'costPriceAtSale',
+  );
+  @override
+  late final GeneratedColumn<int> costPriceAtSale = GeneratedColumn<int>(
+    'cost_price_at_sale',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
     transactionId,
     productId,
     qty,
+    productName,
     priceAtSale,
+    costPriceAtSale,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1348,6 +1374,15 @@ class $TransactionItemsTable extends TransactionItems
     } else if (isInserting) {
       context.missing(_qtyMeta);
     }
+    if (data.containsKey('product_name')) {
+      context.handle(
+        _productNameMeta,
+        productName.isAcceptableOrUnknown(
+          data['product_name']!,
+          _productNameMeta,
+        ),
+      );
+    }
     if (data.containsKey('price_at_sale')) {
       context.handle(
         _priceAtSaleMeta,
@@ -1358,6 +1393,15 @@ class $TransactionItemsTable extends TransactionItems
       );
     } else if (isInserting) {
       context.missing(_priceAtSaleMeta);
+    }
+    if (data.containsKey('cost_price_at_sale')) {
+      context.handle(
+        _costPriceAtSaleMeta,
+        costPriceAtSale.isAcceptableOrUnknown(
+          data['cost_price_at_sale']!,
+          _costPriceAtSaleMeta,
+        ),
+      );
     }
     return context;
   }
@@ -1384,9 +1428,17 @@ class $TransactionItemsTable extends TransactionItems
         DriftSqlType.int,
         data['${effectivePrefix}qty'],
       )!,
+      productName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}product_name'],
+      )!,
       priceAtSale: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}price_at_sale'],
+      )!,
+      costPriceAtSale: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cost_price_at_sale'],
       )!,
     );
   }
@@ -1402,13 +1454,17 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
   final int transactionId;
   final int productId;
   final int qty;
+  final String productName;
   final int priceAtSale;
+  final int costPriceAtSale;
   const TransactionItem({
     required this.id,
     required this.transactionId,
     required this.productId,
     required this.qty,
+    required this.productName,
     required this.priceAtSale,
+    required this.costPriceAtSale,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1417,7 +1473,9 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
     map['transaction_id'] = Variable<int>(transactionId);
     map['product_id'] = Variable<int>(productId);
     map['qty'] = Variable<int>(qty);
+    map['product_name'] = Variable<String>(productName);
     map['price_at_sale'] = Variable<int>(priceAtSale);
+    map['cost_price_at_sale'] = Variable<int>(costPriceAtSale);
     return map;
   }
 
@@ -1427,7 +1485,9 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
       transactionId: Value(transactionId),
       productId: Value(productId),
       qty: Value(qty),
+      productName: Value(productName),
       priceAtSale: Value(priceAtSale),
+      costPriceAtSale: Value(costPriceAtSale),
     );
   }
 
@@ -1441,7 +1501,9 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
       transactionId: serializer.fromJson<int>(json['transactionId']),
       productId: serializer.fromJson<int>(json['productId']),
       qty: serializer.fromJson<int>(json['qty']),
+      productName: serializer.fromJson<String>(json['productName']),
       priceAtSale: serializer.fromJson<int>(json['priceAtSale']),
+      costPriceAtSale: serializer.fromJson<int>(json['costPriceAtSale']),
     );
   }
   @override
@@ -1452,7 +1514,9 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
       'transactionId': serializer.toJson<int>(transactionId),
       'productId': serializer.toJson<int>(productId),
       'qty': serializer.toJson<int>(qty),
+      'productName': serializer.toJson<String>(productName),
       'priceAtSale': serializer.toJson<int>(priceAtSale),
+      'costPriceAtSale': serializer.toJson<int>(costPriceAtSale),
     };
   }
 
@@ -1461,13 +1525,17 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
     int? transactionId,
     int? productId,
     int? qty,
+    String? productName,
     int? priceAtSale,
+    int? costPriceAtSale,
   }) => TransactionItem(
     id: id ?? this.id,
     transactionId: transactionId ?? this.transactionId,
     productId: productId ?? this.productId,
     qty: qty ?? this.qty,
+    productName: productName ?? this.productName,
     priceAtSale: priceAtSale ?? this.priceAtSale,
+    costPriceAtSale: costPriceAtSale ?? this.costPriceAtSale,
   );
   TransactionItem copyWithCompanion(TransactionItemsCompanion data) {
     return TransactionItem(
@@ -1477,9 +1545,15 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
           : this.transactionId,
       productId: data.productId.present ? data.productId.value : this.productId,
       qty: data.qty.present ? data.qty.value : this.qty,
+      productName: data.productName.present
+          ? data.productName.value
+          : this.productName,
       priceAtSale: data.priceAtSale.present
           ? data.priceAtSale.value
           : this.priceAtSale,
+      costPriceAtSale: data.costPriceAtSale.present
+          ? data.costPriceAtSale.value
+          : this.costPriceAtSale,
     );
   }
 
@@ -1490,14 +1564,23 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
           ..write('transactionId: $transactionId, ')
           ..write('productId: $productId, ')
           ..write('qty: $qty, ')
-          ..write('priceAtSale: $priceAtSale')
+          ..write('productName: $productName, ')
+          ..write('priceAtSale: $priceAtSale, ')
+          ..write('costPriceAtSale: $costPriceAtSale')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, transactionId, productId, qty, priceAtSale);
+  int get hashCode => Object.hash(
+    id,
+    transactionId,
+    productId,
+    qty,
+    productName,
+    priceAtSale,
+    costPriceAtSale,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1506,7 +1589,9 @@ class TransactionItem extends DataClass implements Insertable<TransactionItem> {
           other.transactionId == this.transactionId &&
           other.productId == this.productId &&
           other.qty == this.qty &&
-          other.priceAtSale == this.priceAtSale);
+          other.productName == this.productName &&
+          other.priceAtSale == this.priceAtSale &&
+          other.costPriceAtSale == this.costPriceAtSale);
 }
 
 class TransactionItemsCompanion extends UpdateCompanion<TransactionItem> {
@@ -1514,20 +1599,26 @@ class TransactionItemsCompanion extends UpdateCompanion<TransactionItem> {
   final Value<int> transactionId;
   final Value<int> productId;
   final Value<int> qty;
+  final Value<String> productName;
   final Value<int> priceAtSale;
+  final Value<int> costPriceAtSale;
   const TransactionItemsCompanion({
     this.id = const Value.absent(),
     this.transactionId = const Value.absent(),
     this.productId = const Value.absent(),
     this.qty = const Value.absent(),
+    this.productName = const Value.absent(),
     this.priceAtSale = const Value.absent(),
+    this.costPriceAtSale = const Value.absent(),
   });
   TransactionItemsCompanion.insert({
     this.id = const Value.absent(),
     required int transactionId,
     required int productId,
     required int qty,
+    this.productName = const Value.absent(),
     required int priceAtSale,
+    this.costPriceAtSale = const Value.absent(),
   }) : transactionId = Value(transactionId),
        productId = Value(productId),
        qty = Value(qty),
@@ -1537,14 +1628,18 @@ class TransactionItemsCompanion extends UpdateCompanion<TransactionItem> {
     Expression<int>? transactionId,
     Expression<int>? productId,
     Expression<int>? qty,
+    Expression<String>? productName,
     Expression<int>? priceAtSale,
+    Expression<int>? costPriceAtSale,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (transactionId != null) 'transaction_id': transactionId,
       if (productId != null) 'product_id': productId,
       if (qty != null) 'qty': qty,
+      if (productName != null) 'product_name': productName,
       if (priceAtSale != null) 'price_at_sale': priceAtSale,
+      if (costPriceAtSale != null) 'cost_price_at_sale': costPriceAtSale,
     });
   }
 
@@ -1553,14 +1648,18 @@ class TransactionItemsCompanion extends UpdateCompanion<TransactionItem> {
     Value<int>? transactionId,
     Value<int>? productId,
     Value<int>? qty,
+    Value<String>? productName,
     Value<int>? priceAtSale,
+    Value<int>? costPriceAtSale,
   }) {
     return TransactionItemsCompanion(
       id: id ?? this.id,
       transactionId: transactionId ?? this.transactionId,
       productId: productId ?? this.productId,
       qty: qty ?? this.qty,
+      productName: productName ?? this.productName,
       priceAtSale: priceAtSale ?? this.priceAtSale,
+      costPriceAtSale: costPriceAtSale ?? this.costPriceAtSale,
     );
   }
 
@@ -1579,8 +1678,14 @@ class TransactionItemsCompanion extends UpdateCompanion<TransactionItem> {
     if (qty.present) {
       map['qty'] = Variable<int>(qty.value);
     }
+    if (productName.present) {
+      map['product_name'] = Variable<String>(productName.value);
+    }
     if (priceAtSale.present) {
       map['price_at_sale'] = Variable<int>(priceAtSale.value);
+    }
+    if (costPriceAtSale.present) {
+      map['cost_price_at_sale'] = Variable<int>(costPriceAtSale.value);
     }
     return map;
   }
@@ -1592,7 +1697,9 @@ class TransactionItemsCompanion extends UpdateCompanion<TransactionItem> {
           ..write('transactionId: $transactionId, ')
           ..write('productId: $productId, ')
           ..write('qty: $qty, ')
-          ..write('priceAtSale: $priceAtSale')
+          ..write('productName: $productName, ')
+          ..write('priceAtSale: $priceAtSale, ')
+          ..write('costPriceAtSale: $costPriceAtSale')
           ..write(')'))
         .toString();
   }
@@ -3620,7 +3727,9 @@ typedef $$TransactionItemsTableCreateCompanionBuilder =
       required int transactionId,
       required int productId,
       required int qty,
+      Value<String> productName,
       required int priceAtSale,
+      Value<int> costPriceAtSale,
     });
 typedef $$TransactionItemsTableUpdateCompanionBuilder =
     TransactionItemsCompanion Function({
@@ -3628,7 +3737,9 @@ typedef $$TransactionItemsTableUpdateCompanionBuilder =
       Value<int> transactionId,
       Value<int> productId,
       Value<int> qty,
+      Value<String> productName,
       Value<int> priceAtSale,
+      Value<int> costPriceAtSale,
     });
 
 final class $$TransactionItemsTableReferences
@@ -3695,8 +3806,18 @@ class $$TransactionItemsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get productName => $composableBuilder(
+    column: $table.productName,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get priceAtSale => $composableBuilder(
     column: $table.priceAtSale,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get costPriceAtSale => $composableBuilder(
+    column: $table.costPriceAtSale,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3766,8 +3887,18 @@ class $$TransactionItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get productName => $composableBuilder(
+    column: $table.productName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get priceAtSale => $composableBuilder(
     column: $table.priceAtSale,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get costPriceAtSale => $composableBuilder(
+    column: $table.costPriceAtSale,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -3833,8 +3964,18 @@ class $$TransactionItemsTableAnnotationComposer
   GeneratedColumn<int> get qty =>
       $composableBuilder(column: $table.qty, builder: (column) => column);
 
+  GeneratedColumn<String> get productName => $composableBuilder(
+    column: $table.productName,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get priceAtSale => $composableBuilder(
     column: $table.priceAtSale,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get costPriceAtSale => $composableBuilder(
+    column: $table.costPriceAtSale,
     builder: (column) => column,
   );
 
@@ -3919,13 +4060,17 @@ class $$TransactionItemsTableTableManager
                 Value<int> transactionId = const Value.absent(),
                 Value<int> productId = const Value.absent(),
                 Value<int> qty = const Value.absent(),
+                Value<String> productName = const Value.absent(),
                 Value<int> priceAtSale = const Value.absent(),
+                Value<int> costPriceAtSale = const Value.absent(),
               }) => TransactionItemsCompanion(
                 id: id,
                 transactionId: transactionId,
                 productId: productId,
                 qty: qty,
+                productName: productName,
                 priceAtSale: priceAtSale,
+                costPriceAtSale: costPriceAtSale,
               ),
           createCompanionCallback:
               ({
@@ -3933,13 +4078,17 @@ class $$TransactionItemsTableTableManager
                 required int transactionId,
                 required int productId,
                 required int qty,
+                Value<String> productName = const Value.absent(),
                 required int priceAtSale,
+                Value<int> costPriceAtSale = const Value.absent(),
               }) => TransactionItemsCompanion.insert(
                 id: id,
                 transactionId: transactionId,
                 productId: productId,
                 qty: qty,
+                productName: productName,
                 priceAtSale: priceAtSale,
+                costPriceAtSale: costPriceAtSale,
               ),
           withReferenceMapper: (p0) => p0
               .map(

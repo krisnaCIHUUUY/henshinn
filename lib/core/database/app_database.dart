@@ -47,7 +47,12 @@ class TransactionItems extends Table {
       integer().references(Transactions, #id)();
   IntColumn get productId => integer().references(Products, #id)();
   IntColumn get qty => integer()();
-  IntColumn get priceAtSale => integer()(); // snapshot harga saat transaksi
+  // Snapshot saat transaksi (PRD §2.6): laporan lama tidak boleh berubah saat
+  // nama atau harga produk diganti. Laba kotor dihitung dari dua kolom harga
+  // di sini, bukan dari produk yang berlaku sekarang.
+  TextColumn get productName => text().withDefault(const Constant(''))();
+  IntColumn get priceAtSale => integer()();
+  IntColumn get costPriceAtSale => integer().withDefault(const Constant(0))();
 }
 
 class StockMovements extends Table {
@@ -98,7 +103,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -153,6 +158,16 @@ extension _Migrations on GeneratedDatabase {
           );
           await m.addColumn(schema.products, schema.products.isActive);
           await m.createTable(schema.settings);
+        },
+        from3To4: (m, schema) async {
+          await m.addColumn(
+            schema.transactionItems,
+            schema.transactionItems.productName,
+          );
+          await m.addColumn(
+            schema.transactionItems,
+            schema.transactionItems.costPriceAtSale,
+          );
         },
         from2To3: (m, schema) async {
           // Gagal kalau sudah ada barcode kembar di DB lama — memang harus

@@ -110,50 +110,23 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     );
   }
 
+  // list otomatis ter-update lewat stream subscription, tidak perlu emit list
   Future<void> _onAdded(ProductAdded event, Emitter<ProductState> emit) async {
-    final result = await _addProduct(event.product);
-    result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: ProductStatus.failure,
-          errorMessage: failure.message,
-        ),
-      ),
-      (_) => emit(state.copyWith(status: ProductStatus.success)),
-    );
-    // list otomatis ter-update lewat stream subscription, tidak perlu emit ulang list
+    _emitResult(await _addProduct(event.product), emit);
   }
 
   Future<void> _onUpdated(
     ProductUpdated event,
     Emitter<ProductState> emit,
   ) async {
-    final result = await _updateProduct(event.product);
-    result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: ProductStatus.failure,
-          errorMessage: failure.message,
-        ),
-      ),
-      (_) => emit(state.copyWith(status: ProductStatus.success)),
-    );
+    _emitResult(await _updateProduct(event.product), emit);
   }
 
   Future<void> _onDeleted(
     ProductDeleted event,
     Emitter<ProductState> emit,
   ) async {
-    final result = await _deleteProduct(event.productId);
-    result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: ProductStatus.failure,
-          errorMessage: failure.message,
-        ),
-      ),
-      (_) => emit(state.copyWith(status: ProductStatus.success)),
-    );
+    _emitResult(await _deleteProduct(event.productId), emit);
   }
 
   Future<void> _onLowStockRequested(
@@ -194,18 +167,26 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     _emitResult(result, emit);
   }
 
-  void _emitResult(
-    Either<Failure, void> result,
-    Emitter<ProductState> emit,
-  ) {
+  /// Satu-satunya tempat hasil operasi tulis di-emit. `writeCount` selalu
+  /// naik bersama status, jadi pemanggil bisa membedakan "write saya selesai"
+  /// dari emisi stream list yang kebetulan juga bernilai success.
+  void _emitResult(Either<Failure, void> result, Emitter<ProductState> emit) {
+    final writeCount = state.writeCount + 1;
     result.fold(
       (failure) => emit(
         state.copyWith(
           status: ProductStatus.failure,
           errorMessage: failure.message,
+          writeCount: writeCount,
         ),
       ),
-      (_) => emit(state.copyWith(status: ProductStatus.success)),
+      (_) => emit(
+        state.copyWith(
+          status: ProductStatus.success,
+          errorMessage: '',
+          writeCount: writeCount,
+        ),
+      ),
     );
   }
 

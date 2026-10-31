@@ -4,6 +4,30 @@ import 'package:henshin/core/database/app_database.dart';
 
 part 'transaction_dao.g.dart';
 
+/// Dilempar dari dalam `transaction()` saat stok tidak cukup, supaya seluruh
+/// penjualan di-rollback — bukan tersimpan separuh.
+class InsufficientStockException implements Exception {
+  InsufficientStockException(this.productName, this.available, this.requested);
+
+  final String productName;
+  final int available;
+  final int requested;
+
+  @override
+  String toString() =>
+      'Stok $productName tinggal $available, diminta $requested';
+}
+
+/// Satu baris keranjang yang siap disimpan. Snapshot nama dan harga diambil
+/// dari DB di dalam transaksi, bukan dari UI, supaya tidak bisa dipalsukan
+/// atau basi (PRD §2.6).
+class SaleLine {
+  const SaleLine({required this.productId, required this.qty});
+
+  final int productId;
+  final int qty;
+}
+
 @DriftAccessor(
   tables: [Transactions, TransactionItems, Products, StockMovements],
 )
@@ -36,33 +60,79 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
     )..where((i) => i.transactionId.equals(transactionId))).get();
   }
 
-  // Buat transaksi baru + item-nya + kurangi stok, dalam satu operasi atomic
-  Future<int> createTransactionWithItems({
-    required TransactionsCompanion transactionData,
-    required List<TransactionItemsCompanion> items,
-  }) async {
+  /// Simpan penjualan: header + item + pengurangan stok + ledger, **satu
+  /// transaksi Drift**. Ini yang PRD §3.2 sebut tidak boleh dipotong — kalau
+  /// ada satu langkah gagal, tidak ada apa pun yang tersimpan.
+  ///
+  /// Total dihitung ulang di sini dari harga di DB; angka dari UI tidak
+  /// dipercaya. Mengembalikan id transaksi.
+  Future<int> createSale({
+    required List<SaleLine> lines,
+    required int paymentAmount,
+  }) {
     return transaction(() async {
-      final transactionId = await into(transactions).insert(transactionData);
+      var total = 0;
+      final snapshots = <TransactionItemsCompanion>[];
 
-      for (final item in items) {
-        await into(transactionItems)
-            .insert(item.copyWith(transactionId: Value(transactionId)));
+      for (final line in lines) {
+        final product = await (select(
+          products,
+        )..where((p) => p.id.equals(line.productId))).getSingleOrNull();
 
-        final productId = item.productId.value;
-        final qty = item.qty.value;
+        if (product == null) {
+          throw StateError('Produk ${line.productId} tidak ditemukan');
+        }
+        if (product.stock < line.qty) {
+          // Melempar di dalam transaction() membatalkan seluruh penjualan.
+          throw InsufficientStockException(
+            product.name,
+            product.stock,
+            line.qty,
+          );
+        }
 
-        // kurangi stok
-        await (update(products)..where((p) => p.id.equals(productId))).write(
-          ProductsCompanion.custom(stock: products.stock - Variable(qty)),
+        total += product.price * line.qty;
+        snapshots.add(
+          TransactionItemsCompanion.insert(
+            transactionId: 0, // diisi setelah header dibuat
+            productId: product.id,
+            qty: line.qty,
+            productName: Value(product.name),
+            priceAtSale: product.price,
+            costPriceAtSale: Value(product.costPrice),
+          ),
+        );
+      }
+
+      if (paymentAmount < total) {
+        throw StateError('Uang diterima kurang dari total');
+      }
+
+      final transactionId = await into(transactions).insert(
+        TransactionsCompanion.insert(
+          total: total,
+          paymentAmount: paymentAmount,
+          change: paymentAmount - total,
+        ),
+      );
+
+      for (var i = 0; i < snapshots.length; i++) {
+        await into(transactionItems).insert(
+          snapshots[i].copyWith(transactionId: Value(transactionId)),
         );
 
-        // catat pergerakan stok
+        final line = lines[i];
+        await (update(
+          products,
+        )..where((p) => p.id.equals(line.productId))).write(
+          ProductsCompanion.custom(stock: products.stock - Variable(line.qty)),
+        );
         await into(stockMovements).insert(
           StockMovementsCompanion.insert(
-            productId: productId,
+            productId: line.productId,
             type: 'out',
-            quantity: -qty,
-            note: const Value('Penjualan'),
+            quantity: -line.qty,
+            note: Value('Penjualan #$transactionId'),
           ),
         );
       }
