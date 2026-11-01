@@ -487,3 +487,56 @@ bukan oleh pembacaan kode.
 
 Jumlah item per transaksi dihitung dengan satu query join + `groupBy` +
 `qty.sum()` (`useColumns: false`), bukan N query per baris list.
+
+## ADR-031 — Laba kotor tampil terbuka, tanpa PIN
+
+Omzet, laba kotor, dan jumlah transaksi tampil langsung di dashboard. PIN
+tetap melindungi void, restore backup, dan ubah harga/modal.
+
+**Alasan:** PRD §1.6 menulis "PIN melindungi ... layar laba", tapi menandainya
+**asumsi yang perlu dikonfirmasi pemilik**. Pemilik repo ditanya di langkah 12
+dan memilih laba terbuka. Dasarnya metrik PRD §3.2 sendiri: "laba dan produk
+terlaris hari ini terlihat ≤ 10 detik dan ≤ 2 tap" — PIN 6 digit setiap kali
+melanggar metrik itu.
+
+**Konsekuensi:** siapa pun yang memegang HP saat aplikasi terbuka bisa melihat
+margin. Ini diterima karena satu HP = satu pemilik (PRD §1.4: tanpa multi-user).
+Kalau nanti ada kasir lain yang tidak boleh tahu modal, yang berubah **bukan**
+dashboard-nya saja — asumsi "satu PIN, satu pemegang" harus dibuka ulang.
+
+## ADR-032 — Pengelompokan per hari dihitung di Dart, bukan dengan strftime
+
+Omzet per hari dikelompokkan di Dart dari header transaksi, bukan dengan
+`strftime`/`date` SQLite.
+
+**Alasan:** drift menyimpan `DateTime` sebagai unix epoch **UTC**. Fungsi
+tanggal SQLite akan memotong hari di 00:00 UTC = **07:00 WIB**, jadi penjualan
+dini hari masuk ke hari sebelumnya dan angka harian salah tanpa pernah terlihat
+salah jumlahnya — totalnya tetap benar, hanya pembagian harinya melenceng.
+Batas hari di aplikasi ini selalu tengah malam **lokal** (lihat juga
+`ReportPeriod.rangeFrom`).
+
+**Batas yang diterima:** ini berarti header transaksi satu periode dibaca ke
+memori. Aman untuk satu warung; kalau nanti datanya tahunan, pindahkan ke
+agregat SQL **dengan offset zona waktu eksplisit**, jangan ke `strftime` apa
+adanya.
+
+Agregat lain (laba, item terjual, produk terlaris) tetap di SQL karena tidak
+bergantung pada batas hari.
+
+## ADR-033 — fl_chart dipakai untuk tooltip, bukan untuk tampilan
+
+Grafik omzet 7 hari di dashboard memakai `BarChart` dari `fl_chart` (sudah ada
+di `pubspec.yaml`), menggantikan batang `Container` buatan sendiri.
+
+**Alasan:** batang buatan sendiri hanya bisa dibandingkan tingginya. Yang
+dibutuhkan pemilik adalah angka per hari, dan itu datang dari
+`BarTouchTooltipData` — ketuk batang, muncul rupiah hari itu. Kalau tidak ada
+kebutuhan itu, batang `Container` sudah cukup dan paketnya tidak perlu.
+
+**Catatan API:** fl_chart v1 memakai `SideTitleWidget(meta: meta)`; contoh lama
+dengan `axisSide:` tidak lagi berlaku. `maxY` dipaksa 1 kalau seluruh periode
+nol, karena rentang nol membuat chart kosong.
+
+Laporan 7/30 hari sengaja **tanpa** grafik: 30 batang tidak terbaca di layar HP,
+dan agregat periodenya sudah menjawab pertanyaannya.

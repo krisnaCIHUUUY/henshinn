@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:henshin/core/database/app_database.dart';
 import 'package:henshin/core/database/dao/category_dao.dart';
 import 'package:henshin/core/database/dao/product_dao.dart';
+import 'package:henshin/core/database/dao/report_dao.dart';
 import 'package:henshin/core/database/dao/settings_dao.dart';
 import 'package:henshin/core/database/dao/transaction_dao.dart';
 import 'package:henshin/features/product/data/repositories/product_repository_impl.dart';
@@ -15,6 +16,8 @@ import 'package:henshin/features/product/domain/usecases/delete_product.dart';
 import 'package:henshin/features/product/domain/usecases/get_product_by_barcode.dart';
 import 'package:henshin/features/product/domain/usecases/update_product.dart';
 import 'package:henshin/features/product/presentation/bloc/product_bloc.dart';
+import 'package:henshin/features/report/data/repositories/report_repository_impl.dart';
+import 'package:henshin/features/report/domain/repositories/report_repository.dart';
 import 'package:henshin/features/setting/data/repositories/pin_repository_impl.dart';
 import 'package:henshin/features/setting/data/repositories/settings_repository_impl.dart';
 import 'package:henshin/features/setting/domain/repositories/settings_repository.dart';
@@ -53,6 +56,7 @@ void initDependencies() {
   sl.registerLazySingleton<CategoryDao>(() => CategoryDao(sl()));
   sl.registerLazySingleton<TransactionDao>(() => TransactionDao(sl()));
   sl.registerLazySingleton<SettingsDao>(() => SettingsDao(sl()));
+  sl.registerLazySingleton<ReportDao>(() => ReportDao(sl()));
 
   // ===== product =====
   sl.registerLazySingleton<ProductRepository>(
@@ -83,6 +87,9 @@ void initDependencies() {
   sl.registerLazySingleton<CreateSale>(() => CreateSale(sl()));
   // factory, bukan singleton: tiap kunjungan ke kasir mulai dengan keranjang kosong
   sl.registerFactory<CartBloc>(() => CartBloc(createSale: sl()));
+
+  // ===== report =====
+  sl.registerLazySingleton<ReportRepository>(() => ReportRepositoryImpl(sl()));
 
   // ===== setting =====
   sl.registerLazySingleton<SettingsRepository>(
