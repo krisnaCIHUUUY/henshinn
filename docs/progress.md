@@ -1,6 +1,6 @@
 # Progress Henshin POS
 
-Status eksekusi `docs/implementasi.md`. Diperbarui 2026-10-31 (langkah 1–9).
+Status eksekusi `docs/implementasi.md`. Diperbarui 2026-11-01 (langkah 1–11).
 
 Keputusan arsitektur yang diambil selama eksekusi dicatat terpisah di
 `docs/keputusan-arsitektur.md`.
@@ -18,19 +18,22 @@ Keputusan arsitektur yang diambil selama eksekusi dicatat terpisah di
 | 7 | Scan barcode kamera + fallback | ✅ kode selesai, **uji device fisik belum** |
 | 8 | Model `Receipt` + preview + PDF/share | ✅ selesai |
 | 9 | Cetak ESC/POS Bluetooth | 🟡 **sebagian**: `PrinterService` + impl PDF selesai; impl Bluetooth ditunda sampai printer tiba |
-| 10–15 | Riwayat/void, laporan, backup, hardening | ⬜ belum |
+| 10 | Riwayat + detail + cetak ulang | ✅ selesai |
+| 11 | Void ber-PIN + alasan + stok kembali | ✅ selesai |
+| 12–15 | Dashboard/laporan, backup, restore, hardening | ⬜ belum |
 
 Fondasi (1–3), F2 Produk & Stok (4–5), dan F1 Kasir + scan + struk (6–8)
 selesai di sisi kode. Langkah 9 sengaja berhenti di interface + fallback PDF
 sesuai PRD §2.8 ("selama printer belum ada, pengembangan memakai preview dan
 PDF"); impl ESC/POS menunggu printer fisik + spike 1 hari (PRD §3.4).
-Berikutnya langkah 10: riwayat + detail + cetak ulang.
+F3 Riwayat & Void (10–11) selesai. Berikutnya langkah 12: dashboard hari ini
++ laporan preset + produk terlaris.
 
-**Verifikasi saat ini:** 107 tes lolos, `flutter analyze` bersih.
+**Verifikasi saat ini:** 115 tes lolos, `flutter analyze` bersih.
 
-Uji manual di device oleh pemilik repo: langkah 1–5 ✅; langkah 6 (kasir) dan 8
-(struk) sebagian — empat bug ditemukan dan sudah diperbaiki, lihat "Perbaikan
-setelah verifikasi manual". **Belum pernah diuji di HP:** scanner barcode
+Uji manual di device oleh pemilik repo: langkah 1–5, 10 dan 11 ✅; langkah 6
+(kasir) dan 8 (struk) sebagian — lima bug ditemukan dan sudah diperbaiki, lihat
+"Perbaikan setelah verifikasi manual". **Belum pernah diuji di HP:** scanner barcode
 (langkah 7) dan share sheet PDF — keduanya ikut terkubur di APK lama, jadi
 butuh `flutter run` penuh, bukan hot restart.
 
@@ -169,6 +172,38 @@ butuh `flutter run` penuh, bukan hot restart.
   disebut rencana **ditolak** karena rilis terakhirnya 2021-10-06. Lihat
   ADR-023.
 
+## Langkah 10 — Riwayat + detail + cetak ulang
+
+- `TransactionDao.watchHistory({since})`: satu query join + `groupBy` +
+  `qty.sum()` dengan `useColumns: false`, jadi jumlah item per transaksi ikut
+  tanpa N query tambahan. Urutan `date DESC, id DESC` — lihat ADR-030.
+- `TransactionSummary` (entity) hanya memuat yang terlihat di list; detailnya
+  dibaca ulang sebagai `Receipt`, jadi angka struk tidak digandakan.
+- `transaction_history_screen.dart` diganti dari 4 baris dummy ke stream nyata.
+  Tab Hari ini/7/30 hari hanya menggeser `since`; "hari ini" = tengah malam
+  lokal, bukan 24 jam ke belakang. Transaksi void **ikut** tampil (jejak audit).
+- `TransactionDetailScreen` baru: item dengan harga snapshot, total/bayar/
+  kembali, tombol **Cetak ulang** (membuka `ReceiptPreviewScreen(isReprint:
+  true)` — nol kode cetak baru) dan **Void**.
+- Pola state: `StreamBuilder` + repository, bukan Bloc baru. Ditanyakan dan
+  dipilih pemilik repo — lihat ADR-028.
+
+## Langkah 11 — Void ber-PIN + alasan + stok kembali
+
+- `TransactionRepository.voidTransaction(id, reason)`; DAO-nya sudah ada sejak
+  langkah 6 dan sekarang **menolak transaksi yang sudah void** — tanpa itu stok
+  kembali dua kali. Lihat ADR-029.
+- Alur UI: `PinGate.require` dulu, **baru** dialog alasan, supaya yang tidak
+  berhak tidak sempat mengetik apa pun. Tombol Void mati selama alasan kosong,
+  dan repository tetap menolak alasan yang hanya spasi.
+- Soft delete dijaga: baris `transactions`/`transaction_items` tidak pernah
+  dihapus, stok dikembalikan + satu baris `stock_movements` bertipe `in`, semua
+  dalam satu transaksi Drift.
+- Tes: 8 tes repository baru — urutan + jumlah item, filter `since`, void muncul
+  di riwayat, status/stok/ledger setelah void, baris tidak terhapus, alasan
+  kosong ditolak tanpa mengubah stok, void dua kali ditolak, transaksi tidak ada
+  ditolak.
+
 ## Perbaikan setelah verifikasi manual
 
 - **Form tambah produk tidak pernah tertutup setelah simpan sukses** (dilaporkan
@@ -189,6 +224,11 @@ butuh `flutter run` penuh, bukan hot restart.
   Pemuatan async di `initState` tidak ber-try/catch, jadi satu exception
   membuat flag loading tidak pernah dimatikan — tanpa pesan, tanpa jalan
   keluar. Diperbaiki di tiga layar yang berpola sama. Lihat ADR-025.
+- **Struk tidak menutup dirinya setelah dibagikan** (dilaporkan pemilik).
+  `ReceiptPreviewScreen` sekarang `pop()` setelah cetak/bagikan sukses, dan
+  tetap terbuka kalau gagal supaya bisa dicoba lagi. Catatan: di Android
+  `share_plus` tidak bisa diandalkan membedakan "dibagikan" dari "share sheet
+  ditutup", jadi membatalkan sheet juga menutup layar ini.
 - **Layar kasir tidak punya tombol keluar** (dilaporkan pemilik). Dashboard
   membukanya dengan `context.go` yang mengganti stack navigasi, jadi AppBar
   tidak memunculkan tombol kembali **dan** tombol back fisik keluar dari
@@ -201,11 +241,13 @@ butuh `flutter run` penuh, bukan hot restart.
 
 | Hal | Dampak |
 |---|---|
-| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (107 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
+| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (115 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
 | `settings.schemaVersion` hanya diisi saat seed | Jadi basi setelah bump versi berikutnya. Ditandai `shortcut:` di kode |
-| `decrementStock`/`incrementStock` lama di `ProductDao` tidak menulis ledger dan **tidak dipakai siapa pun** | Langkah 6 tidak memakainya (penjualan lewat `TransactionDao.createSale`). Jebakan untuk langkah 11 (void) — pakai `TransactionDao.voidTransaction`. Kandidat dihapus |
+| `decrementStock`/`incrementStock` lama di `ProductDao` tidak menulis ledger dan **tidak dipakai siapa pun** | Langkah 6 dan 11 tidak memakainya (keduanya lewat `TransactionDao`). Sekarang murni mati — kandidat dihapus |
 | `setting_screen.dart` memuat baris dummy "Pajak (PPN) 11%" dan "Export laporan CSV" | Keduanya di luar scope (AGENTS.md §5), perlu dibersihkan sebelum rilis |
-| Riwayat pergerakan stok belum punya tampilan | Ledger ditulis tapi belum bisa dilihat pemilik. Bahan langkah 10 |
+| Riwayat pergerakan stok belum punya tampilan | Ledger ditulis (termasuk oleh void) tapi belum bisa dilihat pemilik. Riwayat langkah 10 menampilkan transaksi, bukan ledger |
+| Layar riwayat + detail transaksi belum punya tes widget | Logikanya teruji di tes repository, navigasi dan dialog alasan void hanya terverifikasi manual (ADR-012, ADR-028) |
+| Ikon ekspor di header riwayat masih mati | Peninggalan UI dummy; ekspor CSV di luar scope (AGENTS.md §5). Perlu dihapus atau diganti fungsi lain |
 | Layar `StockSheet`, `LowStockScreen`, jalur PinGate-saat-ubah-harga, dan alur simpan form sampai layarnya tertutup belum punya tes | Terverifikasi manual, bukan otomatis. Celah inilah yang melewatkan bug ADR-013. Lihat ADR-012 |
 | `.claude/` belum masuk `.gitignore` | Konfigurasi lokal berisiko ikut ter-commit |
 | Scanner belum pernah dijalankan di device fisik | Metrik PRD "produk masuk keranjang ≤2 detik" belum terukur. Emulator tidak cukup (PRD §1.6) |

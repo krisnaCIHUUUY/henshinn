@@ -80,7 +80,11 @@ class _ReceiptPreviewScreenState extends State<ReceiptPreviewScreen> {
       (failure) => ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(failure.message))),
-      (_) {},
+      // Selesai dibagikan/dicetak: struk tidak ada gunanya lagi di layar, jadi
+      // kembali ke kasir / detail transaksi. Catatan: di Android share_plus
+      // tidak bisa diandalkan membedakan "dibagikan" dari "share sheet
+      // ditutup", jadi menutup sheet juga menutup layar ini.
+      (_) => Navigator.of(context).pop(),
     );
   }
 

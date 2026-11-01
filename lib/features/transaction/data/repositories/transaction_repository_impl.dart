@@ -5,6 +5,7 @@ import 'package:henshin/features/setting/domain/entities/store_info.dart';
 import 'package:henshin/features/setting/domain/repositories/settings_repository.dart';
 import 'package:henshin/features/transaction/domain/entities/cart_item.dart';
 import 'package:henshin/features/transaction/domain/entities/receipt.dart';
+import 'package:henshin/features/transaction/domain/entities/transaction_summary.dart';
 import 'package:henshin/features/transaction/domain/repositories/transaction_repository.dart';
 
 class TransactionRepositoryImpl implements TransactionRepository {
@@ -59,6 +60,42 @@ class TransactionRepositoryImpl implements TransactionRepository {
       );
     } catch (e) {
       return Left(DatabaseFailure('Gagal menyusun struk: $e'));
+    }
+  }
+
+  @override
+  Stream<List<TransactionSummary>> watchHistory({DateTime? since}) {
+    return _transactionDao.watchHistory(since: since).map(
+      (rows) => rows
+          .map(
+            (row) => TransactionSummary(
+              id: row.$1.id,
+              dateTime: row.$1.date,
+              total: row.$1.total,
+              itemCount: row.$2,
+              isVoided: row.$1.status == 'voided',
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  @override
+  Future<Either<Failure, Unit>> voidTransaction(
+    int transactionId,
+    String reason,
+  ) async {
+    if (reason.trim().isEmpty) {
+      return const Left(ValidationFailure('Alasan void tidak boleh kosong'));
+    }
+
+    try {
+      await _transactionDao.voidTransaction(transactionId, reason.trim());
+      return const Right(unit);
+    } on StateError catch (e) {
+      return Left(ValidationFailure(e.message));
+    } catch (e) {
+      return Left(DatabaseFailure('Gagal void transaksi: $e'));
     }
   }
 

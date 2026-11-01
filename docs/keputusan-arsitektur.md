@@ -441,3 +441,49 @@ gejalanya muncul ke pemilik sebagai "gagal membagikan".
 monospace Unicode sebagai aset — jangan hapus pemetaan ini tanpa menggantinya.
 Pembatasan ini **hanya** di keluaran PDF; `ReceiptFormatter` tetap menghasilkan
 teks asli untuk preview dan salin-teks.
+
+## ADR-028 — Layar baca memanggil repository langsung, bukan Bloc baru
+
+Riwayat (list reaktif) dan detail transaksi memakai `StreamBuilder` +
+`sl<TransactionRepository>()`, **tanpa** `HistoryBloc`.
+
+**Alasan:** keputusan ini ditanyakan ke pemilik repo di langkah 10 dan dipilih
+secara eksplisit. Layar ini hanya membaca satu stream dan memicu satu aksi
+(void); `HistoryBloc` penuh berarti `history_event.dart` +
+`history_state.dart` + Freezed + codegen untuk nilai yang sama. Layar baca lain
+sudah berpola begini (`StoreInfoScreen`, `ReceiptPreviewScreen`,
+`SettingScreen`).
+
+**Konsekuensi yang harus diterima:** ini menyimpang dari AGENTS.md §3 ("list
+reaktif pakai `watch*` + `emit.forEach`"). Batasnya: Bloc tetap wajib begitu
+layar punya state yang perlu diuji sendiri (form, keranjang, PIN). Tes untuk
+layar baca adalah **tes repository**, bukan tes bloc.
+
+Stream disimpan di field state, bukan dibuat di `build()` — stream baru setiap
+build berarti berlangganan ulang dan list berkedip ke spinner.
+
+## ADR-029 — Void menolak transaksi yang sudah void
+
+`TransactionDao.voidTransaction` membaca header di dalam transaksi dan melempar
+`StateError` kalau statusnya sudah `voided`.
+
+**Alasan:** void mengembalikan stok. Tanpa penjaga ini, dua kali void
+mengembalikan stok dua kali dan angkanya salah **permanen** — tidak ada jejak
+yang bisa dipakai membedakan mana yang benar. Pengecekan harus di dalam
+`transaction()` yang sama dengan penulisannya, bukan di UI atau repository:
+dua tekan tombol cepat bisa lolos dari pengecekan di layar.
+
+Alasan void divalidasi dua kali: tombol di dialog mati selama kolom kosong,
+**dan** repository menolak alasan yang hanya spasi. Yang kedua yang mengikat,
+karena syaratnya datang dari audit pemilik (PRD §2.4), bukan dari UI.
+
+## ADR-030 — Riwayat diurutkan `date DESC, id DESC`
+
+**Alasan:** kolom `date` beresolusi detik. Dua transaksi di detik yang sama
+(wajar di warung saat ramai) muncul dengan urutan yang ditentukan rencana query
+SQLite, bukan oleh waktu — terlihat sebagai "urutan riwayat kadang terbalik".
+`id` monoton naik, jadi dia pemecah seri yang benar. Bug ini ketangkap tes,
+bukan oleh pembacaan kode.
+
+Jumlah item per transaksi dihitung dengan satu query join + `groupBy` +
+`qty.sum()` (`useColumns: false`), bukan N query per baris list.

@@ -3,6 +3,12 @@ import 'package:henshin/core/theme/app_color.dart';
 import 'package:henshin/core/theme/app_radius.dart';
 import 'package:henshin/core/theme/app_spacing.dart';
 import 'package:henshin/core/theme/app_text_style.dart';
+import 'package:henshin/core/utils/currency_formatter.dart';
+import 'package:henshin/features/transaction/domain/entities/transaction_summary.dart';
+import 'package:henshin/features/transaction/domain/repositories/transaction_repository.dart';
+import 'package:henshin/features/transaction/presentation/screens/transaction_detail_screen.dart';
+import 'package:henshin/injection_container.dart';
+import 'package:intl/intl.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -16,6 +22,25 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   int _selectedFilterIndex = 0; // 0: Hari ini, 1: 7 hari, 2: 30 hari
 
   final List<String> _filters = ['Hari ini', '7 hari', '30 hari'];
+
+  /// Batas awal per filter. "Hari ini" = tengah malam lokal, bukan 24 jam ke
+  /// belakang, supaya cocok dengan cara pemilik menghitung harinya.
+  DateTime get _since {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return switch (_selectedFilterIndex) {
+      0 => today,
+      1 => today.subtract(const Duration(days: 6)),
+      _ => today.subtract(const Duration(days: 29)),
+    };
+  }
+
+  // Stream disimpan, bukan dibuat di build(): tiap build baru akan
+  // berlangganan ulang dan membuat list berkedip ke spinner.
+  late Stream<List<TransactionSummary>> _stream = _watch();
+
+  Stream<List<TransactionSummary>> _watch() =>
+      sl<TransactionRepository>().watchHistory(since: _since);
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +61,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     filters: _filters,
                     selectedIndex: _selectedFilterIndex,
                     onSelected: (index) {
-                      setState(() => _selectedFilterIndex = index);
+                      setState(() {
+                        _selectedFilterIndex = index;
+                        _stream = _watch();
+                      });
                     },
                   ),
                   const SizedBox(height: AppSpacing.md),
@@ -44,42 +72,54 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               ),
             ),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                children: const [
-                  _TransactionTile(
-                    invoiceId: 'INV-0911-024',
-                    time: '12:20',
-                    itemCount: 5,
-                    amount: 'Rp 76.000',
-                    status: _TransactionStatus.lunas,
-                  ),
-                  Divider(height: 1, color: AppColor.divider),
-                  _TransactionTile(
-                    invoiceId: 'INV-0911-023',
-                    time: '11:45',
-                    itemCount: 1,
-                    amount: 'Rp 25.000',
-                    status: _TransactionStatus.lunas,
-                  ),
-                  Divider(height: 1, color: AppColor.divider),
-                  _TransactionTile(
-                    invoiceId: 'INV-0911-019',
-                    time: '10:02',
-                    itemCount: 5,
-                    amount: 'Rp 128.500',
-                    status: _TransactionStatus.lunas,
-                  ),
-                  Divider(height: 1, color: AppColor.divider),
-                  _TransactionTile(
-                    invoiceId: 'INV-0911-012',
-                    time: '09:15',
-                    itemCount: 1,
-                    amount: 'Rp 85.000',
-                    status: _TransactionStatus.void_,
-                  ),
-                  Divider(height: 1, color: AppColor.divider),
-                ],
+              child: StreamBuilder<List<TransactionSummary>>(
+                // Stream Drift: setelah void, list menyegarkan dirinya sendiri.
+                stream: _stream,
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return _EmptyOrError(
+                      message: 'Gagal memuat riwayat: ${snapshot.error}',
+                    );
+                  }
+                  final items = snapshot.data;
+                  if (items == null) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (items.isEmpty) {
+                    return const _EmptyOrError(
+                      message: 'Belum ada transaksi di periode ini',
+                    );
+                  }
+
+                  return ListView.separated(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                    ),
+                    itemCount: items.length,
+                    separatorBuilder: (_, _) =>
+                        const Divider(height: 1, color: AppColor.divider),
+                    itemBuilder: (context, index) {
+                      final item = items[index];
+                      return _TransactionTile(
+                        invoiceId: '#${item.id}',
+                        time: DateFormat(
+                          'dd/MM HH:mm',
+                        ).format(item.dateTime),
+                        itemCount: item.itemCount,
+                        amount: formatRupiah(item.total),
+                        status: item.isVoided
+                            ? _TransactionStatus.void_
+                            : _TransactionStatus.lunas,
+                        onTap: () => Navigator.of(context).push<void>(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                TransactionDetailScreen(transactionId: item.id),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
             ),
           ],
@@ -171,12 +211,35 @@ class _FilterTabs extends StatelessWidget {
 
 enum _TransactionStatus { lunas, void_ }
 
+class _EmptyOrError extends StatelessWidget {
+  const _EmptyOrError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: AppTextStyle.bodyMd.copyWith(
+            color: AppColor.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _TransactionTile extends StatelessWidget {
   final String invoiceId;
   final String time;
   final int itemCount;
   final String amount;
   final _TransactionStatus status;
+  final VoidCallback onTap;
 
   const _TransactionTile({
     required this.invoiceId,
@@ -184,14 +247,13 @@ class _TransactionTile extends StatelessWidget {
     required this.itemCount,
     required this.amount,
     required this.status,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {
-        // navigasi ke detail transaksi
-      },
+      onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
         child: Row(
