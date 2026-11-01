@@ -4,6 +4,7 @@ import 'package:henshin/core/utils/page_routes.dart';
 import 'package:henshin/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:henshin/features/product/presentation/screens/low_stock_screen.dart';
 import 'package:henshin/features/product/presentation/screens/product_list_screen.dart';
+import 'package:henshin/features/report/presentation/screens/report_screen.dart';
 import 'package:henshin/features/setting/presentation/screens/pin_create_screen.dart';
 import 'package:henshin/features/setting/presentation/screens/pin_verify_screen.dart';
 import 'package:henshin/features/setting/presentation/screens/setting_screen.dart';
@@ -75,6 +76,12 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const CashierScreen(),
     ),
 
+
+    GoRoute(
+      path: PageRoutes.laporan,
+      name: PageRoutes.laporanName,
+      builder: (context, state) => const ReportScreen(),
+    ),
 
     GoRoute(
       path: PageRoutes.perluRestok,

@@ -57,6 +57,11 @@ docs/struktur_folder.md        # ASPIRATIONAL — differs from code, do not foll
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs   # required after Drift/Freezed edits
 flutter run          # barcode/Bluetooth features need a physical Android device
+# Stale-build rules (have misled debugging three times — see ADR-025):
+#   Dart code changed        -> hot reload (r)
+#   initDependencies changed -> hot RESTART (R); main() does not re-run on reload
+#   pubspec package added    -> full `flutter run`; native side is not recompiled
+#                               by a restart (symptom: MissingPluginException)
 flutter analyze
 flutter test test/drift test/features test/injection_container_test.dart   # the real suite
 flutter test test/some_file_test.dart   # single file; bare `flutter test` fails on widget_test.dart
@@ -64,7 +69,37 @@ dart run drift_dev make-migrations      # schema snapshot + migration steps + te
 flutter build apk --release
 ```
 
-## 5. Do not (PRD §1.4 out-of-scope + production rules)
+## 5. Per-step workflow (`docs/implementasi.md`)
+
+Work one step at a time. Do not start the next step without explicit approval
+from the repo owner. If a step needs a technical decision the plan does not
+cover, stop and ask — do not assume. Finish each step with a 3–5 point summary.
+
+Once the owner says a step is verified, deliver all three of these in one reply:
+
+**1. Conventional commit message** — `Type(scope): deskripsi singkat` (imperative,
+lower case after the colon). Body states what changed and **why**, names the
+PRD/US rule it satisfies, and lists bugs fixed during verification. End with the
+attribution line the harness specifies. Do not run `git commit` unless asked —
+hand over the text.
+
+**2. `docs/progress.md`** — update every part that went stale, not just the new
+section: the "Diperbarui" date and step range, the summary table row, the
+"berikutnya" sentence, the **test count** (count it, never estimate), the manual
+verification paragraph, and the tech-debt table (new rows, and fix rows the step
+made obsolete). Add one `## Langkah N` section with what was built and why.
+
+**3. `docs/keputusan-arsitektur.md`** — one `## ADR-NNN` per decision that cannot
+be inferred from the code: a rule a future change must not undo by accident, a
+rejected alternative, a bug class with a non-obvious cause, or an assumption the
+owner overruled. Take the next free number; never renumber. Each ADR states the
+decision, the reason, and the consequence or limit accepted. Skip decisions the
+code already shows. Cross-link ADRs that constrain each other.
+
+A rule that an agent must follow *while writing code* belongs in §3 or §4 of this
+file too — an ADR alone is too deep for operational rules (see ADR-025).
+
+## 6. Do not (PRD §1.4 out-of-scope + production rules)
 
 - No new features for: cloud sync / multi-device / multi-outlet / auto cloud backup, QRIS/transfer/card payment, multi-user login (one PIN only), loyalty/customer data, marketplace/accounting/WhatsApp integrations, Excel export, supplier/PO, discounts/promos/tax/partial returns, product variants/modifiers/table management, customer debt, cashier shift/cash close, iOS/web targets, in-app CSV import, cash drawer.
 - Never store money as `double`. Never hard-delete transactions.

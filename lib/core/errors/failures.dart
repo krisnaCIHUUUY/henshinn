@@ -20,6 +20,12 @@ class ValidationFailure extends Failure {
   const ValidationFailure(super.message);
 }
 
+/// Cetak atau bagikan struk gagal. Tidak pernah berarti transaksinya gagal:
+/// penjualan selalu tersimpan lebih dulu (US-1.4).
+class PrintFailure extends Failure {
+  const PrintFailure(super.message);
+}
+
 class StorageFailure extends Failure {
   const StorageFailure(super.message);
 }

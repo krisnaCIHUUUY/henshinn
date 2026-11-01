@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:henshin/core/errors/failures.dart';
 import 'package:henshin/features/product/domain/entities/product.dart';
 import 'package:henshin/features/transaction/domain/entities/cart_item.dart';
+import 'package:henshin/features/transaction/domain/entities/receipt.dart';
+import 'package:henshin/features/transaction/domain/entities/transaction_summary.dart';
 import 'package:henshin/features/transaction/domain/repositories/transaction_repository.dart';
 import 'package:henshin/features/transaction/domain/usecases/create_sale.dart';
 import 'package:henshin/features/transaction/presentation/bloc/cart_bloc.dart';
@@ -13,6 +15,23 @@ class _FakeTransactionRepository implements TransactionRepository {
   Failure? failure;
   List<CartItem>? lastItems;
   int? lastPayment;
+
+  // CartBloc hanya memakai createSale; sisanya milik layar struk dan riwayat.
+  @override
+  Future<Either<Failure, Receipt>> buildReceipt(
+    int transactionId, {
+    bool isReprint = false,
+  }) async => throw UnimplementedError();
+
+  @override
+  Stream<List<TransactionSummary>> watchHistory({DateTime? since}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> voidTransaction(
+    int transactionId,
+    String reason,
+  ) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, int>> createSale({
