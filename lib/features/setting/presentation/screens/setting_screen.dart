@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:henshin/core/theme/app_color.dart';
 import 'package:henshin/core/theme/app_radius.dart';
 import 'package:henshin/core/theme/app_text_style.dart';
@@ -7,6 +8,7 @@ import 'package:henshin/core/utils/page_routes.dart';
 import 'package:henshin/features/setting/domain/entities/store_info.dart';
 import 'package:henshin/features/setting/domain/repositories/pin_repository.dart';
 import 'package:henshin/features/setting/domain/repositories/settings_repository.dart';
+import 'package:henshin/features/setting/presentation/backup_action.dart';
 import 'package:henshin/features/setting/presentation/screens/store_info_screen.dart';
 import 'package:henshin/features/setting/presentation/pin_gate.dart';
 import 'package:henshin/injection_container.dart';
@@ -19,7 +21,6 @@ class SettingScreen extends StatefulWidget {
 }
 
 class _SettingScreenState extends State<SettingScreen> {
-  bool _switchValue = false;
   bool _hasPin = false;
   StoreInfo _store = const StoreInfo();
 
@@ -75,6 +76,29 @@ class _SettingScreenState extends State<SettingScreen> {
 
     await context.push<bool>(PageRoutes.aturPin);
     await _loadPinStatus();
+  }
+
+  Future<void> _runBackup() async {
+    if (await BackupAction.run(context)) {
+      await _loadStoreInfo();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Backup dibuat')),
+        );
+      }
+    }
+  }
+
+  String get _backupSubtitle {
+    final last = _store.lastBackupAt;
+    if (last == null) return 'Belum pernah — data hanya ada di HP ini';
+    final days = _store.daysSinceBackup(DateTime.now()) ?? 0;
+    final when = DateFormat('dd/MM/yyyy HH:mm').format(last);
+    return switch (days) {
+      0 => 'Terakhir hari ini · $when',
+      1 => 'Terakhir kemarin · $when',
+      _ => 'Terakhir $days hari lalu · $when',
+    };
   }
 
   @override
@@ -159,30 +183,17 @@ class _SettingScreenState extends State<SettingScreen> {
             const SizedBox(height: 10),
             _SettingsGroup(
               children: [
+                // Baris 'Backup otomatis' dan 'Export laporan CSV' yang dulu di
+                // sini dihapus: backup otomatis tidak ada, dan export CSV
+                // termasuk out-of-scope (AGENTS.md §6 / PRD §1.4).
                 _SettingsRow(
-                  title: 'Backup otomatis',
-                  subtitle: 'Setiap hari · tersimpan lokal',
-                  trailing: Switch(
-                    value: _switchValue,
-                    onChanged: (value) {
-                      // toggle backup otomatis
-                      setState(() {
-                        _switchValue = value;
-                      });
-                    },
-                    activeThumbColor: AppColor.surfaceContainerLowest,
-                    activeTrackColor: AppColor.onSurface,
-                  ),
-                  onTap: null, // baris ini toggle langsung, bukan navigasi
-                ),
-                _SettingsRow(
-                  title: 'Export laporan',
-                  subtitle: 'CSV · periode bulan ini',
-                  trailing: const Icon(Icons.chevron_right,
-                      color: AppColor.outline),
-                  onTap: () {
-                    // navigasi ke export laporan
-                  },
+                  title: 'Backup data',
+                  subtitle: _backupSubtitle,
+                  trailing: _store.backupIsStale(DateTime.now())
+                      ? const _WarningBadge(label: 'Perlu backup')
+                      : const Icon(Icons.chevron_right,
+                          color: AppColor.outline),
+                  onTap: _runBackup,
                   isLast: true,
                 ),
               ],
@@ -318,6 +329,34 @@ class _SettingsRow extends StatelessWidget {
               color: AppColor.outlineVariant,
             ),
         ],
+      ),
+    );
+  }
+}
+
+// ================= WARNING BADGE =================
+
+/// Bentuknya sama dengan [_StatusBadge] tapi warna error: dipakai saat backup
+/// sudah lewat ambang, supaya terbaca sebagai peringatan, bukan status normal.
+class _WarningBadge extends StatelessWidget {
+  const _WarningBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: const BoxDecoration(
+        color: AppColor.errorContainer,
+        borderRadius: AppRadius.fullAll,
+      ),
+      child: Text(
+        label,
+        style: AppTextStyle.labelSm.copyWith(
+          fontWeight: FontWeight.w600,
+          color: AppColor.onErrorContainer,
+        ),
       ),
     );
   }

@@ -10,6 +10,9 @@ import 'package:henshin/core/utils/page_routes.dart';
 import 'package:henshin/features/report/domain/entities/sales_report.dart';
 import 'package:henshin/features/report/domain/repositories/report_repository.dart';
 import 'package:henshin/features/report/presentation/widgets/report_stats.dart';
+import 'package:henshin/features/setting/domain/entities/store_info.dart';
+import 'package:henshin/features/setting/domain/repositories/settings_repository.dart';
+import 'package:henshin/features/setting/presentation/widgets/backup_reminder.dart';
 import 'package:henshin/injection_container.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -22,6 +25,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   SalesReport? _today;
   SalesReport? _week;
+  StoreInfo? _store;
   String? _error;
 
   @override
@@ -40,6 +44,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final repository = sl<ReportRepository>();
       final today = await repository.getReport(ReportPeriod.hariIni);
       final week = await repository.getReport(ReportPeriod.tujuhHari);
+      // Pengingat backup ikut dimuat di sini, bukan di stream sendiri: datanya
+      // hanya berubah saat user backup, dan layar ini sudah punya pemicu muat
+      // ulang (tarik-ke-bawah + kembali dari kasir).
+      final store = await sl<SettingsRepository>().getStoreInfo();
       if (!mounted) return;
 
       setState(() {
@@ -48,6 +56,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _error = null;
         });
         week.fold((f) => _error = f.message, (r) => _week = r);
+        // Gagal baca settings tidak boleh menutupi angka hari ini: banner-nya
+        // saja yang tidak muncul.
+        store.fold((_) => _store = null, (r) => _store = r);
       });
     } catch (e) {
       if (!mounted) return;
@@ -78,6 +89,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 const _GreetingHeader(),
                 const SizedBox(height: AppSpacing.lg - 4),
+                if (_store?.backupIsStale(DateTime.now()) ?? false) ...[
+                  BackupReminder(store: _store!, onDone: _load),
+                  const SizedBox(height: AppSpacing.md),
+                ],
                 if (_error != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),

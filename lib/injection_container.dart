@@ -18,8 +18,10 @@ import 'package:henshin/features/product/domain/usecases/update_product.dart';
 import 'package:henshin/features/product/presentation/bloc/product_bloc.dart';
 import 'package:henshin/features/report/data/repositories/report_repository_impl.dart';
 import 'package:henshin/features/report/domain/repositories/report_repository.dart';
+import 'package:henshin/features/setting/data/repositories/backup_repository_impl.dart';
 import 'package:henshin/features/setting/data/repositories/pin_repository_impl.dart';
 import 'package:henshin/features/setting/data/repositories/settings_repository_impl.dart';
+import 'package:henshin/features/setting/domain/repositories/backup_repository.dart';
 import 'package:henshin/features/setting/domain/repositories/settings_repository.dart';
 import 'package:henshin/features/transaction/data/repositories/transaction_repository_impl.dart';
 import 'package:henshin/features/transaction/data/services/pdf_printer_service.dart';
@@ -94,6 +96,11 @@ void initDependencies() {
   // ===== setting =====
   sl.registerLazySingleton<SettingsRepository>(
     () => SettingsRepositoryImpl(sl()),
+  );
+  // AppDatabase + SettingsDao: VACUUM INTO jalan di koneksi yang sama dengan
+  // aplikasi, lalu `lastBackupAt` ditulis setelah share sheet.
+  sl.registerLazySingleton<BackupRepository>(
+    () => BackupRepositoryImpl(sl(), sl()),
   );
 
   // ===== setting / PIN =====
