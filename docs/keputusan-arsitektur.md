@@ -540,3 +540,76 @@ nol, karena rentang nol membuat chart kosong.
 
 Laporan 7/30 hari sengaja **tanpa** grafik: 30 batang tidak terbaca di layar HP,
 dan agregat periodenya sudah menjawab pertanyaannya.
+
+## ADR-034 — File backup hanya lewat cache aplikasi + share sheet
+
+**Keputusan.** Export backup menulis file ke `getTemporaryDirectory()` (cache
+aplikasi) lalu langsung membuka share sheet. Tidak ada salinan di folder yang
+bisa dibuka file manager, dan tidak ada permintaan izin storage.
+
+**Alasan.** Sejak Android 11 (scoped storage) menulis ke penyimpanan bersama
+butuh SAF atau MediaStore — satu alur izin dan file picker tersendiri, padahal
+PRD §1.6 hanya menuntut backup bisa dikirim ke Drive/WhatsApp, yang justru
+pekerjaan share sheet. Pilihan ini ditawarkan ke pemilik repo bersama opsi
+"simpan juga di folder yang kelihatan", dan opsi cache + share dipilih.
+
+**Konsekuensi yang diterima.** File di cache boleh dihapus OS kapan saja, jadi
+backup hanya benar-benar ada kalau user memilih tujuan di share sheet. Tidak
+ada daftar backup di dalam aplikasi, dan tidak ada cara mengambil ulang file
+yang sudah dibuang OS. Kalau nanti dibutuhkan folder yang kelihatan, itu
+pekerjaan SAF — jangan ditambal dengan `permission_handler` + path keras, yang
+tidak jalan di Android modern.
+
+## ADR-035 — `lastBackupAt` dicatat kecuali share sheet dibatalkan
+
+**Keputusan.** `exportAndShare` mencatat `lastBackupAt` setelah share sheet
+tertutup, **kecuali** statusnya `ShareResultStatus.dismissed`. Status
+`unavailable` tetap dihitung berhasil.
+
+**Alasan.** Di Android `share_plus` sering tidak bisa membedakan "dibagikan"
+dari "sheet ditutup" dan mengembalikan `unavailable` — hal yang sama sudah
+menggigit di layar struk (lihat catatan `receipt_preview_screen.dart`). Kalau
+`unavailable` ditolak, `lastBackupAt` tidak akan pernah terisi di HP mana pun
+dan pengingat 7 hari jadi banner permanen yang diabaikan orang.
+
+**Konsekuensi yang diterima.** `lastBackupAt` bisa berbohong: user membuka
+share sheet, memilih aplikasi, lalu membatalkan di aplikasi tujuan, dan aplikasi
+tetap mengira backup berhasil. Ini ditukar sadar dengan pengingat yang bisa
+dimatikan. Jangan jadikan `lastBackupAt` bukti bahwa file-nya ada — satu-satunya
+bukti adalah restore (langkah 14). Menyatu dengan ADR-034: file di cache juga
+bisa hilang tanpa jejak.
+
+## ADR-036 — Ambang pengingat backup dihitung per hari kalender
+
+**Keputusan.** `StoreInfo.backupIsStale(now)` membandingkan tanggal (tengah
+malam ke tengah malam), bukan selisih jam, dan `lastBackupAt == null` dianggap
+basi. Ambangnya `> 7` hari.
+
+**Alasan.** Dengan selisih jam, backup jam 23:00 yang dibuka jam 01:00 tujuh
+hari kemudian masih terhitung 7 hari lewat `inDays` dan banner tertunda hampir
+sehari penuh. Hari kalender juga sudah jadi konvensi proyek ini untuk
+pengelompokan tanggal (ADR-032), karena drift menyimpan epoch UTC. "Belum pernah
+backup" diperlakukan basi karena itu kondisi paling berbahaya, bukan netral —
+HP baru tanpa backup adalah justru saat pengingatnya paling perlu muncul.
+
+**Konsekuensi yang diterima.** `> 7` berarti banner muncul di hari ke-8, bukan
+ke-7; angka ini diambil harfiah dari `docs/implementasi.md` langkah 13 ("jika >7
+hari"). Kalau yang dimaksud hari ke-7, ubah `backupStaleAfterDays` — jangan
+ubah cara hitungnya ke selisih jam.
+
+## ADR-037 — Export backup tidak di-PIN
+
+**Keputusan.** Membuat dan membagikan backup tidak memerlukan PIN. Restore
+(langkah 14) tetap wajib PIN.
+
+**Alasan.** PRD §2.7 menyebut PIN untuk void, restore, dan ubah harga/modal —
+export tidak termasuk. Konsisten dengan ADR-031 yang sudah memutuskan "satu PIN,
+satu pemegang": PIN di aplikasi ini melindungi dari kesalahan kasir yang merusak
+data, bukan dari pemilik membaca datanya sendiri. Pilihan ini dikonfirmasi ke
+pemilik repo sebelum ditulis.
+
+**Konsekuensi yang diterima.** Siapa pun yang memegang HP dalam keadaan terbuka
+bisa mengirim seluruh data penjualan ke luar. Itu asumsi "satu HP, satu
+pemegang" yang sama seperti ADR-031; kalau asumsi itu gugur (kasir pegawai,
+HP dipakai bergantian), yang harus dibuka ulang bukan baris ini saja tapi
+seluruh model PIN — lihat ADR-031.

@@ -6,6 +6,8 @@ import 'package:henshin/core/database/app_database.dart';
 import 'package:henshin/features/product/domain/repositories/product_repository.dart';
 import 'package:henshin/features/product/presentation/bloc/product_bloc.dart';
 import 'package:henshin/features/setting/domain/repositories/pin_repository.dart';
+import 'package:henshin/features/report/domain/repositories/report_repository.dart';
+import 'package:henshin/features/setting/domain/repositories/backup_repository.dart';
 import 'package:henshin/features/setting/domain/repositories/settings_repository.dart';
 import 'package:henshin/features/setting/presentation/bloc/pin_bloc.dart';
 import 'package:henshin/features/transaction/domain/repositories/transaction_repository.dart';
@@ -68,6 +70,10 @@ void main() {
     expect(sl<TransactionRepository>(), isNotNull);
     expect(sl<CartBloc>(), isNotNull);
     expect(sl<PrinterService>(), isNotNull);
+    expect(sl<ReportRepository>(), isNotNull);
+    // Resolve-nya tidak memanggil path_provider: direktori output baru dibaca
+    // saat export jalan, jadi aman di tes host.
+    expect(sl<BackupRepository>(), isNotNull);
   });
 
   test('database yang di-wire benar-benar bisa dibuka dan di-query', () async {

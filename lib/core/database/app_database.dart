@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart';
 
 import 'app_database.steps.dart';
@@ -124,6 +126,19 @@ class AppDatabase extends _$AppDatabase {
           await _seedIfEmpty();
         },
       );
+
+  /// Snapshot konsisten database ini ke [file] (langkah 13 / PRD §1.6).
+  ///
+  /// `VACUUM INTO` menulis salinan yang sudah di-checkpoint, jadi hasilnya
+  /// tidak pernah berisi transaksi setengah jalan — beda dari menyalin file
+  /// `.sqlite` mentah yang bisa tertinggal WAL-nya. Tidak boleh dipanggil dari
+  /// dalam `transaction()`: sqlite menolak VACUUM di dalam transaksi.
+  Future<void> exportInto(File file) async {
+    await file.parent.create(recursive: true);
+    // sqlite menuntut target kosong; file lama dari export sebelumnya dibuang.
+    if (file.existsSync()) file.deleteSync();
+    await customStatement('VACUUM INTO ?', [file.path]);
+  }
 
   Future<void> _seedIfEmpty() async {
     await transaction(() async {

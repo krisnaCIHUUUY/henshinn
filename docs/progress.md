@@ -1,6 +1,6 @@
 # Progress Henshin POS
 
-Status eksekusi `docs/implementasi.md`. Diperbarui 2026-11-01 (langkah 1–12).
+Status eksekusi `docs/implementasi.md`. Diperbarui 2026-11-02 (langkah 1–13).
 
 Keputusan arsitektur yang diambil selama eksekusi dicatat terpisah di
 `docs/keputusan-arsitektur.md`.
@@ -21,23 +21,27 @@ Keputusan arsitektur yang diambil selama eksekusi dicatat terpisah di
 | 10 | Riwayat + detail + cetak ulang | ✅ selesai |
 | 11 | Void ber-PIN + alasan + stok kembali | ✅ selesai |
 | 12 | Dashboard hari ini + laporan preset + produk terlaris | ✅ selesai |
-| 13–15 | Backup, restore, hardening | ⬜ belum |
+| 13 | Export backup (`VACUUM INTO`) + share + pengingat 7 hari | ✅ selesai |
+| 14–15 | Restore ber-PIN, hardening | ⬜ belum |
 
 Fondasi (1–3), F2 Produk & Stok (4–5), dan F1 Kasir + scan + struk (6–8)
 selesai di sisi kode. Langkah 9 sengaja berhenti di interface + fallback PDF
 sesuai PRD §2.8 ("selama printer belum ada, pengembangan memakai preview dan
 PDF"); impl ESC/POS menunggu printer fisik + spike 1 hari (PRD §3.4).
-F3 Riwayat & Void (10–11) dan F4 Dashboard & Laporan (12) selesai. Berikutnya
-F5 Backup & Restore (13–14) — satu-satunya safety net data, tidak boleh
-dipotong (PRD §1.6).
+F3 Riwayat & Void (10–11), F4 Dashboard & Laporan (12), dan separuh pertama
+F5 (13, export) selesai. Berikutnya langkah 14 Restore — dan sampai itu lolos,
+backup langkah 13 belum terbukti bisa dipulihkan, jadi safety net data PRD §1.6
+baru separuh berdiri.
 
-**Verifikasi saat ini:** 128 tes lolos, `flutter analyze` bersih.
+**Verifikasi saat ini:** 142 tes lolos, `flutter analyze` bersih.
 
-Uji manual di device oleh pemilik repo: langkah 1–5 dan 10–12 ✅; langkah 6
+Uji manual di device oleh pemilik repo: langkah 1–5 dan 10–13 ✅; langkah 6
 (kasir) dan 8 (struk) sebagian — lima bug ditemukan dan sudah diperbaiki, lihat
-"Perbaikan setelah verifikasi manual". **Belum pernah diuji di HP:** scanner barcode
-(langkah 7) dan share sheet PDF — keduanya ikut terkubur di APK lama, jadi
-butuh `flutter run` penuh, bukan hot restart.
+"Perbaikan setelah verifikasi manual". Langkah 13 sekaligus membuktikan
+`SharePlus.instance.share` memang jalan di Android, yang sebelumnya belum pernah
+terkonfirmasi. **Belum pernah diuji di HP:** scanner barcode (langkah 7), dan
+jalur share khusus PDF struk (mime `application/pdf`) — keduanya ikut terkubur
+di APK lama, jadi butuh `flutter run` penuh, bukan hot restart.
 
 ---
 
@@ -238,6 +242,45 @@ butuh `flutter run` penuh, bukan hot restart.
   terlaris, produk terhapus tetap muncul, hari kosong = 0, dan penjualan jam 1
   pagi tetap masuk hari itu (regresi zona waktu).
 
+## Langkah 13 — Export backup + share + pengingat 7 hari
+
+- `AppDatabase.exportInto(File)`: `VACUUM INTO ?` lewat `customStatement`,
+  resep resmi Drift. Hasilnya salinan yang sudah di-checkpoint — tidak pernah
+  berisi transaksi setengah jalan, beda dari menyalin `.sqlite` mentah yang
+  bisa tertinggal WAL-nya. Tidak boleh dipanggil dari dalam `transaction()`.
+- `BackupRepository` + `BackupRepositoryImpl`: `exportToFile()` (snapshot saja,
+  bisa diuji tanpa UI) dipisah dari `exportAndShare()` (share sheet + catat
+  `lastBackupAt`). Direktori output, fungsi share, dan jam disuntikkan.
+- File ditulis ke **cache aplikasi**, bukan folder publik: sejak Android 11
+  menulis ke penyimpanan bersama butuh SAF/MediaStore, dan share sheet sudah
+  menjangkau Drive/WA seperti yang diminta PRD §1.6. Lihat ADR-034.
+- Dibagikan dengan `mimeType: 'application/octet-stream'` — `.sqlite` tidak
+  punya mime terdaftar di Android dan tanpa itu sebagian target share menolak
+  atau menyembunyikan file. Nama file memuat tanggal **dan jam** supaya dua
+  backup di hari yang sama tidak saling menimpa di folder tujuan.
+- `lastBackupAt` hanya dicatat kalau share sheet tidak dibatalkan; status
+  `unavailable` (umum di Android) tetap dihitung berhasil. Lihat ADR-035.
+- `StoreInfo.backupIsStale(now)` + `daysSinceBackup(now)`: ambang dihitung per
+  **hari kalender**, bukan per 168 jam, mengikuti ADR-032. Belum pernah backup
+  juga dianggap basi. Lihat ADR-036.
+- UI: banner merah `BackupReminder` di atas dashboard dengan tombol "Backup
+  sekarang", dan baris "Backup data" di Pengaturan dengan badge "Perlu backup".
+  Keduanya memanggil satu helper `BackupAction.run` — pola `PinGate.require`,
+  bukan bloc baru (ADR-028).
+- Dua baris dummy di grup "Data lokal" dihapus: switch "Backup otomatis"
+  (menjanjikan fitur yang tidak ada) dan "Export laporan CSV" (out-of-scope,
+  AGENTS.md §6).
+- Tes: 14 tes baru — header SQLite file hasil export, isi identik dengan data
+  asli, perubahan setelah snapshot tidak ikut, export ulang di jam sama
+  menimpa alih-alih gagal, empat jalur `lastBackupAt`, empat kasus ambang hari.
+  `ReportRepository` dan `BackupRepository` ditambahkan ke
+  `test/injection_container_test.dart` (`ReportRepository` dari langkah 12
+  ternyata belum pernah masuk situ).
+- Dua cacat ditemukan sendiri saat menulis, bukan dari verifikasi: tombol back
+  bisa menutup dialog tunggu lalu `pop()` menutup halaman di belakangnya
+  (dikunci `PopScope`), dan ekspektasi tes header SQLite salah — 16 byte-nya
+  berakhir NUL dan `trimRight()` tidak membuangnya.
+
 ## Perbaikan setelah verifikasi manual
 
 - **Form tambah produk tidak pernah tertutup setelah simpan sukses** (dilaporkan
@@ -275,10 +318,10 @@ butuh `flutter run` penuh, bukan hot restart.
 
 | Hal | Dampak |
 |---|---|
-| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (128 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
+| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (142 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
 | `settings.schemaVersion` hanya diisi saat seed | Jadi basi setelah bump versi berikutnya. Ditandai `shortcut:` di kode |
 | `decrementStock`/`incrementStock` lama di `ProductDao` tidak menulis ledger dan **tidak dipakai siapa pun** | Langkah 6 dan 11 tidak memakainya (keduanya lewat `TransactionDao`). Sekarang murni mati — kandidat dihapus |
-| `setting_screen.dart` memuat baris dummy "Pajak (PPN) 11%" dan "Export laporan CSV" | Keduanya di luar scope (AGENTS.md §6), perlu dibersihkan sebelum rilis |
+| `setting_screen.dart` masih memuat baris dummy "Pajak (PPN) 11%" dan "Printer thermal BT-01" | Keduanya di luar scope atau belum ada (AGENTS.md §6, langkah 9), perlu dibersihkan sebelum rilis. Baris "Export laporan CSV" sudah dihapus di langkah 13 |
 | Riwayat pergerakan stok belum punya tampilan | Ledger ditulis (termasuk oleh void) tapi belum bisa dilihat pemilik. Riwayat langkah 10 menampilkan transaksi, bukan ledger |
 | Layar riwayat + detail transaksi belum punya tes widget | Logikanya teruji di tes repository, navigasi dan dialog alasan void hanya terverifikasi manual (ADR-012, ADR-028) |
 | Ikon ekspor di header riwayat masih mati | Peninggalan UI dummy; ekspor CSV di luar scope (AGENTS.md §6). Perlu dihapus atau diganti fungsi lain |
@@ -287,9 +330,17 @@ butuh `flutter run` penuh, bukan hot restart.
 | Blok `_RestockList` di `dashboard_screen.dart` masih di-comment | Peninggalan UI dummy; `LowStockScreen` sudah menanganinya. Kandidat hapus |
 | Angka 30 hari menjumlahkan header transaksi di memori | Aman untuk satu warung; perlu pindah ke agregat SQL (dengan offset zona waktu eksplisit) kalau datanya jadi tahunan. ADR-032 |
 | Dashboard dan `ReportScreen` belum punya tes widget | Angkanya dijaga 13 tes repository; chart fl_chart merender di canvas jadi tes widget hanya bisa memastikan widget-nya ada |
-| `.claude/` belum masuk `.gitignore` | Konfigurasi lokal berisiko ikut ter-commit |
 | Scanner belum pernah dijalankan di device fisik | Metrik PRD "produk masuk keranjang ≤2 detik" belum terukur. Emulator tidak cukup (PRD §1.6) |
+| Halaman scan barcode dikunci landscape, pemilik ingin potrait | Diminta 2026-11-02, dikerjakan nanti atas permintaan pemilik. Rincian + langkahnya di `.scratch/scanner-orientasi/issues/01-orientasi-potrait.md`. Keputusan landscape yang lama tidak pernah masuk ADR |
+<<<<<<< HEAD
+| Kategori produk tidak bisa dibuat dari dalam aplikasi | Tab hanya pernah berisi "Semua" + "Umum" dari seed; `CategoryDao.addCategory` tidak dipanggil siapa pun. Desainnya sudah diputuskan lengkap (sesi grilling 2026-11-02), dikerjakan nanti atas permintaan pemilik: `.scratch/kategori-produk/issues/01-buat-kategori-dari-form-produk.md` |
+=======
+>>>>>>> ae56f108df5a78e0192b414fdb619f1c9919a087
 | Impl cetak ESC/POS Bluetooth belum ada | Langkah 9 belum tuntas. Butuh printer 58mm fisik + spike 1 hari (PRD §3.4). Metrik "50× cetak ≥95% sukses" belum terukur |
-| Share sheet PDF belum terkonfirmasi berhasil di device | Dua perbaikan (ADR-026 + rebuild penuh) belum pernah berjalan bersamaan di HP. `SharePlus.instance.share` sendiri belum pernah dikonfirmasi jalan di Android |
+| Jalur share khusus PDF struk belum terkonfirmasi di device | `SharePlus.instance.share` sendiri sudah terbukti jalan lewat backup langkah 13, jadi yang tersisa hanya jalur PDF-nya (ADR-026 + rebuild penuh belum pernah berjalan bersamaan di HP) |
 | Peringatan `Courier has no Unicode support` di log | Hanya informatif; karakter non-Latin1 dipetakan ke `?` di PDF (ADR-027). Ganti font Unicode kalau katalog butuh |
 | `ReceiptPreviewScreen` dan `StoreInfoScreen` belum punya tes | Sama seperti layar lain (ADR-012) |
+| Backup belum pernah dipulihkan | Langkah 14 yang membuktikan file-nya benar-benar bisa dipakai. Sampai itu lolos, "sudah backup" belum berarti "data aman" (PRD §1.6) |
+| File backup hanya ada di cache aplikasi | Boleh dibuang Android kapan saja. `lastBackupAt` bisa mencatat backup yang tidak pernah terkirim ke mana pun, karena Android sering tidak bisa membedakan "dibagikan" dari "sheet ditutup" (ADR-035) |
+| Ambang basi memakai `> 7` hari | Banner baru muncul di hari ke-8, persis seperti teks rencana. Kalau yang dimaksud hari ke-7, ubah `backupStaleAfterDays` atau operatornya di `store_info.dart` |
+| `BackupReminder` dan baris "Backup data" belum punya tes widget | Logikanya teruji di 14 tes repository + entity; banner dan badge hanya terverifikasi manual (ADR-012) |
