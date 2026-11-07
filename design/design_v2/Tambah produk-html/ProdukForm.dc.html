@@ -1,0 +1,98 @@
+<!doctype html>
+<meta charset="utf-8"><style data-dc-design-system-vars>@layer{:root{--bg:#f4f6f6;--surface:#ffffff;--surface-muted:#eaeff0;--line:#dde4e4;--line-strong:#8a9697;--ink:#172021;--ink-muted:#5b6768;--primary:#006565;--primary-pressed:#004d4d;--primary-soft:#ddf0ef;--on-primary:#ffffff;--success:#1d6b37;--success-soft:#e2f2e7;--warning:#7a4f00;--warning-soft:#fcefd2;--danger:#b3261e;--danger-soft:#fbe3e0;--shadow-sheet:0 -4px 24px rgba(23,32,33,0.12);--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-6:24px;--radius-sm:8px;--radius-md:12px;--radius-lg:20px;--radius-full:999px;--tap-min:48px;--tap-primary:56px;--row-min:64px;--font-sans:Roboto, "Noto Sans", system-ui, sans-serif;--font-mono:"Roboto Mono", ui-monospace, monospace;--text-amount:700 36px/44px var(--font-sans);--text-stat:700 22px/28px var(--font-sans);--text-title:600 22px/28px var(--font-sans);--text-heading:600 17px/24px var(--font-sans);--text-body:400 16px/24px var(--font-sans);--text-body-strong:600 16px/24px var(--font-sans);--text-label:500 14px/20px var(--font-sans);--text-caption:500 12px/16px var(--font-sans);--text-receipt:400 13px/18px var(--font-mono);}}</style>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Tambah produk</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#006565}a:hover{color:#004d4d}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; background: #f4f6f6; font-family: Roboto, 'Noto Sans', system-ui, sans-serif; color: #172021; display: flex; flex-direction: column">
+  <header style="display: flex; align-items: center; gap: 4px; padding: 8px 8px 8px 4px">
+    <a href="Produk.dc.html" aria-label="Kembali ke produk" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: #172021">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600">Tambah produk</h1>
+  </header>
+
+  <form style="display: flex; flex-direction: column; gap: 16px; padding: 8px 16px 0 16px">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label for="nama" style="font-size: 14px; line-height: 20px; font-weight: 500">Nama produk</label>
+      <input id="nama" value="Teh Botol 350 ml" style="height: 48px; padding: 0 12px; box-sizing: border-box; background: #ffffff; border: 2px solid #006565; border-radius: 12px; font: inherit; font-size: 16px; color: #172021; outline: none">
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label for="kat" style="font-size: 14px; line-height: 20px; font-weight: 500">Kategori</label>
+      <button id="kat" type="button" style="height: 48px; padding: 0 12px; box-sizing: border-box; background: #ffffff; border: 1px solid #8a9697; border-radius: 12px; font: inherit; font-size: 16px; color: #172021; display: flex; align-items: center; justify-content: space-between">Minuman
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5b6768" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label for="bc" style="font-size: 14px; line-height: 20px; font-weight: 500">Barcode <span style="color: #5b6768">(opsional)</span></label>
+      <div style="display: flex; gap: 8px">
+        <input id="bc" inputmode="numeric" placeholder="Ketik atau scan" style="flex: 1; min-width: 0; height: 48px; padding: 0 12px; box-sizing: border-box; background: #ffffff; border: 1px solid #8a9697; border-radius: 12px; font: inherit; font-size: 16px; color: #172021; outline: none">
+        <button type="button" aria-label="Scan barcode" style="width: 48px; height: 48px; border: 0; border-radius: 12px; background: #eaeff0; color: #172021; display: flex; align-items: center; justify-content: center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10"></path></svg>
+        </button>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="jual" style="font-size: 14px; line-height: 20px; font-weight: 500">Harga jual</label>
+        <div style="display: flex; align-items: center; gap: 6px; height: 48px; padding: 0 12px; box-sizing: border-box; background: #ffffff; border: 1px solid #8a9697; border-radius: 12px">
+          <span style="font-size: 16px; color: #5b6768">Rp</span>
+          <input id="jual" inputmode="numeric" value="5.000" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font: inherit; font-size: 16px; font-weight: 600; color: #172021; font-variant-numeric: tabular-nums">
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="modal" style="font-size: 14px; line-height: 20px; font-weight: 500">Harga modal</label>
+        <div style="display: flex; align-items: center; gap: 6px; height: 48px; padding: 0 12px; box-sizing: border-box; background: #ffffff; border: 1px solid #8a9697; border-radius: 12px">
+          <span style="font-size: 16px; color: #5b6768">Rp</span>
+          <input id="modal" inputmode="numeric" value="4.000" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font: inherit; font-size: 16px; font-weight: 600; color: #172021; font-variant-numeric: tabular-nums">
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #ddf0ef; border-radius: 12px">
+      <span style="font-size: 14px; line-height: 20px; font-weight: 500; color: #006565">Laba kotor per pcs</span>
+      <span style="font-size: 16px; font-weight: 600; color: #006565; font-variant-numeric: tabular-nums">Rp 1.000</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="stok" style="font-size: 14px; line-height: 20px; font-weight: 500">Stok awal</label>
+        <input id="stok" inputmode="numeric" value="24" style="height: 48px; padding: 0 12px; box-sizing: border-box; background: #ffffff; border: 1px solid #8a9697; border-radius: 12px; font: inherit; font-size: 16px; color: #172021; outline: none; font-variant-numeric: tabular-nums">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="min" style="font-size: 14px; line-height: 20px; font-weight: 500">Ingatkan jika sisa</label>
+        <input id="min" inputmode="numeric" value="5" style="height: 48px; padding: 0 12px; box-sizing: border-box; background: #ffffff; border: 1px solid #8a9697; border-radius: 12px; font: inherit; font-size: 16px; color: #172021; outline: none; font-variant-numeric: tabular-nums">
+      </div>
+    </div>
+    <p style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 500; color: #5b6768">Mengubah harga jual atau modal nanti perlu PIN pemilik.</p>
+  </form>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 16px 16px; background: #ffffff; box-shadow: 0 -4px 24px rgba(23,32,33,0.12)">
+    <a href="Produk.dc.html" style="height: 56px; border-radius: 12px; background: #006565; color: #ffffff; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 17px; font-weight: 600">Simpan produk</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!doctype html>
+<meta charset="utf-8"><style data-dc-design-system-vars>@layer{:root{--bg:#f4f6f6;--surface:#ffffff;--surface-muted:#eaeff0;--line:#dde4e4;--line-strong:#8a9697;--ink:#172021;--ink-muted:#5b6768;--primary:#006565;--primary-pressed:#004d4d;--primary-soft:#ddf0ef;--on-primary:#ffffff;--success:#1d6b37;--success-soft:#e2f2e7;--warning:#7a4f00;--warning-soft:#fcefd2;--danger:#b3261e;--danger-soft:#fbe3e0;--shadow-sheet:0 -4px 24px rgba(23,32,33,0.12);--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-6:24px;--radius-sm:8px;--radius-md:12px;--radius-lg:20px;--radius-full:999px;--tap-min:48px;--tap-primary:56px;--row-min:64px;--font-sans:Roboto, "Noto Sans", system-ui, sans-serif;--font-mono:"Roboto Mono", ui-monospace, monospace;--text-amount:700 36px/44px var(--font-sans);--text-stat:700 22px/28px var(--font-sans);--text-title:600 22px/28px var(--font-sans);--text-heading:600 17px/24px var(--font-sans);--text-body:400 16px/24px var(--font-sans);--text-body-strong:600 16px/24px var(--font-sans);--text-label:500 14px/20px var(--font-sans);--text-caption:500 12px/16px var(--font-sans);--text-receipt:400 13px/18px var(--font-mono);}}</style>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Void transaksi</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#006565}a:hover{color:#004d4d}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; background: #f4f6f6; font-family: Roboto, 'Noto Sans', system-ui, sans-serif; color: #172021; display: flex; flex-direction: column">
+  <header style="display: flex; align-items: center; gap: 4px; padding: 8px 8px 8px 4px">
+    <a href="Riwayat.dc.html" aria-label="Kembali ke riwayat" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: #172021">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600">Transaksi #0142</h1>
+  </header>
+  <div style="padding: 8px 16px 0 16px; display: flex; flex-direction: column; gap: 16px">
+    <div style="background: #ffffff; border: 1px solid #dde4e4; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+      <span style="display: flex; justify-content: space-between; font-size: 14px; line-height: 20px; font-weight: 500; color: #5b6768">Hari ini, 14.32 · Tunai<span style="padding: 2px 8px; border-radius: 8px; background: #e2f2e7; color: #1d6b37; font-size: 12px; line-height: 16px; font-weight: 600">Selesai</span></span>
+      <span style="font-size: 36px; line-height: 44px; font-weight: 700; letter-spacing: -0.5px; font-variant-numeric: tabular-nums">Rp 23.500</span>
+    </div>
+    <div style="background: #ffffff; border: 1px solid #dde4e4; border-radius: 12px; padding: 4px 16px">
+      <div style="display: flex; justify-content: space-between; min-height: 48px; align-items: center; border-bottom: 1px solid #dde4e4"><span>Mi Goreng Instan × 2</span><span style="font-weight: 600">Rp 7.000</span></div>
+      <div style="display: flex; justify-content: space-between; min-height: 48px; align-items: center; border-bottom: 1px solid #dde4e4"><span>Air Mineral 600 ml × 1</span><span style="font-weight: 600">Rp 4.000</span></div>
+      <div style="display: flex; justify-content: space-between; min-height: 48px; align-items: center"><span>Telur Ayam × 5</span><span style="font-weight: 600">Rp 12.500</span></div>
+    </div>
+  </div>
+
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(23,32,33,0.45)"></div>
+
+  <section role="dialog" aria-label="Void transaksi dengan PIN" style="position: absolute; left: 0; right: 0; bottom: 0; background: #ffffff; border-radius: 20px 20px 0 0; box-shadow: 0 -4px 24px rgba(23,32,33,0.12); padding: 8px 16px 16px 16px; display: flex; flex-direction: column; gap: 16px">
+    <span aria-hidden="true" style="align-self: center; width: 40px; height: 4px; border-radius: 999px; background: #dde4e4"></span>
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <h2 style="margin: 0; font-size: 17px; line-height: 24px; font-weight: 600">Void transaksi #0142</h2>
+      <p style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 500; color: #5b6768">Rp 23.500 · stok 3 produk dikembalikan. Transaksi tetap tercatat di riwayat.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 14px; line-height: 20px; font-weight: 500">Alasan</span>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap">
+        <button type="button" aria-pressed="true" style="height: 40px; padding: 0 16px; border: 1px solid #006565; border-radius: 999px; background: #ddf0ef; color: #006565; font: inherit; font-size: 14px; font-weight: 500">Salah input</button>
+        <button type="button" style="height: 40px; padding: 0 16px; border: 1px solid #8a9697; border-radius: 999px; background: #ffffff; color: #172021; font: inherit; font-size: 14px; font-weight: 500">Pembeli batal</button>
+        <button type="button" style="height: 40px; padding: 0 16px; border: 1px solid #8a9697; border-radius: 999px; background: #ffffff; color: #172021; font: inherit; font-size: 14px; font-weight: 500">Lainnya</button>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+      <span style="font-size: 14px; line-height: 20px; font-weight: 500">PIN pemilik</span>
+      <div role="img" aria-label="2 dari 4 angka PIN terisi" style="display: flex; gap: 16px">
+        <span style="width: 14px; height: 14px; border-radius: 999px; background: #172021"></span>
+        <span style="width: 14px; height: 14px; border-radius: 999px; background: #172021"></span>
+        <span style="width: 14px; height: 14px; border-radius: 999px; border: 2px solid #8a9697; box-sizing: border-box"></span>
+        <span style="width: 14px; height: 14px; border-radius: 999px; border: 2px solid #8a9697; box-sizing: border-box"></span>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{keys}}" as="k" hint-placeholder-count="11">
+        <button type="button" style="height: 52px; border: 0; border-radius: 12px; background: #eaeff0; color: #172021; font: inherit; font-size: 22px; font-weight: 600">{{k}}</button>
+      </sc-for>
+      <button type="button" aria-label="Hapus angka" style="height: 52px; border: 0; border-radius: 12px; background: #ffffff; color: #172021; display: flex; align-items: center; justify-content: center">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5h11v14H9l-6-7z"></path><path d="M12 9l5 5M17 9l-5 5"></path></svg>
+      </button>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+      <a href="Riwayat.dc.html" style="height: 56px; border-radius: 12px; background: #eaeff0; color: #172021; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 16px; font-weight: 600">Batal</a>
+      <a href="Riwayat.dc.html" style="height: 56px; border-radius: 12px; background: #b3261e; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; font-size: 16px; font-weight: 600">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M5.6 5.6l12.8 12.8"></path></svg>Void transaksi</a>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { keys: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0'] };
+  }
+}
+</script>
+</body>
+</html>

@@ -613,3 +613,109 @@ bisa mengirim seluruh data penjualan ke luar. Itu asumsi "satu HP, satu
 pemegang" yang sama seperti ADR-031; kalau asumsi itu gugur (kasir pegawai,
 HP dipakai bergantian), yang harus dibuka ulang bukan baris ini saja tapi
 seluruh model PIN — lihat ADR-031.
+
+---
+
+> **Catatan nomor.** ADR-038 sengaja dibiarkan kosong: nomor itu sudah
+> dijanjikan ke dua pekerjaan yang diparkir pemilik — kategori produk
+> (`.scratch/kategori-produk/`) dan desain UI v2 (`.scratch/desain-v2/`) —
+> dan komentar kode langkah 14 sudah menyebut 039–041 sebelum keduanya jalan.
+> Mana pun yang dikerjakan lebih dulu mengambil 038. Jangan diisi hal lain,
+> dan jangan ada yang dinomori ulang.
+
+---
+
+## ADR-039 — Restore menutup aplikasi, bukan membangun ulang DI
+
+**Keputusan.** Setelah restore berhasil, `RestoreAction` menampilkan dialog yang
+tidak bisa dilewati lalu memanggil **`exit(0)`**. Aplikasi tidak mencoba
+memulihkan dirinya di dalam proses yang sama.
+
+**Alasan.** Semua DAO, repository, dan bloc di `injection_container.dart`
+terdaftar sebagai `registerLazySingleton` yang bergantung pada satu
+`AppDatabase`. Restore menutup koneksi itu dan menukar file di bawahnya, jadi
+begitu `restoreFrom` mengembalikan `Right`, setiap singleton yang sudah pernah
+dibuat memegang pegangan mati. Alternatif `sl.reset()` + `initDependencies()` +
+remount seluruh widget tree ditolak: bloc yang dipasang di root (`CartBloc`,
+`ProductBloc`) bisa tertinggal memegang koneksi lama, dan kegagalannya muncul
+sebagai layar kosong atau error acak beberapa menit kemudian — kelas bug paling
+sulit dilacak, justru di saat data pemilik paling rawan. Restore adalah aksi
+sekali setahun; kehalusannya tidak sebanding dengan risikonya.
+
+**Harus `exit(0)`, bukan `SystemNavigator.pop()`.** Versi pertama memakai
+`SystemNavigator.pop()` dan lolos semua tes, tapi gagal di HP: layar putih
+kosong saat aplikasi dibuka lagi. Sebabnya `SystemNavigator.pop()` hanya
+menutup Activity dan membiarkan prosesnya hidup — jadi `main()` tidak jalan
+ulang, `initDependencies()` tidak jalan ulang, dan get_it masih memegang
+`AppDatabase` yang baru saja ditutup oleh restore. Setiap query lewat pegangan
+mati itu dan tidak ada yang pernah terender. Membuang aplikasi dari Recents
+lalu membukanya kembali menampilkan data yang sudah dipulihkan dengan benar,
+yang membuktikan filenya sehat dan masalahnya murni daur hidup proses. Ini
+kelas bug yang sama dengan ADR-025: **tidak ada tes Dart yang bisa
+menangkapnya**, karena tes selalu berjalan di proses baru. Kalau suatu saat
+`exit(0)` diganti — misalnya karena lint melarangnya — penggantinya wajib
+benar-benar mematikan proses, bukan sekadar menutup layar.
+
+**Konsekuensi yang diterima.** Pemilik harus membuka aplikasi lagi secara
+manual, dan itu terasa kasar. `exit(0)` juga melewati daur hidup Android:
+boleh di sini karena koneksi database sudah ditutup lebih dulu, jadi tidak ada
+yang perlu di-flush — jangan dijadikan pola untuk tombol keluar lain. Kalau suatu saat restore jadi sering (mis. pindah
+HP berkali-kali saat pelatihan), yang harus dibuka ulang bukan dialognya tapi
+cara `AppDatabase` didaftarkan — misalnya membungkusnya di belakang satu
+pemegang koneksi yang bisa ditukar, bukan singleton langsung.
+
+---
+
+## ADR-040 — Salinan pengaman restore hanya satu file di cache
+
+**Keputusan.** Sebelum menimpa database aktif, `restoreFrom` menulis
+`henshin-sebelum-restore.sqlite` ke cache aplikasi lewat `exportInto`
+(`VACUUM INTO`), selalu di jalur yang sama dan selalu menimpa yang lama. Tidak
+ada riwayat, tidak ada layar untuk melihat atau memilihnya.
+
+**Alasan.** Tujuannya satu: membatalkan satu restore yang baru saja salah.
+Lewat `VACUUM INTO`, bukan menyalin file mentah, supaya salinannya konsisten
+dengan alasan yang sama seperti ADR-034. Menyimpannya bertumpuk per tanggal di
+`getApplicationSupportDirectory` ditolak: tumbuh tanpa batas di penyimpanan
+internal dan butuh kode pembersih, padahal tidak ada UI yang pernah
+menampilkannya. Pilihan ini dikonfirmasi ke pemilik repo sebelum ditulis.
+
+**Konsekuensi yang diterima.** Android boleh menghapus cache kapan pun, jadi
+file ini **bukan backup** dan tidak boleh disebut begitu ke pemilik. Dan karena
+tidak ada tombol pemulihnya, memakainya butuh ADB atau bantuan developer —
+utang yang sudah dicatat di `docs/progress.md`. Kalau salinan pengaman ini
+pernah benar-benar dibutuhkan dan ternyata sudah dibuang OS, yang salah bukan
+kodenya tapi keputusan ini.
+
+---
+
+## ADR-041 — Validasi backup membaca `user_version`, dan menerima skema lebih tua
+
+**Keputusan.** `BackupRepositoryImpl.validate` menolak file yang bukan SQLite,
+yang tidak punya keenam tabel `@DriftDatabase`, atau yang `PRAGMA user_version`
+nya 0 atau lebih besar dari `schemaVersion` aplikasi. Skema yang lebih tua
+diterima. File kandidat dibuka dengan `package:sqlite3` secara `readOnly`,
+**tidak pernah** sebagai `AppDatabase`.
+
+**Alasan.** Tiga hal yang mudah salah, masing-masing punya alasannya:
+(1) Membuka kandidat sebagai `AppDatabase` akan menjalankan
+`migration.onUpgrade` dan **mengubah file backup milik pemilik** sebelum ia
+menyetujui apa pun — karena itu validasinya memakai sqlite mentah.
+(2) Versi dibaca dari `user_version` yang dinaikkan Drift sendiri, bukan kolom
+`settings.schemaVersion` yang hanya diisi saat seed dan sudah ditandai
+`shortcut:` sebagai basi di `app_database.dart`. Memakai kolom itu berarti
+menolak backup yang sebenarnya sah.
+(3) Skema lebih tua diterima karena migrasi akan menaikkannya sendiri saat file
+dibuka ulang — hampir tanpa kode tambahan. Menolaknya akan membuat setiap
+backup yang dibuat sebelum update aplikasi jadi sampah permanen, padahal backup
+lama justru yang paling dibutuhkan saat HP hilang. Pilihan ini dikonfirmasi ke
+pemilik repo sebelum ditulis.
+
+**Konsekuensi yang diterima.** Validasi hanya memeriksa **nama** tabel, bukan
+kolomnya. File SQLite yang kebetulan punya enam tabel bernama sama akan lolos
+validasi dan baru gagal saat dibuka Drift — setelah data aktif tertimpa. Yang
+menyelamatkan keadaan itu adalah salinan pengaman ADR-040, bukan validasinya.
+Memperketatnya berarti menyalin daftar kolom ke dalam kode validasi dan
+memeliharanya setiap kali skema berubah; itu sengaja tidak dilakukan karena
+skenario "database asing dengan enam nama tabel yang persis sama" tidak
+realistis di HP pemilik warung.

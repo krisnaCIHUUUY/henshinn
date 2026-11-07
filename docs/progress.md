@@ -1,6 +1,6 @@
 # Progress Henshin POS
 
-Status eksekusi `docs/implementasi.md`. Diperbarui 2026-11-02 (langkah 1–13).
+Status eksekusi `docs/implementasi.md`. Diperbarui 2026-11-07 (langkah 1–14).
 
 Keputusan arsitektur yang diambil selama eksekusi dicatat terpisah di
 `docs/keputusan-arsitektur.md`.
@@ -22,24 +22,29 @@ Keputusan arsitektur yang diambil selama eksekusi dicatat terpisah di
 | 11 | Void ber-PIN + alasan + stok kembali | ✅ selesai |
 | 12 | Dashboard hari ini + laporan preset + produk terlaris | ✅ selesai |
 | 13 | Export backup (`VACUUM INTO`) + share + pengingat 7 hari | ✅ selesai |
-| 14–15 | Restore ber-PIN, hardening | ⬜ belum |
+| 14 | Restore: picker + validasi + salinan pengaman + PIN | ✅ selesai |
+| 15 | Mode pesawat end-to-end + pilot checklist | ⬜ belum |
 
 Fondasi (1–3), F2 Produk & Stok (4–5), dan F1 Kasir + scan + struk (6–8)
 selesai di sisi kode. Langkah 9 sengaja berhenti di interface + fallback PDF
 sesuai PRD §2.8 ("selama printer belum ada, pengembangan memakai preview dan
 PDF"); impl ESC/POS menunggu printer fisik + spike 1 hari (PRD §3.4).
-F3 Riwayat & Void (10–11), F4 Dashboard & Laporan (12), dan separuh pertama
-F5 (13, export) selesai. Berikutnya langkah 14 Restore — dan sampai itu lolos,
-backup langkah 13 belum terbukti bisa dipulihkan, jadi safety net data PRD §1.6
-baru separuh berdiri.
+F3 Riwayat & Void (10–11), F4 Dashboard & Laporan (12), dan F5 Backup &
+Restore (13–14) selesai. Backup sekarang terbukti bisa dipulihkan — tes
+`backup → hapus → restore → identik` jalan di suite, jadi safety net data
+PRD §1.6 berdiri utuh, bukan separuh seperti setelah langkah 13. Berikutnya
+langkah 15, hardening: uji mode pesawat end-to-end + pilot checklist, yang
+dominannya bukan koding.
 
-**Verifikasi saat ini:** 142 tes lolos, `flutter analyze` bersih.
+**Verifikasi saat ini:** 155 tes lolos, `flutter analyze` bersih.
 
-Uji manual di device oleh pemilik repo: langkah 1–5 dan 10–13 ✅; langkah 6
+Uji manual di device oleh pemilik repo: langkah 1–5 dan 10–14 ✅; langkah 6
 (kasir) dan 8 (struk) sebagian — lima bug ditemukan dan sudah diperbaiki, lihat
 "Perbaikan setelah verifikasi manual". Langkah 13 sekaligus membuktikan
 `SharePlus.instance.share` memang jalan di Android, yang sebelumnya belum pernah
-terkonfirmasi. **Belum pernah diuji di HP:** scanner barcode (langkah 7), dan
+terkonfirmasi; langkah 14 menambah `file_picker` ke daftar yang sudah
+terbukti di HP — sementara `SystemNavigator.pop()` justru terbukti **tidak**
+cukup, lihat "Perbaikan setelah verifikasi manual". **Belum pernah diuji di HP:** scanner barcode (langkah 7), dan
 jalur share khusus PDF struk (mime `application/pdf`) — keduanya ikut terkubur
 di APK lama, jadi butuh `flutter run` penuh, bukan hot restart.
 
@@ -281,7 +286,69 @@ di APK lama, jadi butuh `flutter run` penuh, bukan hot restart.
   (dikunci `PopScope`), dan ekspektasi tes header SQLite salah — 16 byte-nya
   berakhir NUL dan `trimRight()` tidak membuangnya.
 
+## Langkah 14 — Restore: picker + validasi + salinan pengaman + PIN
+
+- `BackupRepositoryImpl.validate(File)`: publik dan statis supaya tiap
+  aturannya bisa diuji tanpa menyentuh database aktif. Urutannya dari yang
+  paling murah ke paling mahal — file ada → panjangnya cukup → 16 byte header
+  `SQLite format 3 + NUL` → dibuka read-only → enam tabel wajib ada →
+  `PRAGMA user_version` masuk rentang.
+- File kandidat **tidak pernah dibuka sebagai `AppDatabase`**: membukanya
+  berarti menjalankan `onUpgrade` dan mengubah backup milik pemilik. Karena itu
+  `package:sqlite3` dipakai langsung (dinaikkan dari dependensi transitif ke
+  langsung, tanpa unduhan baru) dengan `OpenMode.readOnly` — kalau file-nya
+  rusak, sqlite tidak boleh "memperbaikinya" di tempat.
+- Versi skema dibaca dari `PRAGMA user_version`, **bukan** kolom
+  `settings.schemaVersion`: kolom itu hanya diisi saat seed dan sudah ditandai
+  basi di kodenya sendiri, sedangkan `user_version` selalu dinaikkan Drift.
+  Skema 1–4 diterima dan dinaikkan migrasi saat dibuka ulang; skema 5+ ditolak
+  karena menurunkan versi tidak mungkin. Lihat ADR-041.
+- Penukaran filenya berurutan supaya tidak ada keadaan setengah jalan: salinan
+  pengaman lewat `exportInto` (`VACUUM INTO`, jadi konsisten) **selagi koneksi
+  masih hidup** → backup disalin ke `henshin.sqlite.restore` di sebelah file
+  aktif → koneksi ditutup → `rename` yang atomik di filesystem yang sama.
+  Menyalin langsung ke atas file aktif akan meninggalkan database separuh
+  tertimpa kalau prosesnya mati di tengah.
+- Sidecar `-wal` dan `-shm` milik database lama dibuang setelah penukaran:
+  kalau ditinggal, sqlite bisa memutar ulang transaksi lama di atas data yang
+  baru dipulihkan.
+- Kalau `rename` gagal setelah koneksi ditutup, pesannya menyebut keadaan
+  sebenarnya — "data lama masih utuh, tutup dan buka lagi Henshin" — bukan
+  sekadar "gagal", karena di titik itu datanya aman tapi aplikasinya tidak
+  bisa dipakai.
+- `RestoreAction` (presentation): PIN lewat `PinGate` → picker → validasi →
+  konfirmasi merah paling akhir. Urutan itu disengaja supaya pemilik tidak
+  pernah diminta menyetujui penimpaan data sebelum file-nya terbukti sah.
+- `FileType.any` tanpa `allowedExtensions`: filter ekstensi di Android
+  dikerjakan file explorer bawaan HP dan sering diabaikan, jadi validasi
+  dilakukan sendiri — yang memang diminta rencana.
+- File dari picker selalu disalin dulu ke cache lewat `readAsByteStream()`:
+  file dari Drive datang sebagai `content://` tanpa jalur disk (`path` null di
+  `file_picker` 13), dan sqlite butuh jalur nyata. Satu jalur kode untuk semua
+  sumber, bukan dua cabang.
+- Selesai restore, aplikasi **ditutup** lewat dialog yang tidak bisa dilewati.
+  Harus `exit(0)`, bukan `SystemNavigator.pop()` — lihat bug di bawah. Rebuild
+  in-process (`sl.reset()` + remount) sengaja ditolak. Lihat ADR-039.
+- 13 tes baru (total 142 → 155), termasuk metrik PRD langkah 14:
+  `backup → hapus produk → restore → nama/stok/harga identik`. Database tes
+  harus berupa file nyata, bukan `NativeDatabase.memory()`, karena yang diuji
+  justru close + rename.
+- Satu tes menjaga hal yang paling mudah rusak diam-diam: file tidak sah harus
+  gagal **tanpa menutup koneksi** dan tanpa mengubah ukuran file aktif.
+
 ## Perbaikan setelah verifikasi manual
+
+- **Layar putih kosong saat aplikasi dibuka lagi setelah restore**
+  (dilaporkan pemilik, langkah 14). `SystemNavigator.pop()` berhasil menutup
+  aplikasi, tapi ia hanya menutup Activity dan membiarkan prosesnya hidup —
+  jadi saat dibuka lagi `main()` tidak jalan ulang, `initDependencies()` tidak
+  jalan ulang, dan get_it masih memegang `AppDatabase` yang baru ditutup oleh
+  restore. Diganti `exit(0)`. Diagnosis dipisahkan satu gerakan: membuang
+  aplikasi dari Recents lalu membukanya kembali menampilkan data yang sudah
+  dipulihkan dengan benar, yang membuktikan file databasenya sehat dan
+  masalahnya murni daur hidup proses. **Tidak ada tes Dart yang bisa
+  menangkap ini** — tes selalu berjalan di proses baru. Lihat ADR-039 dan
+  ADR-025.
 
 - **Form tambah produk tidak pernah tertutup setelah simpan sukses** (dilaporkan
   pemilik). `ProductState.writeCount` ditambahkan sebagai penanda selesainya
@@ -318,7 +385,7 @@ di APK lama, jadi butuh `flutter run` penuh, bukan hot restart.
 
 | Hal | Dampak |
 |---|---|
-| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (142 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
+| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (155 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
 | `settings.schemaVersion` hanya diisi saat seed | Jadi basi setelah bump versi berikutnya. Ditandai `shortcut:` di kode |
 | `decrementStock`/`incrementStock` lama di `ProductDao` tidak menulis ledger dan **tidak dipakai siapa pun** | Langkah 6 dan 11 tidak memakainya (keduanya lewat `TransactionDao`). Sekarang murni mati — kandidat dihapus |
 | `setting_screen.dart` masih memuat baris dummy "Pajak (PPN) 11%" dan "Printer thermal BT-01" | Keduanya di luar scope atau belum ada (AGENTS.md §6, langkah 9), perlu dibersihkan sebelum rilis. Baris "Export laporan CSV" sudah dihapus di langkah 13 |
@@ -332,15 +399,16 @@ di APK lama, jadi butuh `flutter run` penuh, bukan hot restart.
 | Dashboard dan `ReportScreen` belum punya tes widget | Angkanya dijaga 13 tes repository; chart fl_chart merender di canvas jadi tes widget hanya bisa memastikan widget-nya ada |
 | Scanner belum pernah dijalankan di device fisik | Metrik PRD "produk masuk keranjang ≤2 detik" belum terukur. Emulator tidak cukup (PRD §1.6) |
 | Halaman scan barcode dikunci landscape, pemilik ingin potrait | Diminta 2026-11-02, dikerjakan nanti atas permintaan pemilik. Rincian + langkahnya di `.scratch/scanner-orientasi/issues/01-orientasi-potrait.md`. Keputusan landscape yang lama tidak pernah masuk ADR |
-<<<<<<< HEAD
 | Kategori produk tidak bisa dibuat dari dalam aplikasi | Tab hanya pernah berisi "Semua" + "Umum" dari seed; `CategoryDao.addCategory` tidak dipanggil siapa pun. Desainnya sudah diputuskan lengkap (sesi grilling 2026-11-02), dikerjakan nanti atas permintaan pemilik: `.scratch/kategori-produk/issues/01-buat-kategori-dari-form-produk.md` |
-=======
->>>>>>> ae56f108df5a78e0192b414fdb619f1c9919a087
 | Impl cetak ESC/POS Bluetooth belum ada | Langkah 9 belum tuntas. Butuh printer 58mm fisik + spike 1 hari (PRD §3.4). Metrik "50× cetak ≥95% sukses" belum terukur |
 | Jalur share khusus PDF struk belum terkonfirmasi di device | `SharePlus.instance.share` sendiri sudah terbukti jalan lewat backup langkah 13, jadi yang tersisa hanya jalur PDF-nya (ADR-026 + rebuild penuh belum pernah berjalan bersamaan di HP) |
 | Peringatan `Courier has no Unicode support` di log | Hanya informatif; karakter non-Latin1 dipetakan ke `?` di PDF (ADR-027). Ganti font Unicode kalau katalog butuh |
 | `ReceiptPreviewScreen` dan `StoreInfoScreen` belum punya tes | Sama seperti layar lain (ADR-012) |
-| Backup belum pernah dipulihkan | Langkah 14 yang membuktikan file-nya benar-benar bisa dipakai. Sampai itu lolos, "sudah backup" belum berarti "data aman" (PRD §1.6) |
 | File backup hanya ada di cache aplikasi | Boleh dibuang Android kapan saja. `lastBackupAt` bisa mencatat backup yang tidak pernah terkirim ke mana pun, karena Android sering tidak bisa membedakan "dibagikan" dari "sheet ditutup" (ADR-035) |
+| Salinan pengaman restore tinggal di cache | Satu file `henshin-sebelum-restore.sqlite` yang selalu ditimpa, dan Android boleh menghapus cache kapan pun. Jaring untuk beberapa menit, bukan backup (ADR-040) |
+| Tidak ada cara memulihkan salinan pengaman dari dalam aplikasi | Kalau pemilik memulihkan file yang salah, mengembalikannya butuh ADB atau bantuan developer. Belum diputuskan apakah layak satu tombol (ADR-040) |
+| Restore memaksa aplikasi ditutup | Semua DAO di get_it memegang koneksi yang sudah mati setelah file ditukar, jadi satu-satunya jalan aman adalah `exit(0)` yang benar-benar mematikan proses. Rebuild in-process sengaja ditolak (ADR-039) |
+| `RestoreAction` belum punya tes widget | Validasi + penukaran file teruji di 13 tes repository; dialog konfirmasi, picker, dan dialog "tutup aplikasi" hanya terverifikasi manual (ADR-012) |
+| `file_picker` menambah plugin native baru | Hot restart setelah ini memberi `MissingPluginException`; butuh `flutter run` penuh (ADR-025). `sqlite3` hanya dinaikkan dari transitif ke langsung, tanpa unduhan baru |
 | Ambang basi memakai `> 7` hari | Banner baru muncul di hari ke-8, persis seperti teks rencana. Kalau yang dimaksud hari ke-7, ubah `backupStaleAfterDays` atau operatornya di `store_info.dart` |
 | `BackupReminder` dan baris "Backup data" belum punya tes widget | Logikanya teruji di 14 tes repository + entity; banner dan badge hanya terverifikasi manual (ADR-012) |
