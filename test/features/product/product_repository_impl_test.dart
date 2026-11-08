@@ -39,6 +39,26 @@ void main() {
   Failure? failureOf(dynamic either) =>
       either.fold((Failure f) => f, (_) => null);
 
+  /// Satu penjualan produk [productId]; mengembalikan id transaksinya.
+  Future<int> sell(int productId) async {
+    final transactionId = await db.into(db.transactions).insert(
+      TransactionsCompanion.insert(
+        total: 25000,
+        paymentAmount: 25000,
+        change: 0,
+      ),
+    );
+    await db.into(db.transactionItems).insert(
+      TransactionItemsCompanion.insert(
+        transactionId: transactionId,
+        productId: productId,
+        qty: 1,
+        priceAtSale: 25000,
+      ),
+    );
+    return transactionId;
+  }
+
   setUp(() async {
     db = AppDatabase(NativeDatabase.memory());
     repository = ProductRepositoryImpl(ProductDao(db), CategoryDao(db));
@@ -296,8 +316,53 @@ void main() {
 
       final failure = failureOf(await repository.deleteProduct(id));
       expect(failure, isA<DatabaseFailure>());
-      expect(failure!.message, contains('Nonaktifkan'));
+      expect(failure!.message, contains('pernah terjual'));
+      // Masih aktif, jadi sarannya memang relevan.
+      expect(failure.message, contains('Nonaktifkan'));
       expect(await repository.watchAllProducts().first, hasLength(1));
+    });
+
+    // Dilaporkan pemilik 2026-11-08: pesan lama menyuruh menonaktifkan produk
+    // yang sudah nonaktif, jadi terbaca seolah aplikasi mengira produk itu
+    // masih aktif.
+    test('produk nonaktif yang pernah terjual ditolak tanpa menyuruh '
+        'menonaktifkannya lagi', () async {
+      final id = (await repository.addProduct(
+        draft(name: 'Es Teh', isActive: false),
+      )).getOrElse(() => -1);
+      await sell(id);
+
+      final failure = failureOf(await repository.deleteProduct(id));
+
+      expect(failure!.message, contains('Es Teh'));
+      expect(failure.message, contains('pernah terjual'));
+      expect(failure.message, contains('sudah nonaktif'));
+      expect(failure.message, isNot(contains('Nonaktifkan saja')));
+    });
+
+    // Void menandai transaksinya 'voided' tapi barisnya tetap ada (PRD §2.6),
+    // jadi produknya tetap terkunci. Mengejutkan tanpa konteks ini.
+    test('void transaksi tidak membuat produknya bisa dihapus', () async {
+      final id = (await repository.addProduct(draft())).getOrElse(() => -1);
+      final transactionId = await sell(id);
+      await db.customStatement(
+        "UPDATE transactions SET status = 'voided' WHERE id = $transactionId",
+      );
+
+      final failure = failureOf(await repository.deleteProduct(id));
+
+      expect(failure, isA<DatabaseFailure>());
+      expect(failure!.message, contains('pernah terjual'));
+    });
+
+    test('produk nonaktif yang belum pernah terjual tetap bisa dihapus',
+        () async {
+      final id = (await repository.addProduct(
+        draft(isActive: false),
+      )).getOrElse(() => -1);
+
+      expect((await repository.deleteProduct(id)).isRight(), isTrue);
+      expect(await repository.watchAllProducts().first, isEmpty);
     });
   });
 

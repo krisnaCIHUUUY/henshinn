@@ -75,8 +75,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Hapus produk?'),
         content: Text(
-          '${product.name} akan dihapus. Produk yang sudah dipakai di '
-          'transaksi tidak bisa dihapus — nonaktifkan saja.',
+          '${product.name} akan dihapus. Produk yang pernah terjual tidak '
+          'bisa dihapus karena riwayat penjualannya ikut hilang — '
+          'nonaktifkan saja produknya.',
         ),
         actions: [
           TextButton(

@@ -878,3 +878,59 @@ muncul sebagai "Barcode belum terdaftar". Pola itu — `getOrElse` pada
 `Either<Failure, T?>` di mana `null` juga punya arti sendiri — patut dicurigai
 di mana pun ia muncul: ia membuang satu-satunya informasi yang membedakan
 "tidak ada" dari "gagal".
+
+---
+
+## ADR-045 — Produk yang pernah terjual terkunci selamanya, dan pesan gagal tidak boleh menebak penyebab
+
+**Keputusan.** Produk yang punya baris `transaction_items` tidak bisa dihapus,
+dan **void tidak membebaskannya**. Pesan penolakannya menyebut nama produk,
+alasannya, dan hanya menyarankan "nonaktifkan" kalau produk itu memang masih
+aktif. Blok `catch` di `ProductRepositoryImpl.deleteProduct` hanya memetakan
+pelanggaran FK ke pesan itu; exception lain di-`rethrow` dan tampil sebagai
+dirinya sendiri.
+
+**Alasan.** Dua hal terpisah yang ketemu lewat satu laporan pemilik
+(2026-11-08: "produk tidak aktif gagal terhapus, yang tampil malah popup produk
+masih aktif").
+
+1. **Penolakannya benar, pesannya salah.** Jalur hapus tidak pernah membaca
+   `isActive`; yang mengunci adalah riwayat penjualan. Pesan lama menyuruh
+   menonaktifkan produk yang sudah dinonaktifkan, sehingga terbaca seolah
+   aplikasi mengira produk itu masih aktif. Pemilik menyimpulkan ada bug di
+   tempat yang tidak ada bugnya.
+2. **`catch` lama melabeli SETIAP exception** sebagai "sudah dipakai di
+   transaksi". Error apa pun — DB terkunci, file rusak, bug baru — akan
+   menyamar jadi pesan yang masuk akal dan tidak pernah terlihat. Ini kelas bug
+   yang sama dengan `getOrElse` yang menelan `Left` di ADR-044, dan kedua
+   kalinya ditemukan di repo ini: **jangan pernah menyimpulkan penyebab dari
+   blok `catch` yang menangkap segalanya.** Kalau penyebabnya memang bisa
+   dipastikan, pastikan dulu (di sini: cocokkan `FOREIGN KEY constraint
+   failed`), sisanya diteruskan apa adanya.
+
+Void sengaja tidak membebaskan produk: `voidTransaction` menandai
+`status = 'voided'` dan baris `transaction_items`-nya tetap ada (soft delete,
+ADR dan AGENTS.md §3), karena laporan lama membaca snapshot harga di baris itu.
+Menghapus produknya akan mengosongkan FK yang masih dipakai laporan.
+
+**Konsekuensi yang diterima.**
+
+- **Produk yang pernah terjual menumpuk di daftar produk selamanya.** Pemilik
+  hanya bisa menonaktifkannya — hilang dari kasir, tetap di daftar produk. Kalau
+  itu jadi masalah nyata, yang dibutuhkan bukan hapus tapi fitur terpisah
+  ("sembunyikan dari daftar produk"), dan itu keputusan baru: menghapus barisnya
+  akan merusak laporan yang sudah ada.
+- **Deteksi FK lewat pencocokan string** (`FOREIGN KEY constraint failed`),
+  bukan kode error SQLite. Cukup karena satu-satunya FK yang masih menunjuk
+  produk saat delete dijalankan adalah `transaction_items` — ledger stoknya
+  dihapus di transaksi yang sama (`ProductDao.deleteProduct`). Kalau nanti ada
+  tabel lain yang menunjuk `products`, pesannya akan salah dan **baris inilah
+  yang harus dibaca lebih dulu**.
+- **Satu query ekstra tiap hapus**: produknya diambil sebelum delete supaya
+  pesan gagalnya bisa menyebut nama dan status aktifnya. Satu baris berindeks,
+  dan hanya di jalur yang dipicu manusia.
+- Jalur `rethrow` tidak punya tes: memaksa exception non-FK butuh fake DAO, dan
+  satu-satunya yang akan diuji adalah bahwa pesannya tidak mengaku jadi masalah
+  transaksi. Tiga tes yang ada mengunci aturan utamanya, termasuk bahwa void
+  tidak membebaskan produk.
+

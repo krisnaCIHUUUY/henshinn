@@ -44,7 +44,7 @@ dicatat sebagai utang: impl cetak ESC/POS yang menunggu printer fisik
 UI v2 — orientasi scanner dan kategori produk sudah dikerjakan), dan dua metrik
 PRD yang belum bisa diukur — lihat tabel utang teknis.
 
-**Verifikasi saat ini:** 170 tes lolos, `flutter analyze` bersih.
+**Verifikasi saat ini:** 173 tes lolos, `flutter analyze` bersih.
 
 Uji manual di device oleh pemilik repo: langkah 1–5, 7, dan 10–15 ✅; langkah 6
 (kasir) dan 8 (struk) sebagian — lima bug ditemukan dan sudah diperbaiki, lihat
@@ -387,6 +387,23 @@ dilaporkan pemilik repo setelah menjalankannya di HP sendiri.
 
 ## Perbaikan setelah verifikasi manual
 
+- **Produk nonaktif gagal dihapus, dan pesannya menyuruh menonaktifkannya
+  lagi** (dilaporkan pemilik 2026-11-08, diverifikasi hari yang sama).
+  Penolakannya ternyata **benar** — jalur hapus tidak pernah membaca
+  `isActive`; yang mengunci produk adalah baris `transaction_items`, yaitu
+  riwayat penjualannya. Dibuktikan dengan empat skenario di DB asli sebelum
+  satu baris pun diubah: nonaktif + pernah terjual ❌, nonaktif belum pernah
+  terjual ✅, nonaktif + pernah direstok ✅, dan terjual lalu **di-void** ❌.
+  Yang rusak pesannya: ia menyarankan tindakan yang sudah dilakukan pemilik,
+  jadi terbaca seolah aplikasi mengira produknya masih aktif. Sekarang pesannya
+  menyebut nama produk, alasannya, dan hanya menyarankan "nonaktifkan" kalau
+  produk itu memang masih aktif. Sekalian ditemukan cacat kedua di tempat yang
+  sama: blok `catch`-nya melabeli **setiap** exception sebagai "sudah dipakai di
+  transaksi", jadi error apa pun akan menyamar jadi pesan yang masuk akal dan
+  tidak pernah terlihat — kelas bug yang sama dengan `Left` yang tertelan di
+  ADR-044, dan kedua kalinya di repo ini. 3 tes baru (170 → 173). Lihat
+  ADR-045.
+
 - **Produk yang barcodenya sudah terdaftar tidak ketemu saat di-scan**
   (dilaporkan pemilik 2026-11-08). Kameranya membaca barcode dengan benar —
   sheet "Barcode belum terdaftar" muncul, artinya dekodenya sehat — tapi
@@ -530,7 +547,7 @@ kapitalisasi, berspasi, kosong ditolak, produk langsung memakai id barunya),
 
 | Hal | Dampak |
 |---|---|
-| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (170 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
+| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (173 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
 | `settings.schemaVersion` hanya diisi saat seed | Jadi basi setelah bump versi berikutnya. Ditandai `shortcut:` di kode |
 | `decrementStock`/`incrementStock` lama di `ProductDao` tidak menulis ledger dan **tidak dipakai siapa pun** | Langkah 6 dan 11 tidak memakainya (keduanya lewat `TransactionDao`). Sekarang murni mati — kandidat dihapus |
 | `setting_screen.dart` masih memuat baris dummy "Pajak (PPN) 11%" dan "Printer thermal BT-01" | Keduanya di luar scope atau belum ada (AGENTS.md §6, langkah 9), perlu dibersihkan sebelum rilis. Baris "Export laporan CSV" sudah dihapus di langkah 13 |
@@ -543,6 +560,7 @@ kapitalisasi, berspasi, kosong ditolak, produk langsung memakai id barunya),
 | Angka 30 hari menjumlahkan header transaksi di memori | Aman untuk satu warung; perlu pindah ke agregat SQL (dengan offset zona waktu eksplisit) kalau datanya jadi tahunan. ADR-032 |
 | Dashboard dan `ReportScreen` belum punya tes widget | Angkanya dijaga 13 tes repository; chart fl_chart merender di canvas jadi tes widget hanya bisa memastikan widget-nya ada |
 | Barcode yang beda hanya nol di depan tidak dicocokkan | Kemasan UPC-A mencetak 12 digit sementara scanner bisa melaporkannya sebagai EAN-13 dengan nol tambahan. Pencocokan longgar sengaja ditolak: dua produk yang beda hanya nol di depan akan saling tertukar (ADR-044) |
+| Produk yang pernah terjual tidak bisa dihapus selamanya | Hanya bisa dinonaktifkan: hilang dari kasir, tetap di daftar produk. Void tidak membebaskannya. Kalau daftarnya jadi penuh, yang dibutuhkan fitur "sembunyikan dari daftar produk", bukan hapus (ADR-045) |
 | Nama kategori tidak bisa dihapus atau diganti dari dalam aplikasi | Disengaja (ADR-038): salah ketik hilang dari layar begitu produknya dipindah, tapi barisnya menumpuk di DB selamanya. Diterima karena tidak ada laporan yang membacanya |
 | Kategori bisa lahir tanpa produk | Kalau penyimpanan produk gagal setelah kategorinya dibuat, kategori itu tetap ada. Sengaja tidak dibungkus satu transaksi karena tab kosong tidak pernah ditampilkan (ADR-038) |
 | `lower()` SQLite hanya melipat ASCII | "Café" dan "café" masih bisa jadi dua kategori. Ditandai `shortcut:` di `CategoryDao` (ADR-038) |

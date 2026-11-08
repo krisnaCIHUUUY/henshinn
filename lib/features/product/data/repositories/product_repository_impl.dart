@@ -158,19 +158,29 @@ class ProductRepositoryImpl implements ProductRepository {
   @override
   Future<Either<Failure, void>> deleteProduct(int id) async {
     try {
-      final rowsAffected = await _productDao.deleteProduct(id);
-      if (rowsAffected == 0) {
+      // Diambil lebih dulu supaya pesan gagalnya bisa menyebut nama produknya
+      // dan tahu produk itu sudah nonaktif atau belum.
+      final product = await _productDao.getProductById(id);
+      if (product == null) {
         return const Left(NotFoundFailure('Produk tidak ditemukan'));
+      }
+
+      try {
+        await _productDao.deleteProduct(id);
+      } catch (e) {
+        // Satu-satunya FK yang masih menunjuk produk saat delete dijalankan
+        // adalah `transaction_items`: ledger stoknya ikut terhapus di
+        // transaksi yang sama (`ProductDao.deleteProduct`). Jadi FK gagal
+        // berarti produknya pernah terjual, bukan sebab lain.
+        //
+        // Dulu blok ini melabeli SETIAP exception sebagai masalah transaksi,
+        // jadi error apa pun muncul sebagai "sudah dipakai di transaksi".
+        if (!e.toString().contains('FOREIGN KEY constraint failed')) rethrow;
+        return Left(DatabaseFailure(_soldMessage(product)));
       }
       return const Right(null);
     } catch (e) {
-      // Kemungkinan besar: FK constraint karena produk masih dipakai di transaction_items
-      return Left(
-        DatabaseFailure(
-          'Produk tidak bisa dihapus karena sudah dipakai di transaksi. '
-          'Nonaktifkan saja produknya.',
-        ),
-      );
+      return Left(DatabaseFailure('Gagal menghapus produk: $e'));
     }
   }
 
@@ -219,6 +229,21 @@ class ProductRepositoryImpl implements ProductRepository {
   }
 
   // ===== internal =====
+
+  /// Produk yang pernah terjual tidak bisa dihapus: baris
+  /// `transaction_items`-nya adalah riwayat penjualan, dan void tidak
+  /// membebaskannya — barisnya tetap ada supaya laporan lama tidak berubah
+  /// (PRD §2.6). Saran "nonaktifkan" hanya ditampilkan kalau produknya memang
+  /// masih aktif; menyarankannya pada produk yang sudah nonaktif membuat
+  /// pesannya terbaca seolah aplikasi mengira produk itu masih aktif
+  /// (dilaporkan pemilik 2026-11-08).
+  String _soldMessage(Product product) {
+    final advice = product.isActive
+        ? 'Nonaktifkan saja produknya supaya tidak muncul di kasir.'
+        : 'Produk ini sudah nonaktif dan tidak muncul di kasir.';
+    return '${product.name} sudah pernah terjual, jadi tidak bisa dihapus — '
+        'riwayat penjualannya akan ikut hilang. $advice';
+  }
 
   /// Barcode kosong disimpan sebagai NULL, bukan string kosong — kalau tidak,
   /// produk kedua tanpa barcode akan bentrok dengan index unik.
