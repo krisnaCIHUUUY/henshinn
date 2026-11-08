@@ -1,6 +1,6 @@
 # Progress Henshin POS
 
-Status eksekusi `docs/implementasi.md`. Diperbarui 2026-11-07 (langkah 1–14).
+Status eksekusi `docs/implementasi.md`. Diperbarui 2026-11-08 (langkah 1–15).
 
 Keputusan arsitektur yang diambil selama eksekusi dicatat terpisah di
 `docs/keputusan-arsitektur.md`.
@@ -15,7 +15,7 @@ Keputusan arsitektur yang diambil selama eksekusi dicatat terpisah di
 | 4 | CRUD produk + validasi harga/stok | ✅ selesai |
 | 5 | Restok + ledger `stock_movements` + peringatan stok menipis | ✅ selesai |
 | 6 | Keranjang + bayar + kembalian + simpan atomik | ✅ selesai |
-| 7 | Scan barcode kamera + fallback | ✅ kode selesai, **uji device fisik belum** |
+| 7 | Scan barcode kamera + fallback | ✅ selesai, terverifikasi di HP saat langkah 15 |
 | 8 | Model `Receipt` + preview + PDF/share | ✅ selesai |
 | 9 | Cetak ESC/POS Bluetooth | 🟡 **sebagian**: `PrinterService` + impl PDF selesai; impl Bluetooth ditunda sampai printer tiba |
 | 10 | Riwayat + detail + cetak ulang | ✅ selesai |
@@ -23,7 +23,7 @@ Keputusan arsitektur yang diambil selama eksekusi dicatat terpisah di
 | 12 | Dashboard hari ini + laporan preset + produk terlaris | ✅ selesai |
 | 13 | Export backup (`VACUUM INTO`) + share + pengingat 7 hari | ✅ selesai |
 | 14 | Restore: picker + validasi + salinan pengaman + PIN | ✅ selesai |
-| 15 | Mode pesawat end-to-end + pilot checklist | ⬜ belum |
+| 15 | Mode pesawat end-to-end + pilot checklist | ✅ selesai, kecuali jalur cetak thermal (langkah 9) |
 
 Fondasi (1–3), F2 Produk & Stok (4–5), dan F1 Kasir + scan + struk (6–8)
 selesai di sisi kode. Langkah 9 sengaja berhenti di interface + fallback PDF
@@ -32,21 +32,33 @@ PDF"); impl ESC/POS menunggu printer fisik + spike 1 hari (PRD §3.4).
 F3 Riwayat & Void (10–11), F4 Dashboard & Laporan (12), dan F5 Backup &
 Restore (13–14) selesai. Backup sekarang terbukti bisa dipulihkan — tes
 `backup → hapus → restore → identik` jalan di suite, jadi safety net data
-PRD §1.6 berdiri utuh, bukan separuh seperti setelah langkah 13. Berikutnya
-langkah 15, hardening: uji mode pesawat end-to-end + pilot checklist, yang
-dominannya bukan koding.
+PRD §1.6 berdiri utuh, bukan separuh seperti setelah langkah 13.
+
+**Kelima belas langkah `docs/implementasi.md` sudah dijalankan.** Langkah 15
+menutupnya: F1→F5 diuji pemilik dalam mode pesawat di HP, median transaksi
+3 item ≤30 detik sesuai PRD §1.5, dan scan barcode akhirnya terbukti jalan di
+perangkat nyata. Yang tersisa bukan langkah rencana, tapi tiga hal yang sudah
+dicatat sebagai utang: impl cetak ESC/POS yang menunggu printer fisik
+(langkah 9), tiga pekerjaan yang diparkir pemilik di `.scratch/` (kategori
+produk, desain UI v2, orientasi scanner), dan dua metrik PRD yang belum bisa
+diukur — lihat tabel utang teknis.
 
 **Verifikasi saat ini:** 155 tes lolos, `flutter analyze` bersih.
 
-Uji manual di device oleh pemilik repo: langkah 1–5 dan 10–14 ✅; langkah 6
+Uji manual di device oleh pemilik repo: langkah 1–5, 7, dan 10–15 ✅; langkah 6
 (kasir) dan 8 (struk) sebagian — lima bug ditemukan dan sudah diperbaiki, lihat
 "Perbaikan setelah verifikasi manual". Langkah 13 sekaligus membuktikan
 `SharePlus.instance.share` memang jalan di Android, yang sebelumnya belum pernah
 terkonfirmasi; langkah 14 menambah `file_picker` ke daftar yang sudah
 terbukti di HP — sementara `SystemNavigator.pop()` justru terbukti **tidak**
-cukup, lihat "Perbaikan setelah verifikasi manual". **Belum pernah diuji di HP:** scanner barcode (langkah 7), dan
-jalur share khusus PDF struk (mime `application/pdf`) — keduanya ikut terkubur
-di APK lama, jadi butuh `flutter run` penuh, bukan hot restart.
+cukup, lihat "Perbaikan setelah verifikasi manual". Langkah 15 menutup lubang
+terlama: **scanner barcode akhirnya jalan di HP fisik**, yang sejak langkah 7
+hanya pernah diuji di emulator.
+
+**Masih belum pernah diuji di HP:** cetak ESC/POS ke printer thermal (belum ada
+implementasinya, dan printernya belum ada — langkah 9), dan jalur share khusus
+PDF struk dengan mime `application/pdf` (`SharePlus.instance.share` sendiri
+sudah terbukti lewat backup langkah 13, jadi yang tersisa hanya mime-nya).
 
 ---
 
@@ -336,6 +348,38 @@ di APK lama, jadi butuh `flutter run` penuh, bukan hot restart.
 - Satu tes menjaga hal yang paling mudah rusak diam-diam: file tidak sah harus
   gagal **tanpa menutup koneksi** dan tanpa mengubah ukuran file aktif.
 
+## Langkah 15 — Mode pesawat end-to-end + pilot checklist
+
+Langkah tanpa koding: tidak ada baris kode yang berubah dan tidak ada tes baru
+(tetap 155). Isinya pengukuran, dan yang tercatat di bawah adalah yang
+dilaporkan pemilik repo setelah menjalankannya di HP sendiri.
+
+**Yang lolos.**
+
+- F1→F5 dijalankan penuh dalam mode pesawat. Tidak ada jalur yang menunggu
+  jaringan — memang tidak boleh ada: aplikasi ini tidak punya backend sama
+  sekali (AGENTS.md §1).
+- Median menyelesaikan transaksi 3 item **≤30 detik**; metrik PRD §1.5
+  tercapai.
+- Baseline 10 transaksi manual dijalankan sebagai pembanding.
+- **Scan barcode terbukti jalan di HP fisik.** Ini lubang terlama di proyek:
+  sejak langkah 7 scanner hanya pernah dijalankan di emulator, dan PRD §1.6
+  sendiri menyebut emulator tidak cukup. Baris utang tekniknya dihapus.
+
+**Yang tidak tercakup, dan tetap tidak tercakup.**
+
+- Cetak ESC/POS ke printer thermal sengaja di luar uji: implementasinya belum
+  ada dan printernya belum tiba (langkah 9 masih sebagian). Metrik PRD
+  "50× cetak ≥95% sukses" belum terukur, dan tidak akan terukur sampai
+  hardware-nya ada.
+- Skenario UAT tertulis tidak dibuat; pengujiannya manual tanpa artefak. Uji
+  berikutnya setelah perubahan besar — misalnya desain UI v2 — jadi tidak
+  punya pembanding yang bisa diulang. Dicatat sebagai utang.
+- Angka crash-free ≥99% tidak diukur. Tidak ada crash yang dilaporkan selama
+  pengujian, tapi "tidak terlihat crash" bukan sebuah rate: menghitungnya
+  butuh telemetri yang tidak ada dan tidak boleh ada di aplikasi offline ini.
+  Lihat ADR-042.
+
 ## Perbaikan setelah verifikasi manual
 
 - **Layar putih kosong saat aplikasi dibuka lagi setelah restore**
@@ -397,9 +441,11 @@ di APK lama, jadi butuh `flutter run` penuh, bukan hot restart.
 | Blok `_RestockList` di `dashboard_screen.dart` masih di-comment | Peninggalan UI dummy; `LowStockScreen` sudah menanganinya. Kandidat hapus |
 | Angka 30 hari menjumlahkan header transaksi di memori | Aman untuk satu warung; perlu pindah ke agregat SQL (dengan offset zona waktu eksplisit) kalau datanya jadi tahunan. ADR-032 |
 | Dashboard dan `ReportScreen` belum punya tes widget | Angkanya dijaga 13 tes repository; chart fl_chart merender di canvas jadi tes widget hanya bisa memastikan widget-nya ada |
-| Scanner belum pernah dijalankan di device fisik | Metrik PRD "produk masuk keranjang ≤2 detik" belum terukur. Emulator tidak cukup (PRD §1.6) |
 | Halaman scan barcode dikunci landscape, pemilik ingin potrait | Diminta 2026-11-02, dikerjakan nanti atas permintaan pemilik. Rincian + langkahnya di `.scratch/scanner-orientasi/issues/01-orientasi-potrait.md`. Keputusan landscape yang lama tidak pernah masuk ADR |
 | Kategori produk tidak bisa dibuat dari dalam aplikasi | Tab hanya pernah berisi "Semua" + "Umum" dari seed; `CategoryDao.addCategory` tidak dipanggil siapa pun. Desainnya sudah diputuskan lengkap (sesi grilling 2026-11-02), dikerjakan nanti atas permintaan pemilik: `.scratch/kategori-produk/issues/01-buat-kategori-dari-form-produk.md` |
+| Skenario UAT tidak pernah ditulis | Langkah 15 diuji manual tanpa artefak, jadi uji berikutnya setelah perubahan besar (desain v2) tidak punya pembanding yang bisa diulang — hanya ingatan |
+| Crash-free ≥99% tidak terukur | Tidak ada crash terlihat saat uji, tapi itu bukan rate. Menghitungnya butuh telemetri, yang bertabrakan dengan offline-only (ADR-042) |
+| Metrik "produk masuk keranjang ≤2 detik" belum terukur | Scanner sudah terbukti jalan di HP (langkah 15), tapi kecepatannya tidak diukur dengan stopwatch |
 | Impl cetak ESC/POS Bluetooth belum ada | Langkah 9 belum tuntas. Butuh printer 58mm fisik + spike 1 hari (PRD §3.4). Metrik "50× cetak ≥95% sukses" belum terukur |
 | Jalur share khusus PDF struk belum terkonfirmasi di device | `SharePlus.instance.share` sendiri sudah terbukti jalan lewat backup langkah 13, jadi yang tersisa hanya jalur PDF-nya (ADR-026 + rebuild penuh belum pernah berjalan bersamaan di HP) |
 | Peringatan `Courier has no Unicode support` di log | Hanya informatif; karakter non-Latin1 dipetakan ke `?` di PDF (ADR-027). Ganti font Unicode kalau katalog butuh |

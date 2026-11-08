@@ -719,3 +719,28 @@ Memperketatnya berarti menyalin daftar kolom ke dalam kode validasi dan
 memeliharanya setiap kali skema berubah; itu sengaja tidak dilakukan karena
 skenario "database asing dengan enam nama tabel yang persis sama" tidak
 realistis di HP pemilik warung.
+
+---
+
+## ADR-042 — Crash-free rate tidak diukur; keandalan dijaga uji manual
+
+**Keputusan.** Metrik PRD §1.5 "crash-free ≥99%" tidak diukur sebagai angka.
+Keandalan dinilai dari uji manual pemilik (langkah 15) dan dari suite tes, dan
+`docs/progress.md` menyebutnya "tidak terukur", bukan "tercapai".
+
+**Alasan.** Menghitung crash-free rate butuh menghitung sesi dan crash lalu
+mengirimkannya ke suatu tempat — artinya SDK crash reporting dan jaringan.
+Aplikasi ini tidak punya backend sama sekali dan "cloud sync / auto cloud
+backup" ada di daftar out-of-scope (AGENTS.md §6 / PRD §1.4), jadi
+menambahkannya bukan sekadar satu dependency: ia membatalkan sifat
+offline-only yang jadi alasan produk ini ada. Menyimpan hitungan crash secara
+lokal juga ditolak — crash justru sering terjadi sebelum sesuatu bisa ditulis
+ke disk, dan tidak ada yang akan pernah membacanya.
+
+**Konsekuensi yang diterima.** Angka itu akan tetap kosong di PRD selamanya,
+dan ini harus dikatakan apa adanya ke pemilik, bukan dianggap lolos karena
+"tidak ada yang terlihat crash". Yang menggantikannya lebih lemah: 155 tes dan
+satu sesi uji manual oleh satu orang di satu HP. Kalau suatu saat Henshin
+dipakai lebih dari satu warung, yang harus dibuka ulang bukan baris ini tapi
+asumsi "satu HP, satu pemegang" (ADR-031) — dan saat itu crash reporting
+mungkin layak dipertimbangkan ulang bersama keputusan offline-only-nya.
