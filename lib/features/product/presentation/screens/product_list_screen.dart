@@ -14,6 +14,26 @@ import 'package:henshin/features/product/presentation/widgets/stock_sheet.dart';
 import 'package:go_router/go_router.dart';
 import 'package:henshin/core/utils/page_routes.dart';
 
+/// Kategori yang punya minimal satu produk aktif.
+///
+/// Tab kategori kosong tidak ditampilkan: tidak ada hapus atau ganti nama
+/// kategori di aplikasi ini, jadi ini yang membuat salah ketik hilang sendiri
+/// begitu produknya dipindah. Produk nonaktif tidak dihitung — kategori
+/// gunanya alat cari, dan kasir tidak mencari produk nonaktif (ADR-038).
+///
+/// Fungsi lepas, bukan di dalam `build`, supaya bisa diuji dengan async nyata:
+/// di `testWidgets` stream Drift tidak pernah maju (ADR-012).
+List<CategoryEntity> categoriesWithActiveProducts(
+  List<CategoryEntity> categories,
+  List<ProductEntity> products,
+) {
+  final used = {
+    for (final product in products)
+      if (product.isActive) product.categoryId,
+  };
+  return categories.where((c) => used.contains(c.id)).toList();
+}
+
 class ProductListScreen extends StatefulWidget {
   const ProductListScreen({super.key});
 
@@ -55,8 +75,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Hapus produk?'),
         content: Text(
-          '${product.name} akan dihapus. Produk yang sudah dipakai di '
-          'transaksi tidak bisa dihapus — nonaktifkan saja.',
+          '${product.name} akan dihapus. Produk yang pernah terjual tidak '
+          'bisa dihapus karena riwayat penjualannya ikut hilang — '
+          'nonaktifkan saja produknya.',
         ),
         actions: [
           TextButton(
@@ -90,10 +111,22 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 .showSnackBar(SnackBar(content: Text(state.errorMessage)));
           },
           builder: (context, state) {
-            final products = _selectedCategoryId == null
+            final visibleCategories = categoriesWithActiveProducts(
+              state.categories,
+              state.products,
+            );
+
+            // Tab yang sedang dipilih bisa lenyap saat produk terakhirnya
+            // dipindah; tanpa ini daftarnya jadi kosong tanpa tab yang aktif.
+            final selectedCategoryId =
+                visibleCategories.any((c) => c.id == _selectedCategoryId)
+                ? _selectedCategoryId
+                : null;
+
+            final products = selectedCategoryId == null
                 ? state.products
                 : state.products
-                      .where((p) => p.categoryId == _selectedCategoryId)
+                      .where((p) => p.categoryId == selectedCategoryId)
                       .toList();
 
             return Column(
@@ -112,8 +145,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       _HeaderRow(onAddPressed: _openForm),
                       const SizedBox(height: AppSpacing.lg - 4),
                       _CategoryTabs(
-                        categories: state.categories,
-                        selectedId: _selectedCategoryId,
+                        categories: visibleCategories,
+                        selectedId: selectedCategoryId,
                         onSelected: (id) =>
                             setState(() => _selectedCategoryId = id),
                       ),

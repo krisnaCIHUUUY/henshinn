@@ -1,0 +1,112 @@
+<!doctype html>
+<meta charset="utf-8"><style data-dc-design-system-vars>@layer{:root{--bg:#f4f6f6;--surface:#ffffff;--surface-muted:#eaeff0;--line:#dde4e4;--line-strong:#8a9697;--ink:#172021;--ink-muted:#5b6768;--primary:#006565;--primary-pressed:#004d4d;--primary-soft:#ddf0ef;--on-primary:#ffffff;--success:#1d6b37;--success-soft:#e2f2e7;--warning:#7a4f00;--warning-soft:#fcefd2;--danger:#b3261e;--danger-soft:#fbe3e0;--shadow-sheet:0 -4px 24px rgba(23,32,33,0.12);--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-6:24px;--radius-sm:8px;--radius-md:12px;--radius-lg:20px;--radius-full:999px;--tap-min:48px;--tap-primary:56px;--row-min:64px;--font-sans:Roboto, "Noto Sans", system-ui, sans-serif;--font-mono:"Roboto Mono", ui-monospace, monospace;--text-amount:700 36px/44px var(--font-sans);--text-stat:700 22px/28px var(--font-sans);--text-title:600 22px/28px var(--font-sans);--text-heading:600 17px/24px var(--font-sans);--text-body:400 16px/24px var(--font-sans);--text-body-strong:600 16px/24px var(--font-sans);--text-label:500 14px/20px var(--font-sans);--text-caption:500 12px/16px var(--font-sans);--text-receipt:400 13px/18px var(--font-mono);}}</style>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Laporan</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#006565}a:hover{color:#004d4d}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; background: #f4f6f6; font-family: Roboto, 'Noto Sans', system-ui, sans-serif; color: #172021; display: flex; flex-direction: column">
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 8px 4px 0 16px">
+    <h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600">Laporan</h1>
+    <a href="Pengaturan.dc.html" aria-label="Pengaturan" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: #5b6768">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+    </a>
+  </header>
+
+  <div style="display: flex; gap: 8px; padding: 8px 16px 0 16px; overflow: hidden">
+    <button type="button" aria-pressed="true" style="flex: none; height: 40px; padding: 0 16px; border: 1px solid #006565; border-radius: 999px; background: #ddf0ef; color: #006565; font: inherit; font-size: 14px; font-weight: 500">Hari ini</button>
+    <button type="button" style="flex: none; height: 40px; padding: 0 16px; border: 1px solid #8a9697; border-radius: 999px; background: #ffffff; color: #172021; font: inherit; font-size: 14px; font-weight: 500">7 hari</button>
+    <button type="button" style="flex: none; height: 40px; padding: 0 16px; border: 1px solid #8a9697; border-radius: 999px; background: #ffffff; color: #172021; font: inherit; font-size: 14px; font-weight: 500">Bulan ini</button>
+    <button type="button" style="flex: none; height: 40px; padding: 0 16px; border: 1px solid #8a9697; border-radius: 999px; background: #ffffff; color: #172021; font: inherit; font-size: 14px; font-weight: 500">Pilih</button>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 0 16px">
+    <div style="background: #ffffff; border: 1px solid #dde4e4; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+      <span style="font-size: 14px; line-height: 20px; font-weight: 500; color: #5b6768">Omzet hari ini</span>
+      <span style="font-size: 36px; line-height: 44px; font-weight: 700; letter-spacing: -0.5px; font-variant-numeric: tabular-nums">Rp 1.284.500</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <div style="background: #ffffff; border: 1px solid #dde4e4; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+        <span style="display: flex; align-items: center; gap: 4px; font-size: 14px; line-height: 20px; font-weight: 500; color: #5b6768">Laba kotor
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" role="img" aria-label="Dilindungi PIN"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></span>
+        <span style="font-size: 22px; line-height: 28px; font-weight: 700; font-variant-numeric: tabular-nums">Rp 312.000</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #dde4e4; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 14px; line-height: 20px; font-weight: 500; color: #5b6768">Transaksi</span>
+        <span style="font-size: 22px; line-height: 28px; font-weight: 700; font-variant-numeric: tabular-nums">24</span>
+      </div>
+    </div>
+  </div>
+
+  <section style="padding: 24px 16px 0 16px">
+    <h2 style="margin: 0 0 8px 0; font-size: 17px; line-height: 24px; font-weight: 600">Terlaris</h2>
+    <div style="background: #ffffff; border: 1px solid #dde4e4; border-radius: 12px; overflow: hidden">
+      <sc-for list="{{top}}" as="t" hint-placeholder-count="3">
+        <div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 4px 16px; border-bottom: 1px solid #dde4e4">
+          <span style="width: 20px; font-size: 16px; font-weight: 600; color: #5b6768; font-variant-numeric: tabular-nums">{{t.rank}}</span>
+          <span style="flex: 1; display: flex; flex-direction: column">
+            <span style="font-size: 16px; line-height: 22px">{{t.name}}</span>
+            <span style="font-size: 14px; line-height: 20px; font-weight: 500; color: #5b6768">{{t.qty}}</span>
+          </span>
+          <span style="font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums">{{t.sum}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="padding: 24px 16px 0 16px">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px">
+      <h2 style="margin: 0; font-size: 17px; line-height: 24px; font-weight: 600">Perlu restok</h2>
+      <a href="Produk.dc.html" style="font-size: 14px; font-weight: 500; text-decoration: none; padding: 4px 0">Lihat semua</a>
+    </div>
+    <div style="background: #ffffff; border: 1px solid #dde4e4; border-radius: 12px; overflow: hidden">
+      <div style="display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding: 4px 16px; border-bottom: 1px solid #dde4e4">
+        <span style="font-size: 16px">Minyak Goreng 1 L</span>
+        <span style="padding: 2px 8px; border-radius: 8px; background: #fbe3e0; color: #b3261e; font-size: 12px; line-height: 16px; font-weight: 600">Habis</span>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding: 4px 16px">
+        <span style="font-size: 16px">Beras 5 kg</span>
+        <span style="padding: 2px 8px; border-radius: 8px; background: #fcefd2; color: #7a4f00; font-size: 12px; line-height: 16px; font-weight: 600">Sisa 2</span>
+      </div>
+    </div>
+  </section>
+
+  <nav aria-label="Navigasi utama" style="position: absolute; left: 0; right: 0; bottom: 0; height: 72px; background: #ffffff; border-top: 1px solid #dde4e4; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr))">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; color: #5b6768; font-size: 12px; line-height: 16px; font-weight: 500">
+      <span style="width: 56px; height: 32px; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><rect x="5" y="3" width="14" height="6" rx="1"></rect><path d="M3 21h18l-1.5-9h-15z"></path><path d="M8 15h2M14 15h2M8 18h8"></path></svg></span>Kasir</a>
+    <a href="Produk.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; color: #5b6768; font-size: 12px; line-height: 16px; font-weight: 500">
+      <span style="width: 56px; height: 32px; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"></path><path d="M3 7l9 4 9-4M12 11v10"></path></svg></span>Produk</a>
+    <a href="Riwayat.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; color: #5b6768; font-size: 12px; line-height: 16px; font-weight: 500">
+      <span style="width: 56px; height: 32px; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"></path><path d="M9 8h6M9 12h6M9 16h4"></path></svg></span>Riwayat</a>
+    <a href="Laporan.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; color: #006565; font-size: 12px; line-height: 16px; font-weight: 600">
+      <span style="width: 56px; height: 32px; border-radius: 999px; background: #ddf0ef; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 20V11M12 20V4M19 20v-7"></path></svg></span>Laporan</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      top: [
+        { rank: '1', name: 'Mi Goreng Instan', qty: '62 pcs terjual', sum: 'Rp 217.000' },
+        { rank: '2', name: 'Kopi Sachet', qty: '48 pcs terjual', sum: 'Rp 96.000' },
+        { rank: '3', name: 'Air Mineral 600 ml', qty: '31 pcs terjual', sum: 'Rp 124.000' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

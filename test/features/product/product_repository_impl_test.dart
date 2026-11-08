@@ -39,6 +39,26 @@ void main() {
   Failure? failureOf(dynamic either) =>
       either.fold((Failure f) => f, (_) => null);
 
+  /// Satu penjualan produk [productId]; mengembalikan id transaksinya.
+  Future<int> sell(int productId) async {
+    final transactionId = await db.into(db.transactions).insert(
+      TransactionsCompanion.insert(
+        total: 25000,
+        paymentAmount: 25000,
+        change: 0,
+      ),
+    );
+    await db.into(db.transactionItems).insert(
+      TransactionItemsCompanion.insert(
+        transactionId: transactionId,
+        productId: productId,
+        qty: 1,
+        priceAtSale: 25000,
+      ),
+    );
+    return transactionId;
+  }
+
   setUp(() async {
     db = AppDatabase(NativeDatabase.memory());
     repository = ProductRepositoryImpl(ProductDao(db), CategoryDao(db));
@@ -220,6 +240,37 @@ void main() {
       expect(result.getOrElse(() => null), isNull);
     });
 
+    // Jalur simpan memangkas barcode (`_blankToNull`), jadi jalur cari wajib
+    // memangkas dengan cara yang sama — kalau tidak, keduanya tidak sepakat
+    // soal apa kuncinya dan produk yang terdaftar jadi "tidak ditemukan".
+    test('kode dari scanner yang berspasi tetap menemukan produknya', () async {
+      await repository.addProduct(draft(barcode: '8991234567890'));
+
+      final result = await repository.getProductByBarcode(
+        ' 8991234567890\n',
+      );
+      expect(result.getOrElse(() => null)?.name, 'Cappuccino');
+    });
+
+    test('barcode disimpan berspasi pun tetap bisa dicari tanpa spasi',
+        () async {
+      await repository.addProduct(draft(barcode: '  8991234567890  '));
+
+      final result = await repository.getProductByBarcode('8991234567890');
+      expect(result.getOrElse(() => null)?.name, 'Cappuccino');
+    });
+
+    test('kode kosong atau hanya spasi mengembalikan null, bukan produk '
+        'tanpa barcode', () async {
+      await repository.addProduct(draft(name: 'Tanpa barcode', barcode: ''));
+
+      for (final kode in ['', '   ']) {
+        final result = await repository.getProductByBarcode(kode);
+        expect(failureOf(result), isNull);
+        expect(result.getOrElse(() => null), isNull, reason: 'kode "$kode"');
+      }
+    });
+
     test('produk nonaktif tetap ditemukan — penyaringan ada di pemanggil',
         () async {
       await repository.addProduct(
@@ -265,8 +316,117 @@ void main() {
 
       final failure = failureOf(await repository.deleteProduct(id));
       expect(failure, isA<DatabaseFailure>());
-      expect(failure!.message, contains('Nonaktifkan'));
+      expect(failure!.message, contains('pernah terjual'));
+      // Masih aktif, jadi sarannya memang relevan.
+      expect(failure.message, contains('Nonaktifkan'));
       expect(await repository.watchAllProducts().first, hasLength(1));
+    });
+
+    // Dilaporkan pemilik 2026-11-08: pesan lama menyuruh menonaktifkan produk
+    // yang sudah nonaktif, jadi terbaca seolah aplikasi mengira produk itu
+    // masih aktif.
+    test('produk nonaktif yang pernah terjual ditolak tanpa menyuruh '
+        'menonaktifkannya lagi', () async {
+      final id = (await repository.addProduct(
+        draft(name: 'Es Teh', isActive: false),
+      )).getOrElse(() => -1);
+      await sell(id);
+
+      final failure = failureOf(await repository.deleteProduct(id));
+
+      expect(failure!.message, contains('Es Teh'));
+      expect(failure.message, contains('pernah terjual'));
+      expect(failure.message, contains('sudah nonaktif'));
+      expect(failure.message, isNot(contains('Nonaktifkan saja')));
+    });
+
+    // Void menandai transaksinya 'voided' tapi barisnya tetap ada (PRD §2.6),
+    // jadi produknya tetap terkunci. Mengejutkan tanpa konteks ini.
+    test('void transaksi tidak membuat produknya bisa dihapus', () async {
+      final id = (await repository.addProduct(draft())).getOrElse(() => -1);
+      final transactionId = await sell(id);
+      await db.customStatement(
+        "UPDATE transactions SET status = 'voided' WHERE id = $transactionId",
+      );
+
+      final failure = failureOf(await repository.deleteProduct(id));
+
+      expect(failure, isA<DatabaseFailure>());
+      expect(failure!.message, contains('pernah terjual'));
+    });
+
+    test('produk nonaktif yang belum pernah terjual tetap bisa dihapus',
+        () async {
+      final id = (await repository.addProduct(
+        draft(isActive: false),
+      )).getOrElse(() => -1);
+
+      expect((await repository.deleteProduct(id)).isRight(), isTrue);
+      expect(await repository.watchAllProducts().first, isEmpty);
+    });
+  });
+
+  group('cari-atau-buat kategori', () {
+    test('nama baru membuat satu kategori', () async {
+      final id = (await repository.findOrCreateCategory('Minuman'))
+          .getOrElse(() => -1);
+
+      final rows = await db.select(db.categories).get();
+      expect(rows.map((c) => c.name), ['Umum', 'Minuman']);
+      expect(rows.last.id, id);
+    });
+
+    test('nama yang sama persis memakai kategori lama', () async {
+      final first = (await repository.findOrCreateCategory('Minuman'))
+          .getOrElse(() => -1);
+      final second = (await repository.findOrCreateCategory('Minuman'))
+          .getOrElse(() => -2);
+
+      expect(second, first);
+      expect(await db.select(db.categories).get(), hasLength(2));
+    });
+
+    // Keputusan pemilik: beda kapitalisasi bukan kategori baru, dan bukan
+    // error — produknya masuk ke kategori yang sudah ada (ADR-038).
+    test('beda huruf besar kecil memakai kategori lama', () async {
+      final first = (await repository.findOrCreateCategory('Minuman'))
+          .getOrElse(() => -1);
+      final second = (await repository.findOrCreateCategory('mInUmAn'))
+          .getOrElse(() => -2);
+
+      expect(second, first);
+      expect(await db.select(db.categories).get(), hasLength(2));
+    });
+
+    test('spasi di ujung tidak membuat kategori kembar', () async {
+      final first = (await repository.findOrCreateCategory('Minuman'))
+          .getOrElse(() => -1);
+      final second = (await repository.findOrCreateCategory('  Minuman  '))
+          .getOrElse(() => -2);
+
+      expect(second, first);
+      expect(await db.select(db.categories).get(), hasLength(2));
+    });
+
+    test('nama kosong ditolak dan tidak menulis apa pun', () async {
+      final failure = failureOf(await repository.findOrCreateCategory('   '));
+
+      expect(failure, isA<ValidationFailure>());
+      expect(await db.select(db.categories).get(), hasLength(1));
+    });
+
+    test('produk bisa langsung dipakai dengan kategori yang baru dibuat',
+        () async {
+      final categoryId = (await repository.findOrCreateCategory('Minuman'))
+          .getOrElse(() => -1);
+
+      final result = await repository.addProduct(
+        NewProduct(name: 'Es Teh', price: 5000, categoryId: categoryId),
+      );
+
+      expect(result.isRight(), isTrue);
+      final products = await repository.watchAllProducts().first;
+      expect(products.single.categoryId, categoryId);
     });
   });
 }

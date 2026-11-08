@@ -1,0 +1,35 @@
+/* Henshin v2 — generated from tokens.json */
+:root {
+  --bg: #f4f6f6;
+  --surface: #ffffff;
+  --surface-muted: #eaeff0;
+  --line: #dde4e4;
+  --line-strong: #8a9697;
+  --ink: #172021;
+  --ink-muted: #5b6768;
+  --primary: #006565;
+  --primary-pressed: #004d4d;
+  --primary-soft: #ddf0ef;
+  --on-primary: #ffffff;
+  --success: #1d6b37;
+  --success-soft: #e2f2e7;
+  --warning: #7a4f00;
+  --warning-soft: #fcefd2;
+  --danger: #b3261e;
+  --danger-soft: #fbe3e0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 999px;
+  --tap-min: 48px;
+  --tap-primary: 56px;
+  --row-min: 64px;
+  --shadow-sheet: 0 -4px 24px rgba(23,32,33,0.12);
+  --font-sans: Roboto, "Noto Sans", system-ui, sans-serif;
+  --font-mono: "Roboto Mono", ui-monospace, monospace;
+}

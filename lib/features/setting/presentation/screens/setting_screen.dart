@@ -9,6 +9,7 @@ import 'package:henshin/features/setting/domain/entities/store_info.dart';
 import 'package:henshin/features/setting/domain/repositories/pin_repository.dart';
 import 'package:henshin/features/setting/domain/repositories/settings_repository.dart';
 import 'package:henshin/features/setting/presentation/backup_action.dart';
+import 'package:henshin/features/setting/presentation/restore_action.dart';
 import 'package:henshin/features/setting/presentation/screens/store_info_screen.dart';
 import 'package:henshin/features/setting/presentation/pin_gate.dart';
 import 'package:henshin/injection_container.dart';
@@ -194,6 +195,15 @@ class _SettingScreenState extends State<SettingScreen> {
                       : const Icon(Icons.chevron_right,
                           color: AppColor.outline),
                   onTap: _runBackup,
+                ),
+                _SettingsRow(
+                  title: 'Pulihkan data',
+                  subtitle: 'Timpa data HP ini dengan file backup · perlu PIN',
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: AppColor.outline,
+                  ),
+                  onTap: () => RestoreAction.run(context),
                   isLast: true,
                 ),
               ],

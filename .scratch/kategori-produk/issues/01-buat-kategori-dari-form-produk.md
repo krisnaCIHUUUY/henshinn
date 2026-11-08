@@ -1,7 +1,10 @@
 # Kategori baru dibuat dari form produk, tab kosong disembunyikan
 
-Status: ready-for-agent
+Status: done
 Type: task
+
+Selesai dan diverifikasi pemilik 2026-11-08. Lihat "Hasil implementasi" di
+bawah dan ADR-038.
 
 Hasil sesi `/grill-with-docs` 2026-11-02. Pemilik repo minta dikerjakan nanti —
 jangan mulai tanpa diminta ulang.
@@ -68,3 +71,29 @@ diharapkan — sebut ini di ringkasan saat mengerjakannya.
 
 Istilahnya sudah dikunci di `CONTEXT.md`: **Kategori**, **Filter Semua** (tab
 pertama, bukan kategori, tidak punya baris DB), dan **Umum**.
+
+## Hasil implementasi (2026-11-08)
+
+Keenam butir dikerjakan. Yang berbeda dari rencana, dan alasannya:
+
+- **Pertanyaan terbuka dijawab: hanya produk aktif yang dihitung.**
+  `watchAllProducts` memang menyertakan `isActive = false` (`select(products)`
+  tanpa filter), jadi tanpa ini kategori berisi produk nonaktif saja tetap
+  memunculkan tab.
+- **Resolusi kategori dipanggil dari form, bukan lewat `ProductBloc`.**
+  `NewProduct.categoryId` bertipe `int` wajib, jadi menitipkan nama kategori
+  lewat event berarti mengubah entity, event, bloc dan semua pemanggilnya.
+  Gantinya `_resolveCategoryId()` menunggu `sl<FindOrCreateCategory>()` sebelum
+  event `added`/`updated` dikirim — pola yang sama dengan
+  `barcode_scanner_screen.dart:135` yang sudah memanggil
+  `sl<GetProductByBarcode>()` dari layar.
+- **Filter tab jadi fungsi lepas `categoriesWithActiveProducts`.** Tes widget
+  berbasis DB untuk aturan ini ditulis lebih dulu dan **gagal**: stream Drift
+  tidak maju di `testWidgets`, jadi tab 'Minuman' tidak pernah muncul meski
+  produknya sudah di DB (ADR-012 terbukti ulang, bukan diasumsikan). Fungsinya
+  dipisah supaya bisa diuji dengan `test()` biasa.
+- **Opsi `+ Kategori baru` memakai nilai dropdown `-1`**, bukan `null`:
+  `null` sudah dipakai validator `'Pilih kategori'`.
+
+Tes: 12 baru (170 total, dari 158). `flutter analyze` bersih.
+Diverifikasi pemilik di HP: berjalan lancar.

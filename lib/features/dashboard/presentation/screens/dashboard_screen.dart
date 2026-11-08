@@ -138,27 +138,13 @@ class _GreetingHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Henshin',
-                style: AppTextStyle.headlineMd.copyWith(
-                  color: AppColor.onSurface,
-                ),
-              ),
-              SizedBox(height: AppSpacing.xs),
-              Text(
-                'Henshin Store · kasir 1',
-                style: AppTextStyle.bodyMd.copyWith(
-                  color: AppColor.onSurfaceVariant,
-                ),
-              ),
-            ],
+          child: Text(
+            'Henshin',
+            style: AppTextStyle.headlineMd.copyWith(color: AppColor.onSurface),
           ),
         ),
         TextButton.icon(
@@ -397,120 +383,6 @@ class _SectionTitle extends StatelessWidget {
     );
   }
 }
-
-// ================= RESTOCK LIST =================
-
-// class _RestockList extends StatelessWidget {
-//   const _RestockList();
-
-//   @override
-//   Widget build(BuildContext context) {
-//     final items = [
-//       _RestockItem(
-//         initial: 'K',
-//         name: 'Kopi Susu Henshin',
-//         category: 'Minuman',
-//         remaining: 'Sisa 3',
-//       ),
-//       _RestockItem(
-//         initial: 'S',
-//         name: 'Stiker Henshin',
-//         category: 'Merchandise',
-//         remaining: 'Sisa 2',
-//       ),
-//     ];
-
-//     return Column(
-//       children: [
-//         for (int i = 0; i < items.length; i++) ...[
-//           _RestockTile(item: items[i]),
-//           if (i != items.length - 1)
-//             Divider(height: 1, color: AppColor.divider),
-//         ],
-//       ],
-//     );
-//   }
-// }
-
-// class _RestockItem {
-//   final String initial;
-//   final String name;
-//   final String category;
-//   final String remaining;
-
-//   _RestockItem({
-//     required this.initial,
-//     required this.name,
-//     required this.category,
-//     required this.remaining,
-//   });
-// }
-
-// class _RestockTile extends StatelessWidget {
-//   final _RestockItem item;
-//   const _RestockTile({required this.item});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Padding(
-//       padding: const EdgeInsets.symmetric(vertical: AppSpacing.md - 2),
-//       child: Row(
-//         children: [
-//           CircleAvatar(
-//             radius: 20,
-//             backgroundColor: AppColor.surfaceContainerHigh,
-//             child: Text(
-//               item.initial,
-//               style: AppTextStyle.labelSm.copyWith(
-//                 color: AppColor.onSurface,
-//                 fontWeight: FontWeight.w600,
-//               ),
-//             ),
-//           ),
-//           const SizedBox(width: AppSpacing.md - 2),
-//           Expanded(
-//             child: Column(
-//               crossAxisAlignment: CrossAxisAlignment.start,
-//               children: [
-//                 Text(
-//                   item.name,
-//                   style: AppTextStyle.bodyMd.copyWith(
-//                     color: AppColor.onSurface,
-//                     fontWeight: FontWeight.w600,
-//                   ),
-//                 ),
-//                 const SizedBox(height: AppSpacing.xs - 2),
-//                 Text(
-//                   item.category,
-//                   style: AppTextStyle.labelSm.copyWith(
-//                     color: AppColor.onSurfaceVariant,
-//                   ),
-//                 ),
-//               ],
-//             ),
-//           ),
-//           Container(
-//             padding: const EdgeInsets.symmetric(
-//               horizontal: AppSpacing.md - 4,
-//               vertical: AppSpacing.xs + 2,
-//             ),
-//             decoration: const BoxDecoration(
-//               color: AppColor.tertiaryFixedDim,
-//               borderRadius: AppRadius.fullAll,
-//             ),
-//             child: Text(
-//               item.remaining,
-//               style: AppTextStyle.labelSm.copyWith(
-//                 color: AppColor.onTertiaryFixed,
-//                 fontWeight: FontWeight.w600,
-//               ),
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
 
 // ================= START TRANSACTION BUTTON =================
 

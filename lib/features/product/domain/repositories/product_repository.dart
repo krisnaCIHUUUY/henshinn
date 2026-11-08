@@ -11,8 +11,13 @@ abstract class ProductRepository {
   Stream<List<ProductEntity>> watchProductsByCategory(int categoryId);
 
   /// Stream kategori untuk pilihan di form produk. Ikut di repository ini
-  /// karena kategori belum punya CRUD sendiri — baru dipakai baca-saja.
+  /// karena kategori bukan entitas yang dikelola sendiri — hanya kolom produk.
   Stream<List<CategoryEntity>> watchCategories();
+
+  /// Id kategori bernama [name], dibuat kalau belum ada. Nama dicocokkan tanpa
+  /// peka huruf besar/kecil, jadi pemilik tidak bisa membuat dua kategori yang
+  /// hanya beda kapitalisasi (ADR-038).
+  Future<Either<Failure, int>> findOrCreateCategory(String name);
 
   /// Stream produk aktif yang stoknya <= batas per produk sendiri.
   Stream<List<ProductEntity>> watchLowStockProducts();

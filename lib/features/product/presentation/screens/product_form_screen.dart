@@ -7,10 +7,12 @@ import 'package:henshin/core/theme/app_spacing.dart';
 import 'package:henshin/core/theme/app_text_style.dart';
 import 'package:henshin/core/utils/currency_formatter.dart';
 import 'package:henshin/features/product/domain/entities/product.dart';
+import 'package:henshin/features/product/domain/usecases/find_or_create_category.dart';
 import 'package:henshin/features/product/presentation/bloc/product_bloc.dart';
 import 'package:henshin/features/product/presentation/bloc/product_event.dart';
 import 'package:henshin/features/product/presentation/bloc/product_state.dart';
 import 'package:henshin/features/setting/presentation/pin_gate.dart';
+import 'package:henshin/injection_container.dart';
 
 /// Tambah produk (`product == null`) atau ubah produk yang sudah ada.
 /// Memakai `ProductBloc` dari ancestor — bukan instance baru — supaya list di
@@ -28,6 +30,10 @@ class ProductFormScreen extends StatefulWidget {
   State<ProductFormScreen> createState() => _ProductFormScreenState();
 }
 
+/// Nilai dropdown untuk opsi "+ Kategori baru". Bukan id di DB — id asli
+/// selalu positif, jadi angka negatif tidak bisa bertabrakan dengan kategori.
+const _newCategoryOption = -1;
+
 class _ProductFormScreenState extends State<ProductFormScreen> {
   final _formKey = GlobalKey<FormState>();
 
@@ -37,6 +43,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   late final TextEditingController _costPrice;
   late final TextEditingController _stock;
   late final TextEditingController _threshold;
+  late final TextEditingController _newCategoryName;
 
   int? _categoryId;
   late bool _isActive;
@@ -56,6 +63,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _costPrice = TextEditingController(text: p == null ? '' : '${p.costPrice}');
     _stock = TextEditingController(text: p == null ? '0' : '${p.stock}');
     _threshold = TextEditingController(text: '${p?.lowStockThreshold ?? 5}');
+    _newCategoryName = TextEditingController();
     _categoryId = p?.categoryId;
     _isActive = p?.isActive ?? true;
 
@@ -64,7 +72,15 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
 
   @override
   void dispose() {
-    for (final c in [_name, _barcode, _price, _costPrice, _stock, _threshold]) {
+    for (final c in [
+      _name,
+      _barcode,
+      _price,
+      _costPrice,
+      _stock,
+      _threshold,
+      _newCategoryName,
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -93,6 +109,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     }
     if (!mounted) return;
 
+    final categoryId = await _resolveCategoryId();
+    if (categoryId == null || !mounted) return;
+
     setState(() => _saving = true);
 
     final bloc = context.read<ProductBloc>();
@@ -107,7 +126,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             stock: _intOf(_stock),
             lowStockThreshold: _intOf(_threshold, fallback: 5),
             isActive: _isActive,
-            categoryId: _categoryId,
+            categoryId: categoryId,
           ),
         ),
       );
@@ -122,11 +141,29 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             stock: _intOf(_stock),
             lowStockThreshold: _intOf(_threshold, fallback: 5),
             isActive: _isActive,
-            categoryId: _categoryId!,
+            categoryId: categoryId,
           ),
         ),
       );
     }
+  }
+
+  /// Kategori baru dibuat di sini, bukan di layar sendiri: PRD §F2 menaruh
+  /// kategori sebagai kolom produk, bukan entitas yang dikelola (ADR-038).
+  /// `null` = gagal dan pesannya sudah tampil, jadi penyimpanan dibatalkan.
+  ///
+  /// Kalau produknya batal disimpan setelah ini, kategorinya tetap ada tapi
+  /// kosong — dan tab kategori kosong tidak pernah ditampilkan, jadi tidak ada
+  /// yang terlihat salah bagi pemilik.
+  Future<int?> _resolveCategoryId() async {
+    if (_categoryId != _newCategoryOption) return _categoryId;
+
+    final result = await sl<FindOrCreateCategory>()(_newCategoryName.text);
+    if (!mounted) return null;
+    return result.fold((failure) {
+      _showMessage(failure.message);
+      return null;
+    }, (id) => id);
   }
 
   void _showMessage(String message) {
@@ -178,6 +215,18 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                   value: _categoryId,
                   onChanged: (id) => setState(() => _categoryId = id),
                 ),
+                if (_categoryId == _newCategoryOption) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _Field(
+                    controller: _newCategoryName,
+                    label: 'Nama kategori baru',
+                    helper: 'Dipakai sebagai tab di daftar produk',
+                    textCapitalization: TextCapitalization.words,
+                    validator: (value) => (value ?? '').trim().isEmpty
+                        ? 'Nama kategori wajib diisi'
+                        : null,
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.lg),
                 _Field(
                   controller: _price,
@@ -332,7 +381,9 @@ class _CategoryPicker extends StatelessWidget {
           previous.categories != current.categories,
       builder: (context, state) {
         return DropdownButtonFormField<int>(
-          initialValue: state.categories.any((c) => c.id == value)
+          initialValue:
+              value == _newCategoryOption ||
+                  state.categories.any((c) => c.id == value)
               ? value
               : null,
           decoration: InputDecoration(
@@ -342,6 +393,10 @@ class _CategoryPicker extends StatelessWidget {
           items: [
             for (final category in state.categories)
               DropdownMenuItem(value: category.id, child: Text(category.name)),
+            const DropdownMenuItem(
+              value: _newCategoryOption,
+              child: Text('+ Kategori baru'),
+            ),
           ],
           onChanged: onChanged,
           validator: (selected) => selected == null ? 'Pilih kategori' : null,

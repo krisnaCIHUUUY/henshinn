@@ -613,3 +613,324 @@ bisa mengirim seluruh data penjualan ke luar. Itu asumsi "satu HP, satu
 pemegang" yang sama seperti ADR-031; kalau asumsi itu gugur (kasir pegawai,
 HP dipakai bergantian), yang harus dibuka ulang bukan baris ini saja tapi
 seluruh model PIN — lihat ADR-031.
+
+---
+
+## ADR-038 — Kategori dibuat dari form produk, tanpa hapus dan tanpa unique index
+
+**Keputusan.** Kategori adalah **alat cari cepat** di daftar produk, bukan data
+laporan: tidak muncul di struk dan tidak dipakai perhitungan apa pun. Karena itu
+empat hal sekaligus:
+
+1. **Dibuat dari form produk**, bukan layar pengelola kategori. Dropdown
+   kategori punya opsi `+ Kategori baru`; namanya diketik di situ dan
+   kategorinya dibuat saat produk disimpan.
+2. **Tidak ada hapus dan tidak ada ganti nama.** Gantinya, tab kategori hanya
+   tampil untuk kategori yang punya minimal satu produk **aktif**
+   (`categoriesWithActiveProducts` di `product_list_screen.dart`).
+3. **Nama dicocokkan tanpa peka huruf besar/kecil** sebelum insert
+   (`CategoryDao.findCategoryByName`). "minuman" saat "Minuman" sudah ada masuk
+   ke kategori lama, tanpa pesan error.
+4. **Tanpa unique index di DB.** Jaminan nama tunggal ada di kode saja.
+
+**Alasan.** PRD §F2 menyebut kategori sebagai *kolom produk*, bukan entitas yang
+dikelola — jadi layar CRUD kategori adalah fitur yang tidak pernah diminta, dan
+`CategoryDao.updateCategory`/`deleteCategory` yang ada sejak langkah 2 memang
+tidak pernah dipanggil dari mana pun (keduanya dihapus di pekerjaan ini, bukan
+ditinggal sebagai kode mati). Menyembunyikan tab kosong menyelesaikan masalah
+salah ketik tanpa menambah satu pun tombol: kategori salah ketik lenyap begitu
+produknya dipindah. Dan unique index berarti bump `schemaVersion`, yang akan
+menambah satu variabel baru ke uji restore langkah 14 (ADR-041) demi masalah
+yang tidak ada di "satu HP, satu pemakai".
+
+**Konsekuensi yang diterima.**
+
+- **Tab 'Umum' akan hilang sendiri** begitu semua produk punya kategori nyata.
+  Itu benar menurut aturan di atas, tapi akan terasa seperti kerusakan kalau
+  tidak diharapkan. Barisnya tetap ada di DB dan tetap jadi tujuan FK
+  `products.categoryId` hasil seed langkah 2 — yang hilang hanya tabnya.
+- **Baris kategori menumpuk tanpa bisa dibersihkan dari dalam aplikasi.** Salah
+  ketik hilang dari layar, tidak dari DB. Diterima: satu baris berisi satu nama
+  pendek, dan tidak ada laporan yang membacanya.
+- **Kategori bisa lahir tanpa produk.** Kalau penyimpanan produk gagal setelah
+  kategorinya dibuat, kategori itu tetap ada. Tidak dibungkus satu transaksi
+  karena akibatnya nol: tab kosong tidak pernah ditampilkan.
+- **`lower()` SQLite hanya melipat ASCII**, jadi "Café" dan "café" masih bisa
+  jadi dua kategori. Ditandai `shortcut:` di `CategoryDao`.
+- **Nilai dropdown `-1`** (`_newCategoryOption`) adalah penanda opsi, bukan id.
+  Aman karena id Drift selalu positif, tapi jangan pernah dikirim ke DB —
+  `_resolveCategoryId` wajib menukarnya dengan id asli lebih dulu.
+- Filter tabnya **fungsi lepas, bukan kode di dalam `build`**, semata-mata
+  supaya bisa diuji: di `testWidgets` stream Drift tidak pernah maju, jadi tes
+  widget berbasis DB untuk aturan ini mustahil (ADR-012 — dicoba dan gagal
+  justru begitu, bukan diasumsikan).
+
+Membatalkan keputusan ini (misal kategori jadi dimensi laporan) berarti
+mengubah aturan 2 lebih dulu: begitu laporan lama memakai nama kategori,
+menyembunyikan tab tidak lagi cukup dan hapus/ganti nama jadi wajib ada.
+
+---
+
+## ADR-039 — Restore menutup aplikasi, bukan membangun ulang DI
+
+**Keputusan.** Setelah restore berhasil, `RestoreAction` menampilkan dialog yang
+tidak bisa dilewati lalu memanggil **`exit(0)`**. Aplikasi tidak mencoba
+memulihkan dirinya di dalam proses yang sama.
+
+**Alasan.** Semua DAO, repository, dan bloc di `injection_container.dart`
+terdaftar sebagai `registerLazySingleton` yang bergantung pada satu
+`AppDatabase`. Restore menutup koneksi itu dan menukar file di bawahnya, jadi
+begitu `restoreFrom` mengembalikan `Right`, setiap singleton yang sudah pernah
+dibuat memegang pegangan mati. Alternatif `sl.reset()` + `initDependencies()` +
+remount seluruh widget tree ditolak: bloc yang dipasang di root (`CartBloc`,
+`ProductBloc`) bisa tertinggal memegang koneksi lama, dan kegagalannya muncul
+sebagai layar kosong atau error acak beberapa menit kemudian — kelas bug paling
+sulit dilacak, justru di saat data pemilik paling rawan. Restore adalah aksi
+sekali setahun; kehalusannya tidak sebanding dengan risikonya.
+
+**Harus `exit(0)`, bukan `SystemNavigator.pop()`.** Versi pertama memakai
+`SystemNavigator.pop()` dan lolos semua tes, tapi gagal di HP: layar putih
+kosong saat aplikasi dibuka lagi. Sebabnya `SystemNavigator.pop()` hanya
+menutup Activity dan membiarkan prosesnya hidup — jadi `main()` tidak jalan
+ulang, `initDependencies()` tidak jalan ulang, dan get_it masih memegang
+`AppDatabase` yang baru saja ditutup oleh restore. Setiap query lewat pegangan
+mati itu dan tidak ada yang pernah terender. Membuang aplikasi dari Recents
+lalu membukanya kembali menampilkan data yang sudah dipulihkan dengan benar,
+yang membuktikan filenya sehat dan masalahnya murni daur hidup proses. Ini
+kelas bug yang sama dengan ADR-025: **tidak ada tes Dart yang bisa
+menangkapnya**, karena tes selalu berjalan di proses baru. Kalau suatu saat
+`exit(0)` diganti — misalnya karena lint melarangnya — penggantinya wajib
+benar-benar mematikan proses, bukan sekadar menutup layar.
+
+**Konsekuensi yang diterima.** Pemilik harus membuka aplikasi lagi secara
+manual, dan itu terasa kasar. `exit(0)` juga melewati daur hidup Android:
+boleh di sini karena koneksi database sudah ditutup lebih dulu, jadi tidak ada
+yang perlu di-flush — jangan dijadikan pola untuk tombol keluar lain. Kalau suatu saat restore jadi sering (mis. pindah
+HP berkali-kali saat pelatihan), yang harus dibuka ulang bukan dialognya tapi
+cara `AppDatabase` didaftarkan — misalnya membungkusnya di belakang satu
+pemegang koneksi yang bisa ditukar, bukan singleton langsung.
+
+---
+
+## ADR-040 — Salinan pengaman restore hanya satu file di cache
+
+**Keputusan.** Sebelum menimpa database aktif, `restoreFrom` menulis
+`henshin-sebelum-restore.sqlite` ke cache aplikasi lewat `exportInto`
+(`VACUUM INTO`), selalu di jalur yang sama dan selalu menimpa yang lama. Tidak
+ada riwayat, tidak ada layar untuk melihat atau memilihnya.
+
+**Alasan.** Tujuannya satu: membatalkan satu restore yang baru saja salah.
+Lewat `VACUUM INTO`, bukan menyalin file mentah, supaya salinannya konsisten
+dengan alasan yang sama seperti ADR-034. Menyimpannya bertumpuk per tanggal di
+`getApplicationSupportDirectory` ditolak: tumbuh tanpa batas di penyimpanan
+internal dan butuh kode pembersih, padahal tidak ada UI yang pernah
+menampilkannya. Pilihan ini dikonfirmasi ke pemilik repo sebelum ditulis.
+
+**Konsekuensi yang diterima.** Android boleh menghapus cache kapan pun, jadi
+file ini **bukan backup** dan tidak boleh disebut begitu ke pemilik. Dan karena
+tidak ada tombol pemulihnya, memakainya butuh ADB atau bantuan developer —
+utang yang sudah dicatat di `docs/progress.md`. Kalau salinan pengaman ini
+pernah benar-benar dibutuhkan dan ternyata sudah dibuang OS, yang salah bukan
+kodenya tapi keputusan ini.
+
+---
+
+## ADR-041 — Validasi backup membaca `user_version`, dan menerima skema lebih tua
+
+**Keputusan.** `BackupRepositoryImpl.validate` menolak file yang bukan SQLite,
+yang tidak punya keenam tabel `@DriftDatabase`, atau yang `PRAGMA user_version`
+nya 0 atau lebih besar dari `schemaVersion` aplikasi. Skema yang lebih tua
+diterima. File kandidat dibuka dengan `package:sqlite3` secara `readOnly`,
+**tidak pernah** sebagai `AppDatabase`.
+
+**Alasan.** Tiga hal yang mudah salah, masing-masing punya alasannya:
+(1) Membuka kandidat sebagai `AppDatabase` akan menjalankan
+`migration.onUpgrade` dan **mengubah file backup milik pemilik** sebelum ia
+menyetujui apa pun — karena itu validasinya memakai sqlite mentah.
+(2) Versi dibaca dari `user_version` yang dinaikkan Drift sendiri, bukan kolom
+`settings.schemaVersion` yang hanya diisi saat seed dan sudah ditandai
+`shortcut:` sebagai basi di `app_database.dart`. Memakai kolom itu berarti
+menolak backup yang sebenarnya sah.
+(3) Skema lebih tua diterima karena migrasi akan menaikkannya sendiri saat file
+dibuka ulang — hampir tanpa kode tambahan. Menolaknya akan membuat setiap
+backup yang dibuat sebelum update aplikasi jadi sampah permanen, padahal backup
+lama justru yang paling dibutuhkan saat HP hilang. Pilihan ini dikonfirmasi ke
+pemilik repo sebelum ditulis.
+
+**Konsekuensi yang diterima.** Validasi hanya memeriksa **nama** tabel, bukan
+kolomnya. File SQLite yang kebetulan punya enam tabel bernama sama akan lolos
+validasi dan baru gagal saat dibuka Drift — setelah data aktif tertimpa. Yang
+menyelamatkan keadaan itu adalah salinan pengaman ADR-040, bukan validasinya.
+Memperketatnya berarti menyalin daftar kolom ke dalam kode validasi dan
+memeliharanya setiap kali skema berubah; itu sengaja tidak dilakukan karena
+skenario "database asing dengan enam nama tabel yang persis sama" tidak
+realistis di HP pemilik warung.
+
+---
+
+## ADR-042 — Crash-free rate tidak diukur; keandalan dijaga uji manual
+
+**Keputusan.** Metrik PRD §1.5 "crash-free ≥99%" tidak diukur sebagai angka.
+Keandalan dinilai dari uji manual pemilik (langkah 15) dan dari suite tes, dan
+`docs/progress.md` menyebutnya "tidak terukur", bukan "tercapai".
+
+**Alasan.** Menghitung crash-free rate butuh menghitung sesi dan crash lalu
+mengirimkannya ke suatu tempat — artinya SDK crash reporting dan jaringan.
+Aplikasi ini tidak punya backend sama sekali dan "cloud sync / auto cloud
+backup" ada di daftar out-of-scope (AGENTS.md §6 / PRD §1.4), jadi
+menambahkannya bukan sekadar satu dependency: ia membatalkan sifat
+offline-only yang jadi alasan produk ini ada. Menyimpan hitungan crash secara
+lokal juga ditolak — crash justru sering terjadi sebelum sesuatu bisa ditulis
+ke disk, dan tidak ada yang akan pernah membacanya.
+
+**Konsekuensi yang diterima.** Angka itu akan tetap kosong di PRD selamanya,
+dan ini harus dikatakan apa adanya ke pemilik, bukan dianggap lolos karena
+"tidak ada yang terlihat crash". Yang menggantikannya lebih lemah: 155 tes dan
+satu sesi uji manual oleh satu orang di satu HP. Kalau suatu saat Henshin
+dipakai lebih dari satu warung, yang harus dibuka ulang bukan baris ini tapi
+asumsi "satu HP, satu pemegang" (ADR-031) — dan saat itu crash reporting
+mungkin layak dipertimbangkan ulang bersama keputusan offline-only-nya.
+
+---
+
+## ADR-043 — Halaman scan dikunci potrait, frame diperlebar sebagai gantinya
+
+**Keputusan.** `BarcodeScannerScreen` mengunci `DeviceOrientation.portraitUp`
+di `initState` dan membuang preferensi itu (`setPreferredOrientations(const [])`)
+di `dispose`. Frame pemandu diubah jadi lebar-dan-pendek (0,85 × lebar layar,
+tinggi 0,55 × lebar frame), tidak lagi mengikuti bentuk layar. Area deteksi
+tetap seluruh frame kamera — `scanWindow` **tidak** dipakai.
+
+**Alasan.** Keputusan lama adalah landscape, dengan alasan yang hanya hidup di
+satu komentar: barcode 1D berupa garis vertikal, jadi lebih mudah masuk frame
+kalau framenya lebar. Alasan itu benar secara optik tapi mengabaikan cara
+alatnya dipakai — kasir memegang HP dengan satu tangan sementara tangan lain
+memegang barang, dan memutar HP ke landscape di tengah transaksi memakan waktu
+yang justru dihitung metrik PRD §1.5 (3 item ≤30 detik). Pemilik meminta
+potrait. Keuntungan optik landscape diganti dengan melebarkan frame pemandunya:
+bentuk frame, bukan orientasi layar, yang menuntun kasir mengarahkan kamera.
+
+**`scanWindow` ditolak.** `mobile_scanner` bisa membatasi deteksi ke satu
+persegi lewat `scanWindow`, dan sekilas itu cocok dengan frame pemandu. Ditolak
+karena akibatnya berlawanan dengan tujuannya: hari ini deteksi berjalan di
+seluruh gambar kamera dan framenya murni pemandu, jadi barcode yang sedikit di
+luar frame tetap terbaca. Membatasi deteksi ke frame yang di potrait justru
+lebih kecil akan membuat scan **lebih sulit** dari sekarang. Framenya sengaja
+dibiarkan "berbohong sedikit" ke arah yang memaafkan, bukan yang menghukum.
+
+**Konsekuensi yang diterima.** Barcode 1D yang sangat panjang (EAN-13 pada
+kemasan besar) mungkin perlu kamera ditarik lebih jauh di potrait dibanding
+landscape, dan itu bisa menurunkan ketajaman. Belum terukur — metrik PRD
+"produk masuk keranjang ≤2 detik" belum pernah diukur dengan stopwatch bahkan
+sebelum perubahan ini, jadi tidak ada angka pembanding. Kalau di lapangan
+ternyata barcode panjang jadi sering gagal, yang dibuka ulang bukan orientasinya
+(pemilik sudah memutuskan) tapi frame dan zoom-nya — `MobileScannerController`
+punya kontrol zoom yang sampai sekarang tidak dipakai sama sekali.
+
+**Catatan.** `dispose` versi lama mengunci potrait alih-alih membuang
+preferensinya. Karena tidak ada layar lain yang menyentuh `SystemChrome`,
+efeknya seluruh aplikasi terkunci potrait setelah scanner dibuka sekali —
+tidak pernah terlihat karena aplikasinya memang dipakai potrait. Sekarang
+dibuang dengan daftar kosong supaya layar ini tidak menetapkan kebijakan untuk
+layar lain.
+
+---
+
+## ADR-044 — Kunci pencarian barcode dinormalkan sama di tulis dan baca; pencocokan longgar ditolak
+
+**Keputusan.** `ProductRepositoryImpl.getProductByBarcode` memangkas kode yang
+masuk (`trim`) dan mengembalikan `Right(null)` untuk kode kosong, persis
+senormal jalur simpan (`_blankToNull`). Pencocokan di DAO tetap **persis**
+(`barcode.equals`) — tidak ada toleransi nol di depan, tidak ada `LIKE`.
+
+**Alasan.** Bug nyata yang dilaporkan pemilik 2026-11-08: produk yang
+barcodenya sudah terdaftar tidak ketemu saat di-scan. Dekodenya sehat; yang
+rusak adalah kesepakatan soal kunci. Barcode disimpan sudah dipangkas, tapi
+kode dari scanner dicari apa adanya, dan `equals` tidak memaafkan satu karakter
+pun. Beberapa simbologi 1D (Code 39) mengembalikan `rawValue` dengan karakter
+penutup. **Aturannya: kalau satu nilai dinormalkan sebelum disimpan, ia wajib
+dinormalkan dengan cara yang sama sebelum dicari.** Asimetri seperti ini tidak
+akan tertangkap tes yang memakai string yang sama di kedua sisi — tes lama
+melakukan itu dan lolos selama berbulan-bulan.
+
+**Pencocokan longgar ditolak.** Kemasan UPC-A mencetak 12 digit sementara
+scanner bisa melaporkannya sebagai EAN-13 dengan nol tambahan di depan, jadi
+mencoba kedua bentuk terlihat menggoda. Ditolak: dua produk berbeda yang
+barcodenya hanya beda nol di depan akan saling tertukar, dan di kasir itu
+berarti barang salah masuk keranjang dan harga salah tercetak di struk —
+kegagalan yang lebih buruk daripada "barcode belum terdaftar", karena yang
+pertama tidak kelihatan. Kalau nanti ini benar-benar jadi masalah di lapangan,
+yang benar bukan pencocokan longgar tapi menormalkan ke satu bentuk kanonik
+(mis. selalu 13 digit) **di kedua jalur sekaligus**, dan index uniknya harus
+ikut memakai bentuk itu.
+
+**Konsekuensi yang diterima.** Perbedaan karakter yang sebenarnya pada bug ini
+tidak pernah tercatat — perbaikannya terbukti bekerja di HP pemilik, tapi dua
+string yang dibandingkan tidak pernah diambil. Jadi tidak ada bukti bahwa
+`trim` yang menyelesaikannya, hanya bukti bahwa sesudahnya berhasil. Kalau
+gejala serupa muncul lagi, mulai dari mengambil kedua string itu, jangan
+menganggap ADR ini sudah menjelaskannya.
+
+**Terkait.** Cacat yang menyembunyikan bug ini bukan di sini tapi di
+presentation: `_onDetect` melipat `Left(DatabaseFailure)` dan `Right(null)`
+menjadi satu lewat `getOrElse(() => null)`, sehingga setiap error database
+muncul sebagai "Barcode belum terdaftar". Pola itu — `getOrElse` pada
+`Either<Failure, T?>` di mana `null` juga punya arti sendiri — patut dicurigai
+di mana pun ia muncul: ia membuang satu-satunya informasi yang membedakan
+"tidak ada" dari "gagal".
+
+---
+
+## ADR-045 — Produk yang pernah terjual terkunci selamanya, dan pesan gagal tidak boleh menebak penyebab
+
+**Keputusan.** Produk yang punya baris `transaction_items` tidak bisa dihapus,
+dan **void tidak membebaskannya**. Pesan penolakannya menyebut nama produk,
+alasannya, dan hanya menyarankan "nonaktifkan" kalau produk itu memang masih
+aktif. Blok `catch` di `ProductRepositoryImpl.deleteProduct` hanya memetakan
+pelanggaran FK ke pesan itu; exception lain di-`rethrow` dan tampil sebagai
+dirinya sendiri.
+
+**Alasan.** Dua hal terpisah yang ketemu lewat satu laporan pemilik
+(2026-11-08: "produk tidak aktif gagal terhapus, yang tampil malah popup produk
+masih aktif").
+
+1. **Penolakannya benar, pesannya salah.** Jalur hapus tidak pernah membaca
+   `isActive`; yang mengunci adalah riwayat penjualan. Pesan lama menyuruh
+   menonaktifkan produk yang sudah dinonaktifkan, sehingga terbaca seolah
+   aplikasi mengira produk itu masih aktif. Pemilik menyimpulkan ada bug di
+   tempat yang tidak ada bugnya.
+2. **`catch` lama melabeli SETIAP exception** sebagai "sudah dipakai di
+   transaksi". Error apa pun — DB terkunci, file rusak, bug baru — akan
+   menyamar jadi pesan yang masuk akal dan tidak pernah terlihat. Ini kelas bug
+   yang sama dengan `getOrElse` yang menelan `Left` di ADR-044, dan kedua
+   kalinya ditemukan di repo ini: **jangan pernah menyimpulkan penyebab dari
+   blok `catch` yang menangkap segalanya.** Kalau penyebabnya memang bisa
+   dipastikan, pastikan dulu (di sini: cocokkan `FOREIGN KEY constraint
+   failed`), sisanya diteruskan apa adanya.
+
+Void sengaja tidak membebaskan produk: `voidTransaction` menandai
+`status = 'voided'` dan baris `transaction_items`-nya tetap ada (soft delete,
+ADR dan AGENTS.md §3), karena laporan lama membaca snapshot harga di baris itu.
+Menghapus produknya akan mengosongkan FK yang masih dipakai laporan.
+
+**Konsekuensi yang diterima.**
+
+- **Produk yang pernah terjual menumpuk di daftar produk selamanya.** Pemilik
+  hanya bisa menonaktifkannya — hilang dari kasir, tetap di daftar produk. Kalau
+  itu jadi masalah nyata, yang dibutuhkan bukan hapus tapi fitur terpisah
+  ("sembunyikan dari daftar produk"), dan itu keputusan baru: menghapus barisnya
+  akan merusak laporan yang sudah ada.
+- **Deteksi FK lewat pencocokan string** (`FOREIGN KEY constraint failed`),
+  bukan kode error SQLite. Cukup karena satu-satunya FK yang masih menunjuk
+  produk saat delete dijalankan adalah `transaction_items` — ledger stoknya
+  dihapus di transaksi yang sama (`ProductDao.deleteProduct`). Kalau nanti ada
+  tabel lain yang menunjuk `products`, pesannya akan salah dan **baris inilah
+  yang harus dibaca lebih dulu**.
+- **Satu query ekstra tiap hapus**: produknya diambil sebelum delete supaya
+  pesan gagalnya bisa menyebut nama dan status aktifnya. Satu baris berindeks,
+  dan hanya di jalur yang dipicu manusia.
+- Jalur `rethrow` tidak punya tes: memaksa exception non-FK butuh fake DAO, dan
+  satu-satunya yang akan diuji adalah bahwa pesannya tidak mengaku jadi masalah
+  transaksi. Tiga tes yang ada mengunci aturan utamanya, termasuk bahwa void
+  tidak membebaskan produk.
+

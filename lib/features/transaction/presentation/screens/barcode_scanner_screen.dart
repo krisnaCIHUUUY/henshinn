@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:henshin/core/errors/failures.dart';
+import 'package:henshin/core/theme/app_color.dart';
 import 'package:henshin/features/product/domain/entities/product.dart';
 import 'package:henshin/features/product/domain/usecases/get_product_by_barcode.dart';
 import 'package:henshin/features/product/presentation/screens/product_form_screen.dart';
@@ -58,11 +60,14 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // Barcode 1D lebih mudah terbaca dalam orientasi lebar.
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
+    // Potrait atas permintaan pemilik: memegang HP tegak lebih nyaman saat
+    // tangan lain memegang barang. Ini sengaja menukar keuntungan lama
+    // landscape untuk barcode 1D — frame pemandu yang dilebarkan menggantikan
+    // keuntungan itu. Lihat ADR-043.
+    //
+    // `portraitUp` saja, tanpa `portraitDown`: preview kamera terbalik tidak
+    // pernah berguna. Rotasi preview-nya sendiri diurus mobile_scanner.
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
     _subscription = _controller.barcodes.listen(_onDetect);
     unawaited(_controller.start());
@@ -74,10 +79,11 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     unawaited(_subscription?.cancel());
     _subscription = null;
 
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
+    // Daftar kosong = buang preferensi layar ini, bukan memaksakan kebijakan
+    // baru ke seluruh aplikasi. Versi sebelumnya mengunci potrait di sini, dan
+    // karena tidak ada layar lain yang menyentuh `SystemChrome`, seluruh
+    // aplikasi ikut terkunci potrait setelah scanner dibuka sekali.
+    SystemChrome.setPreferredOrientations(const []);
 
     super.dispose();
     await _controller.dispose();
@@ -129,9 +135,25 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     final result = await sl<GetProductByBarcode>()(code);
     if (!mounted) return;
 
+    // `Left` berarti gagal membaca database, bukan "barcode tidak terdaftar".
+    // Dulu keduanya dilipat jadi satu oleh `getOrElse(() => null)`, jadi setiap
+    // error database muncul sebagai "Barcode belum terdaftar" dan tidak ada
+    // yang bisa membedakannya — termasuk saat mencari penyebab bug ini.
+    final failure = result.fold<Failure?>((f) => f, (_) => null);
+    if (failure != null) {
+      _showProblem(failure.message);
+      setState(() => _isBusy = false);
+      return;
+    }
+
     final product = result.getOrElse(() => null);
-    if (product == null || !product.isActive) {
+    if (product == null) {
       await _handleUnknown(code);
+    } else if (!product.isActive) {
+      // Produk ada tapi dinonaktifkan. Menyebutnya "belum terdaftar" akan
+      // menyesatkan: kasir lalu mencoba menambahkannya dan justru ditolak
+      // index unik barcode, tanpa petunjuk apa yang sebenarnya salah.
+      _showProblem('${product.name} nonaktif — aktifkan dulu di halaman Produk');
     } else {
       // Haptic supaya kasir tahu tanpa harus melihat layar.
       await HapticFeedback.mediumImpact();
@@ -141,6 +163,21 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     }
 
     if (mounted) setState(() => _isBusy = false);
+  }
+
+  /// Masalah yang bukan "barcode tidak terdaftar": error database atau produk
+  /// nonaktif. Dibedakan dari snackbar sukses supaya kasir tidak menyangka
+  /// barangnya sudah masuk keranjang.
+  void _showProblem(String message) {
+    ScaffoldMessenger.of(context)
+      ..removeCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 4),
+          backgroundColor: AppColor.error,
+          content: Text(message, style: const TextStyle(color: Colors.white)),
+        ),
+      );
   }
 
   void _showAdded(ProductEntity product) {
@@ -325,10 +362,13 @@ class _ScannerOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    // Di landscape, area scan dibuat melebar mengikuti bentuk barcode 1D
-    final scanWidth = size.width * 0.6;
-    final scanHeight = size.height * 0.45;
+    final size = MediaQuery.sizeOf(context);
+    // Framenya mengikuti bentuk barcode, bukan bentuk layar: barcode 1D itu
+    // lebar dan pendek. Rumus lama (0,6 × lebar, 0,45 × tinggi) menghasilkan
+    // kotak yang justru menjulang tinggi di potrait — bentuk paling sulit
+    // untuk memasukkan barcode.
+    final scanWidth = size.width * 0.85;
+    final scanHeight = scanWidth * 0.55;
 
     return Stack(
       children: [
@@ -369,11 +409,13 @@ class _ScannerOverlay extends StatelessWidget {
           ),
         ),
         
-        // Instruksi
+        // Instruksi ditaruh tepat di bawah frame, dihitung dari ukuran frame
+        // yang sama. Dulu dipaku ke `bottom: 24`, yang di potrait bertumpuk
+        // dengan tombol "Selesai · N item" begitu keranjang terisi.
         Positioned(
           left: 0,
           right: 0,
-          bottom: 24,
+          top: size.height / 2 + scanHeight / 2 + 20,
           child: Text(
             'Arahkan kamera ke barcode produk',
             textAlign: TextAlign.center,
