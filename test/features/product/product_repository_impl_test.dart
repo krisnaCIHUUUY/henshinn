@@ -300,4 +300,68 @@ void main() {
       expect(await repository.watchAllProducts().first, hasLength(1));
     });
   });
+
+  group('cari-atau-buat kategori', () {
+    test('nama baru membuat satu kategori', () async {
+      final id = (await repository.findOrCreateCategory('Minuman'))
+          .getOrElse(() => -1);
+
+      final rows = await db.select(db.categories).get();
+      expect(rows.map((c) => c.name), ['Umum', 'Minuman']);
+      expect(rows.last.id, id);
+    });
+
+    test('nama yang sama persis memakai kategori lama', () async {
+      final first = (await repository.findOrCreateCategory('Minuman'))
+          .getOrElse(() => -1);
+      final second = (await repository.findOrCreateCategory('Minuman'))
+          .getOrElse(() => -2);
+
+      expect(second, first);
+      expect(await db.select(db.categories).get(), hasLength(2));
+    });
+
+    // Keputusan pemilik: beda kapitalisasi bukan kategori baru, dan bukan
+    // error — produknya masuk ke kategori yang sudah ada (ADR-038).
+    test('beda huruf besar kecil memakai kategori lama', () async {
+      final first = (await repository.findOrCreateCategory('Minuman'))
+          .getOrElse(() => -1);
+      final second = (await repository.findOrCreateCategory('mInUmAn'))
+          .getOrElse(() => -2);
+
+      expect(second, first);
+      expect(await db.select(db.categories).get(), hasLength(2));
+    });
+
+    test('spasi di ujung tidak membuat kategori kembar', () async {
+      final first = (await repository.findOrCreateCategory('Minuman'))
+          .getOrElse(() => -1);
+      final second = (await repository.findOrCreateCategory('  Minuman  '))
+          .getOrElse(() => -2);
+
+      expect(second, first);
+      expect(await db.select(db.categories).get(), hasLength(2));
+    });
+
+    test('nama kosong ditolak dan tidak menulis apa pun', () async {
+      final failure = failureOf(await repository.findOrCreateCategory('   '));
+
+      expect(failure, isA<ValidationFailure>());
+      expect(await db.select(db.categories).get(), hasLength(1));
+    });
+
+    test('produk bisa langsung dipakai dengan kategori yang baru dibuat',
+        () async {
+      final categoryId = (await repository.findOrCreateCategory('Minuman'))
+          .getOrElse(() => -1);
+
+      final result = await repository.addProduct(
+        NewProduct(name: 'Es Teh', price: 5000, categoryId: categoryId),
+      );
+
+      expect(result.isRight(), isTrue);
+      final products = await repository.watchAllProducts().first;
+      expect(products.single.categoryId, categoryId);
+    });
+  });
 }

@@ -616,12 +616,58 @@ seluruh model PIN — lihat ADR-031.
 
 ---
 
-> **Catatan nomor.** ADR-038 sengaja dibiarkan kosong: nomor itu sudah
-> dijanjikan ke dua pekerjaan yang diparkir pemilik — kategori produk
-> (`.scratch/kategori-produk/`) dan desain UI v2 (`.scratch/desain-v2/`) —
-> dan komentar kode langkah 14 sudah menyebut 039–041 sebelum keduanya jalan.
-> Mana pun yang dikerjakan lebih dulu mengambil 038. Jangan diisi hal lain,
-> dan jangan ada yang dinomori ulang.
+## ADR-038 — Kategori dibuat dari form produk, tanpa hapus dan tanpa unique index
+
+**Keputusan.** Kategori adalah **alat cari cepat** di daftar produk, bukan data
+laporan: tidak muncul di struk dan tidak dipakai perhitungan apa pun. Karena itu
+empat hal sekaligus:
+
+1. **Dibuat dari form produk**, bukan layar pengelola kategori. Dropdown
+   kategori punya opsi `+ Kategori baru`; namanya diketik di situ dan
+   kategorinya dibuat saat produk disimpan.
+2. **Tidak ada hapus dan tidak ada ganti nama.** Gantinya, tab kategori hanya
+   tampil untuk kategori yang punya minimal satu produk **aktif**
+   (`categoriesWithActiveProducts` di `product_list_screen.dart`).
+3. **Nama dicocokkan tanpa peka huruf besar/kecil** sebelum insert
+   (`CategoryDao.findCategoryByName`). "minuman" saat "Minuman" sudah ada masuk
+   ke kategori lama, tanpa pesan error.
+4. **Tanpa unique index di DB.** Jaminan nama tunggal ada di kode saja.
+
+**Alasan.** PRD §F2 menyebut kategori sebagai *kolom produk*, bukan entitas yang
+dikelola — jadi layar CRUD kategori adalah fitur yang tidak pernah diminta, dan
+`CategoryDao.updateCategory`/`deleteCategory` yang ada sejak langkah 2 memang
+tidak pernah dipanggil dari mana pun (keduanya dihapus di pekerjaan ini, bukan
+ditinggal sebagai kode mati). Menyembunyikan tab kosong menyelesaikan masalah
+salah ketik tanpa menambah satu pun tombol: kategori salah ketik lenyap begitu
+produknya dipindah. Dan unique index berarti bump `schemaVersion`, yang akan
+menambah satu variabel baru ke uji restore langkah 14 (ADR-041) demi masalah
+yang tidak ada di "satu HP, satu pemakai".
+
+**Konsekuensi yang diterima.**
+
+- **Tab 'Umum' akan hilang sendiri** begitu semua produk punya kategori nyata.
+  Itu benar menurut aturan di atas, tapi akan terasa seperti kerusakan kalau
+  tidak diharapkan. Barisnya tetap ada di DB dan tetap jadi tujuan FK
+  `products.categoryId` hasil seed langkah 2 — yang hilang hanya tabnya.
+- **Baris kategori menumpuk tanpa bisa dibersihkan dari dalam aplikasi.** Salah
+  ketik hilang dari layar, tidak dari DB. Diterima: satu baris berisi satu nama
+  pendek, dan tidak ada laporan yang membacanya.
+- **Kategori bisa lahir tanpa produk.** Kalau penyimpanan produk gagal setelah
+  kategorinya dibuat, kategori itu tetap ada. Tidak dibungkus satu transaksi
+  karena akibatnya nol: tab kosong tidak pernah ditampilkan.
+- **`lower()` SQLite hanya melipat ASCII**, jadi "Café" dan "café" masih bisa
+  jadi dua kategori. Ditandai `shortcut:` di `CategoryDao`.
+- **Nilai dropdown `-1`** (`_newCategoryOption`) adalah penanda opsi, bukan id.
+  Aman karena id Drift selalu positif, tapi jangan pernah dikirim ke DB —
+  `_resolveCategoryId` wajib menukarnya dengan id asli lebih dulu.
+- Filter tabnya **fungsi lepas, bukan kode di dalam `build`**, semata-mata
+  supaya bisa diuji: di `testWidgets` stream Drift tidak pernah maju, jadi tes
+  widget berbasis DB untuk aturan ini mustahil (ADR-012 — dicoba dan gagal
+  justru begitu, bukan diasumsikan).
+
+Membatalkan keputusan ini (misal kategori jadi dimensi laporan) berarti
+mengubah aturan 2 lebih dulu: begitu laporan lama memakai nama kategori,
+menyembunyikan tab tidak lagi cukup dan hapus/ganti nama jadi wajib ada.
 
 ---
 

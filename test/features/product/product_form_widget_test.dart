@@ -83,4 +83,30 @@ void main() {
     // form masih terbuka, tidak ada yang tersimpan
     expect(find.text('Tambah Produk'), findsWidgets);
   });
+
+  testWidgets('opsi "+ Kategori baru" memunculkan field nama yang wajib diisi',
+      (tester) async {
+    await pumpList(tester);
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nama kategori baru'), findsNothing);
+
+    await tester.tap(find.byType(DropdownButtonFormField<int>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('+ Kategori baru').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nama kategori baru'), findsOneWidget);
+
+    final save = find.widgetWithText(ElevatedButton, 'Simpan');
+    await tester.ensureVisible(save);
+    await tester.pumpAndSettle();
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nama kategori wajib diisi'), findsOneWidget);
+    // Validator kategori lama tidak boleh ikut menyala: opsinya sudah dipilih.
+    expect(find.text('Pilih kategori'), findsNothing);
+  });
 }

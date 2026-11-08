@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:henshin/core/database/app_database.dart';
 import 'package:henshin/core/database/dao/category_dao.dart';
 import 'package:henshin/core/database/dao/product_dao.dart';
 import 'package:henshin/features/product/data/model/product_model.dart';
@@ -39,6 +40,26 @@ class ProductRepositoryImpl implements ProductRepository {
     return _productDao.watchLowStockProducts().map(
       (rows) => rows.map(ProductModel.toEntity).toList(),
     );
+  }
+
+  @override
+  Future<Either<Failure, int>> findOrCreateCategory(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      return const Left(ValidationFailure('Nama kategori tidak boleh kosong'));
+    }
+
+    try {
+      final existing = await _categoryDao.findCategoryByName(trimmed);
+      if (existing != null) return Right(existing.id);
+      return Right(
+        await _categoryDao.addCategory(
+          CategoriesCompanion.insert(name: trimmed),
+        ),
+      );
+    } catch (e) {
+      return Left(DatabaseFailure('Gagal menyimpan kategori: $e'));
+    }
   }
 
   @override

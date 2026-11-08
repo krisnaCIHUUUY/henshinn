@@ -1,6 +1,7 @@
 # Progress Henshin POS
 
-Status eksekusi `docs/implementasi.md`. Diperbarui 2026-11-08 (langkah 1–15, plus orientasi scan + perbaikan cari barcode).
+Status eksekusi `docs/implementasi.md`. Diperbarui 2026-11-08 (langkah 1–15, plus orientasi scan, perbaikan cari
+barcode, dan kategori produk).
 
 Keputusan arsitektur yang diambil selama eksekusi dicatat terpisah di
 `docs/keputusan-arsitektur.md`.
@@ -39,11 +40,11 @@ menutupnya: F1→F5 diuji pemilik dalam mode pesawat di HP, median transaksi
 3 item ≤30 detik sesuai PRD §1.5, dan scan barcode akhirnya terbukti jalan di
 perangkat nyata. Yang tersisa bukan langkah rencana, tapi tiga hal yang sudah
 dicatat sebagai utang: impl cetak ESC/POS yang menunggu printer fisik
-(langkah 9), tiga pekerjaan yang diparkir pemilik di `.scratch/` (kategori
-produk, desain UI v2, orientasi scanner), dan dua metrik PRD yang belum bisa
-diukur — lihat tabel utang teknis.
+(langkah 9), satu pekerjaan yang masih diparkir pemilik di `.scratch/` (desain
+UI v2 — orientasi scanner dan kategori produk sudah dikerjakan), dan dua metrik
+PRD yang belum bisa diukur — lihat tabel utang teknis.
 
-**Verifikasi saat ini:** 158 tes lolos, `flutter analyze` bersih.
+**Verifikasi saat ini:** 170 tes lolos, `flutter analyze` bersih.
 
 Uji manual di device oleh pemilik repo: langkah 1–5, 7, dan 10–15 ✅; langkah 6
 (kasir) dan 8 (struk) sebagian — lima bug ditemukan dan sudah diperbaiki, lihat
@@ -472,11 +473,64 @@ dilaporkan pemilik repo setelah menjalankannya di HP sendiri.
 
 ---
 
+## Kategori produk (di luar langkah rencana)
+
+Dikerjakan 2026-11-08 atas permintaan pemilik, diverifikasi pemilik hari yang
+sama. Desainnya sudah dikunci di sesi grilling 2026-11-02 dan tersimpan di
+`.scratch/kategori-produk/issues/01-buat-kategori-dari-form-produk.md`; yang
+dikerjakan di sini persis itu. Alasan lengkap tiap keputusan ada di **ADR-038**.
+
+**Lubang yang ditutup.** Tab kategori di daftar produk hanya pernah berisi
+"Semua" dan "Umum" hasil seed langkah 2, dan **tidak ada apa pun di aplikasi
+yang bisa membuat kategori** — `CategoryDao.addCategory` ada sejak langkah 2 dan
+tidak pernah dipanggil dari mana pun. Ini lubang di rencana, bukan bug:
+PRD §F2 menyebut kategori sebagai *kolom produk*, bukan entitas yang dikelola,
+jadi tidak ada langkah yang pernah menugaskan pembuatannya.
+
+**Yang dibangun.**
+
+- `CategoryDao.findCategoryByName` + `ProductRepositoryImpl.findOrCreateCategory`:
+  nama dicocokkan tanpa peka huruf besar/kecil, jadi "minuman" saat "Minuman"
+  sudah ada masuk ke kategori lama tanpa pesan error. `limit(1)`, bukan
+  `getSingleOrNull` tanpa batas: tidak ada unique index di kolom itu, jadi baris
+  kembar mungkin ada dan tidak boleh melempar.
+- Opsi `+ Kategori baru` di dropdown form produk, dengan field nama yang muncul
+  saat opsi itu dipilih. Nilainya `-1`, bukan `null`, karena `null` sudah dipakai
+  validator `'Pilih kategori'` yang ada sejak langkah 4.
+- Tab kategori hanya tampil untuk kategori yang punya **produk aktif**. Ini
+  jawaban atas satu pertanyaan terbuka di tiket: `watchAllProducts` memang
+  menyertakan `isActive = false`, jadi tanpa aturan ini kategori berisi barang
+  nonaktif saja tetap memunculkan tabnya.
+- `CategoryDao.updateCategory` dan `deleteCategory` **dihapus**, tidak ditinggal
+  sebagai kode mati: tidak ada hapus/ganti nama kategori di desain ini.
+
+**Efek samping yang disengaja: tab "Umum" hilang sendiri** begitu semua produk
+punya kategori nyata. Barisnya tetap di DB dan tetap jadi tujuan FK
+`products.categoryId` hasil seed — yang hilang hanya tabnya. Benar menurut
+aturan, tapi akan terasa seperti kerusakan kalau tidak diharapkan.
+
+**Dua hal yang tidak ada di tiket dan tetap dikerjakan**, karena cacatnya nyata:
+
+1. Tab yang sedang dipilih bisa lenyap saat produk terakhirnya dipindah.
+   Tanpa fallback, daftarnya jadi kosong tanpa tab aktif mana pun — pemilik akan
+   melihat "Belum ada produk" padahal produknya ada.
+2. Tes widget berbasis DB untuk aturan tab **ditulis lebih dulu dan gagal**:
+   stream Drift tidak maju di `testWidgets`, jadi tab 'Minuman' tidak pernah
+   muncul meski produknya sudah masuk DB. Filternya dipisah jadi fungsi lepas
+   `categoriesWithActiveProducts` supaya bisa diuji dengan `test()` biasa.
+   ADR-012 terbukti ulang di sini, bukan diasumsikan.
+
+12 tes baru (158 → 170): 6 untuk cari-atau-buat (nama baru, sama persis, beda
+kapitalisasi, berspasi, kosong ditolak, produk langsung memakai id barunya),
+5 untuk filter tab, 1 tes widget untuk field nama yang wajib diisi.
+
+---
+
 ## Utang teknis yang masih terbuka
 
 | Hal | Dampak |
 |---|---|
-| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (158 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
+| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (170 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
 | `settings.schemaVersion` hanya diisi saat seed | Jadi basi setelah bump versi berikutnya. Ditandai `shortcut:` di kode |
 | `decrementStock`/`incrementStock` lama di `ProductDao` tidak menulis ledger dan **tidak dipakai siapa pun** | Langkah 6 dan 11 tidak memakainya (keduanya lewat `TransactionDao`). Sekarang murni mati — kandidat dihapus |
 | `setting_screen.dart` masih memuat baris dummy "Pajak (PPN) 11%" dan "Printer thermal BT-01" | Keduanya di luar scope atau belum ada (AGENTS.md §6, langkah 9), perlu dibersihkan sebelum rilis. Baris "Export laporan CSV" sudah dihapus di langkah 13 |
@@ -489,7 +543,9 @@ dilaporkan pemilik repo setelah menjalankannya di HP sendiri.
 | Angka 30 hari menjumlahkan header transaksi di memori | Aman untuk satu warung; perlu pindah ke agregat SQL (dengan offset zona waktu eksplisit) kalau datanya jadi tahunan. ADR-032 |
 | Dashboard dan `ReportScreen` belum punya tes widget | Angkanya dijaga 13 tes repository; chart fl_chart merender di canvas jadi tes widget hanya bisa memastikan widget-nya ada |
 | Barcode yang beda hanya nol di depan tidak dicocokkan | Kemasan UPC-A mencetak 12 digit sementara scanner bisa melaporkannya sebagai EAN-13 dengan nol tambahan. Pencocokan longgar sengaja ditolak: dua produk yang beda hanya nol di depan akan saling tertukar (ADR-044) |
-| Kategori produk tidak bisa dibuat dari dalam aplikasi | Tab hanya pernah berisi "Semua" + "Umum" dari seed; `CategoryDao.addCategory` tidak dipanggil siapa pun. Desainnya sudah diputuskan lengkap (sesi grilling 2026-11-02), dikerjakan nanti atas permintaan pemilik: `.scratch/kategori-produk/issues/01-buat-kategori-dari-form-produk.md` |
+| Nama kategori tidak bisa dihapus atau diganti dari dalam aplikasi | Disengaja (ADR-038): salah ketik hilang dari layar begitu produknya dipindah, tapi barisnya menumpuk di DB selamanya. Diterima karena tidak ada laporan yang membacanya |
+| Kategori bisa lahir tanpa produk | Kalau penyimpanan produk gagal setelah kategorinya dibuat, kategori itu tetap ada. Sengaja tidak dibungkus satu transaksi karena tab kosong tidak pernah ditampilkan (ADR-038) |
+| `lower()` SQLite hanya melipat ASCII | "Café" dan "café" masih bisa jadi dua kategori. Ditandai `shortcut:` di `CategoryDao` (ADR-038) |
 | Skenario UAT tidak pernah ditulis | Langkah 15 diuji manual tanpa artefak, jadi uji berikutnya setelah perubahan besar (desain v2) tidak punya pembanding yang bisa diulang — hanya ingatan |
 | Crash-free ≥99% tidak terukur | Tidak ada crash terlihat saat uji, tapi itu bukan rate. Menghitungnya butuh telemetri, yang bertabrakan dengan offline-only (ADR-042) |
 | Metrik "produk masuk keranjang ≤2 detik" belum terukur | Jalur scan lengkap baru benar-benar jalan sejak 2026-11-08 (perbaikan cari barcode), dan kecepatannya belum pernah diukur dengan stopwatch — termasuk sesudah halaman scan jadi potrait |

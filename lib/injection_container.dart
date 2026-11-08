@@ -13,6 +13,7 @@ import 'package:henshin/features/product/data/repositories/product_repository_im
 import 'package:henshin/features/product/domain/repositories/product_repository.dart';
 import 'package:henshin/features/product/domain/usecases/add_product.dart';
 import 'package:henshin/features/product/domain/usecases/delete_product.dart';
+import 'package:henshin/features/product/domain/usecases/find_or_create_category.dart';
 import 'package:henshin/features/product/domain/usecases/get_product_by_barcode.dart';
 import 'package:henshin/features/product/domain/usecases/update_product.dart';
 import 'package:henshin/features/product/presentation/bloc/product_bloc.dart';
@@ -69,6 +70,9 @@ void initDependencies() {
   sl.registerLazySingleton<DeleteProduct>(() => DeleteProduct(sl()));
   sl.registerLazySingleton<GetProductByBarcode>(
     () => GetProductByBarcode(sl()),
+  );
+  sl.registerLazySingleton<FindOrCreateCategory>(
+    () => FindOrCreateCategory(sl()),
   );
   sl.registerFactory<ProductBloc>(
     () => ProductBloc(
