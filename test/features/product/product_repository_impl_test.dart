@@ -220,6 +220,37 @@ void main() {
       expect(result.getOrElse(() => null), isNull);
     });
 
+    // Jalur simpan memangkas barcode (`_blankToNull`), jadi jalur cari wajib
+    // memangkas dengan cara yang sama — kalau tidak, keduanya tidak sepakat
+    // soal apa kuncinya dan produk yang terdaftar jadi "tidak ditemukan".
+    test('kode dari scanner yang berspasi tetap menemukan produknya', () async {
+      await repository.addProduct(draft(barcode: '8991234567890'));
+
+      final result = await repository.getProductByBarcode(
+        ' 8991234567890\n',
+      );
+      expect(result.getOrElse(() => null)?.name, 'Cappuccino');
+    });
+
+    test('barcode disimpan berspasi pun tetap bisa dicari tanpa spasi',
+        () async {
+      await repository.addProduct(draft(barcode: '  8991234567890  '));
+
+      final result = await repository.getProductByBarcode('8991234567890');
+      expect(result.getOrElse(() => null)?.name, 'Cappuccino');
+    });
+
+    test('kode kosong atau hanya spasi mengembalikan null, bukan produk '
+        'tanpa barcode', () async {
+      await repository.addProduct(draft(name: 'Tanpa barcode', barcode: ''));
+
+      for (final kode in ['', '   ']) {
+        final result = await repository.getProductByBarcode(kode);
+        expect(failureOf(result), isNull);
+        expect(result.getOrElse(() => null), isNull, reason: 'kode "$kode"');
+      }
+    });
+
     test('produk nonaktif tetap ditemukan — penyaringan ada di pemanggil',
         () async {
       await repository.addProduct(

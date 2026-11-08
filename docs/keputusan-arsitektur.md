@@ -744,3 +744,91 @@ satu sesi uji manual oleh satu orang di satu HP. Kalau suatu saat Henshin
 dipakai lebih dari satu warung, yang harus dibuka ulang bukan baris ini tapi
 asumsi "satu HP, satu pemegang" (ADR-031) — dan saat itu crash reporting
 mungkin layak dipertimbangkan ulang bersama keputusan offline-only-nya.
+
+---
+
+## ADR-043 — Halaman scan dikunci potrait, frame diperlebar sebagai gantinya
+
+**Keputusan.** `BarcodeScannerScreen` mengunci `DeviceOrientation.portraitUp`
+di `initState` dan membuang preferensi itu (`setPreferredOrientations(const [])`)
+di `dispose`. Frame pemandu diubah jadi lebar-dan-pendek (0,85 × lebar layar,
+tinggi 0,55 × lebar frame), tidak lagi mengikuti bentuk layar. Area deteksi
+tetap seluruh frame kamera — `scanWindow` **tidak** dipakai.
+
+**Alasan.** Keputusan lama adalah landscape, dengan alasan yang hanya hidup di
+satu komentar: barcode 1D berupa garis vertikal, jadi lebih mudah masuk frame
+kalau framenya lebar. Alasan itu benar secara optik tapi mengabaikan cara
+alatnya dipakai — kasir memegang HP dengan satu tangan sementara tangan lain
+memegang barang, dan memutar HP ke landscape di tengah transaksi memakan waktu
+yang justru dihitung metrik PRD §1.5 (3 item ≤30 detik). Pemilik meminta
+potrait. Keuntungan optik landscape diganti dengan melebarkan frame pemandunya:
+bentuk frame, bukan orientasi layar, yang menuntun kasir mengarahkan kamera.
+
+**`scanWindow` ditolak.** `mobile_scanner` bisa membatasi deteksi ke satu
+persegi lewat `scanWindow`, dan sekilas itu cocok dengan frame pemandu. Ditolak
+karena akibatnya berlawanan dengan tujuannya: hari ini deteksi berjalan di
+seluruh gambar kamera dan framenya murni pemandu, jadi barcode yang sedikit di
+luar frame tetap terbaca. Membatasi deteksi ke frame yang di potrait justru
+lebih kecil akan membuat scan **lebih sulit** dari sekarang. Framenya sengaja
+dibiarkan "berbohong sedikit" ke arah yang memaafkan, bukan yang menghukum.
+
+**Konsekuensi yang diterima.** Barcode 1D yang sangat panjang (EAN-13 pada
+kemasan besar) mungkin perlu kamera ditarik lebih jauh di potrait dibanding
+landscape, dan itu bisa menurunkan ketajaman. Belum terukur — metrik PRD
+"produk masuk keranjang ≤2 detik" belum pernah diukur dengan stopwatch bahkan
+sebelum perubahan ini, jadi tidak ada angka pembanding. Kalau di lapangan
+ternyata barcode panjang jadi sering gagal, yang dibuka ulang bukan orientasinya
+(pemilik sudah memutuskan) tapi frame dan zoom-nya — `MobileScannerController`
+punya kontrol zoom yang sampai sekarang tidak dipakai sama sekali.
+
+**Catatan.** `dispose` versi lama mengunci potrait alih-alih membuang
+preferensinya. Karena tidak ada layar lain yang menyentuh `SystemChrome`,
+efeknya seluruh aplikasi terkunci potrait setelah scanner dibuka sekali —
+tidak pernah terlihat karena aplikasinya memang dipakai potrait. Sekarang
+dibuang dengan daftar kosong supaya layar ini tidak menetapkan kebijakan untuk
+layar lain.
+
+---
+
+## ADR-044 — Kunci pencarian barcode dinormalkan sama di tulis dan baca; pencocokan longgar ditolak
+
+**Keputusan.** `ProductRepositoryImpl.getProductByBarcode` memangkas kode yang
+masuk (`trim`) dan mengembalikan `Right(null)` untuk kode kosong, persis
+senormal jalur simpan (`_blankToNull`). Pencocokan di DAO tetap **persis**
+(`barcode.equals`) — tidak ada toleransi nol di depan, tidak ada `LIKE`.
+
+**Alasan.** Bug nyata yang dilaporkan pemilik 2026-11-08: produk yang
+barcodenya sudah terdaftar tidak ketemu saat di-scan. Dekodenya sehat; yang
+rusak adalah kesepakatan soal kunci. Barcode disimpan sudah dipangkas, tapi
+kode dari scanner dicari apa adanya, dan `equals` tidak memaafkan satu karakter
+pun. Beberapa simbologi 1D (Code 39) mengembalikan `rawValue` dengan karakter
+penutup. **Aturannya: kalau satu nilai dinormalkan sebelum disimpan, ia wajib
+dinormalkan dengan cara yang sama sebelum dicari.** Asimetri seperti ini tidak
+akan tertangkap tes yang memakai string yang sama di kedua sisi — tes lama
+melakukan itu dan lolos selama berbulan-bulan.
+
+**Pencocokan longgar ditolak.** Kemasan UPC-A mencetak 12 digit sementara
+scanner bisa melaporkannya sebagai EAN-13 dengan nol tambahan di depan, jadi
+mencoba kedua bentuk terlihat menggoda. Ditolak: dua produk berbeda yang
+barcodenya hanya beda nol di depan akan saling tertukar, dan di kasir itu
+berarti barang salah masuk keranjang dan harga salah tercetak di struk —
+kegagalan yang lebih buruk daripada "barcode belum terdaftar", karena yang
+pertama tidak kelihatan. Kalau nanti ini benar-benar jadi masalah di lapangan,
+yang benar bukan pencocokan longgar tapi menormalkan ke satu bentuk kanonik
+(mis. selalu 13 digit) **di kedua jalur sekaligus**, dan index uniknya harus
+ikut memakai bentuk itu.
+
+**Konsekuensi yang diterima.** Perbedaan karakter yang sebenarnya pada bug ini
+tidak pernah tercatat — perbaikannya terbukti bekerja di HP pemilik, tapi dua
+string yang dibandingkan tidak pernah diambil. Jadi tidak ada bukti bahwa
+`trim` yang menyelesaikannya, hanya bukti bahwa sesudahnya berhasil. Kalau
+gejala serupa muncul lagi, mulai dari mengambil kedua string itu, jangan
+menganggap ADR ini sudah menjelaskannya.
+
+**Terkait.** Cacat yang menyembunyikan bug ini bukan di sini tapi di
+presentation: `_onDetect` melipat `Left(DatabaseFailure)` dan `Right(null)`
+menjadi satu lewat `getOrElse(() => null)`, sehingga setiap error database
+muncul sebagai "Barcode belum terdaftar". Pola itu — `getOrElse` pada
+`Either<Failure, T?>` di mana `null` juga punya arti sendiri — patut dicurigai
+di mana pun ia muncul: ia membuang satu-satunya informasi yang membedakan
+"tidak ada" dari "gagal".

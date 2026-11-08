@@ -1,6 +1,6 @@
 # Progress Henshin POS
 
-Status eksekusi `docs/implementasi.md`. Diperbarui 2026-11-08 (langkah 1–15).
+Status eksekusi `docs/implementasi.md`. Diperbarui 2026-11-08 (langkah 1–15, plus orientasi scan + perbaikan cari barcode).
 
 Keputusan arsitektur yang diambil selama eksekusi dicatat terpisah di
 `docs/keputusan-arsitektur.md`.
@@ -43,7 +43,7 @@ dicatat sebagai utang: impl cetak ESC/POS yang menunggu printer fisik
 produk, desain UI v2, orientasi scanner), dan dua metrik PRD yang belum bisa
 diukur — lihat tabel utang teknis.
 
-**Verifikasi saat ini:** 155 tes lolos, `flutter analyze` bersih.
+**Verifikasi saat ini:** 158 tes lolos, `flutter analyze` bersih.
 
 Uji manual di device oleh pemilik repo: langkah 1–5, 7, dan 10–15 ✅; langkah 6
 (kasir) dan 8 (struk) sebagian — lima bug ditemukan dan sudah diperbaiki, lihat
@@ -362,7 +362,11 @@ dilaporkan pemilik repo setelah menjalankannya di HP sendiri.
 - Median menyelesaikan transaksi 3 item **≤30 detik**; metrik PRD §1.5
   tercapai.
 - Baseline 10 transaksi manual dijalankan sebagai pembanding.
-- **Scan barcode terbukti jalan di HP fisik.** Ini lubang terlama di proyek:
+- **Scan barcode terbukti jalan di HP fisik.** Catatan penting yang baru
+  diketahui sesudahnya: yang terbukti di uji ini hanya bahwa **kamera membaca
+  barcode**, bukan bahwa produk terdaftar ketemu — pencarian produknya ternyata
+  rusak sejak lama dan baru ditemukan 2026-11-08. Lihat "Perbaikan setelah
+  verifikasi manual". Ini lubang terlama di proyek:
   sejak langkah 7 scanner hanya pernah dijalankan di emulator, dan PRD §1.6
   sendiri menyebut emulator tidak cukup. Baris utang tekniknya dihapus.
 
@@ -381,6 +385,49 @@ dilaporkan pemilik repo setelah menjalankannya di HP sendiri.
   Lihat ADR-042.
 
 ## Perbaikan setelah verifikasi manual
+
+- **Produk yang barcodenya sudah terdaftar tidak ketemu saat di-scan**
+  (dilaporkan pemilik 2026-11-08). Kameranya membaca barcode dengan benar —
+  sheet "Barcode belum terdaftar" muncul, artinya dekodenya sehat — tapi
+  pencarian produknya gagal. Penyebabnya jalur tulis dan jalur baca tidak
+  sepakat soal apa kuncinya: `addProduct`/`updateProduct` memangkas barcode
+  lewat `_blankToNull`, sementara `getProductByBarcode` memakai kode dari
+  scanner apa adanya, dan DAO-nya mencocokkan **persis**
+  (`barcode.equals`). Beberapa simbologi 1D (Code 39) juga mengembalikan
+  `rawValue` dengan karakter penutup. Diperbaiki dengan memangkas di jalur
+  baca juga, plus menolak kode kosong supaya tidak pernah mencocoki produk
+  tanpa barcode. 3 tes baru (155 → 158). Lihat ADR-044.
+
+  Ikut ditemukan saat menelusuri: `_onDetect` melipat `Left(DatabaseFailure)`
+  dan `Right(null)` menjadi satu hasil lewat `getOrElse(() => null)`, jadi
+  **setiap** error database muncul sebagai "Barcode belum terdaftar". Itu yang
+  membuat bug ini sulit dilihat dari layar. Sekarang error memunculkan snackbar
+  merah berisi pesannya, dan produk nonaktif dibedakan dengan pesannya sendiri
+  — sebelumnya produk nonaktif juga disebut "belum terdaftar", padahal
+  mendaftarkannya lagi justru ditolak index unik barcode.
+
+  **Perbedaan karakter yang sebenarnya tidak pernah tercatat.** Perbaikannya
+  terbukti bekerja di HP pemilik, tapi dua string yang dibandingkan — kode
+  yang terbaca scanner dan nilai yang tersimpan — tidak pernah diambil, jadi
+  tidak ada bukti karakter mana yang berbeda. Kalau gejala serupa muncul lagi,
+  jangan anggap kasus ini sudah menjelaskannya.
+
+  Satu dugaan yang diperiksa dan **salah**: barcode kembar. Index uniknya
+  dideklarasikan dengan `@TableIndex`, jadi `createAll()` ikut membuatnya di
+  install baru — bukan hanya lewat migrasi 2→3 — sehingga duplikat tidak
+  mungkin ada dan `getSingleOrNull()` tidak pernah bisa melempar karenanya.
+
+- **Halaman scan diubah ke potrait** (permintaan pemilik 2026-11-02,
+  dikerjakan 2026-11-08). Kunci landscape di `initState` diganti
+  `DeviceOrientation.portraitUp`; frame pemandu diubah jadi lebar-dan-pendek
+  (0,85 × lebar layar, tinggi 0,55 × lebar frame) karena rumus lama
+  menghasilkan kotak menjulang tinggi di potrait — bentuk paling sulit untuk
+  barcode 1D. Teks instruksi dipindah ke bawah frame; dulu dipaku `bottom: 24`
+  dan bertumpuk dengan tombol "Selesai · N item". `dispose` sekarang membuang
+  preferensi orientasi (`const []`) alih-alih mengunci potrait — cacat lama
+  yang membuat **seluruh** aplikasi terkunci potrait setelah scanner dibuka
+  sekali, tidak pernah terlihat karena aplikasinya memang dipakai potrait.
+  `scanWindow` sengaja tidak dipakai. Lihat ADR-043.
 
 - **Layar putih kosong saat aplikasi dibuka lagi setelah restore**
   (dilaporkan pemilik, langkah 14). `SystemNavigator.pop()` berhasil menutup
@@ -429,7 +476,7 @@ dilaporkan pemilik repo setelah menjalankannya di HP sendiri.
 
 | Hal | Dampak |
 |---|---|
-| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (155 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
+| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (158 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
 | `settings.schemaVersion` hanya diisi saat seed | Jadi basi setelah bump versi berikutnya. Ditandai `shortcut:` di kode |
 | `decrementStock`/`incrementStock` lama di `ProductDao` tidak menulis ledger dan **tidak dipakai siapa pun** | Langkah 6 dan 11 tidak memakainya (keduanya lewat `TransactionDao`). Sekarang murni mati — kandidat dihapus |
 | `setting_screen.dart` masih memuat baris dummy "Pajak (PPN) 11%" dan "Printer thermal BT-01" | Keduanya di luar scope atau belum ada (AGENTS.md §6, langkah 9), perlu dibersihkan sebelum rilis. Baris "Export laporan CSV" sudah dihapus di langkah 13 |
@@ -441,11 +488,11 @@ dilaporkan pemilik repo setelah menjalankannya di HP sendiri.
 | Blok `_RestockList` di `dashboard_screen.dart` masih di-comment | Peninggalan UI dummy; `LowStockScreen` sudah menanganinya. Kandidat hapus |
 | Angka 30 hari menjumlahkan header transaksi di memori | Aman untuk satu warung; perlu pindah ke agregat SQL (dengan offset zona waktu eksplisit) kalau datanya jadi tahunan. ADR-032 |
 | Dashboard dan `ReportScreen` belum punya tes widget | Angkanya dijaga 13 tes repository; chart fl_chart merender di canvas jadi tes widget hanya bisa memastikan widget-nya ada |
-| Halaman scan barcode dikunci landscape, pemilik ingin potrait | Diminta 2026-11-02, dikerjakan nanti atas permintaan pemilik. Rincian + langkahnya di `.scratch/scanner-orientasi/issues/01-orientasi-potrait.md`. Keputusan landscape yang lama tidak pernah masuk ADR |
+| Barcode yang beda hanya nol di depan tidak dicocokkan | Kemasan UPC-A mencetak 12 digit sementara scanner bisa melaporkannya sebagai EAN-13 dengan nol tambahan. Pencocokan longgar sengaja ditolak: dua produk yang beda hanya nol di depan akan saling tertukar (ADR-044) |
 | Kategori produk tidak bisa dibuat dari dalam aplikasi | Tab hanya pernah berisi "Semua" + "Umum" dari seed; `CategoryDao.addCategory` tidak dipanggil siapa pun. Desainnya sudah diputuskan lengkap (sesi grilling 2026-11-02), dikerjakan nanti atas permintaan pemilik: `.scratch/kategori-produk/issues/01-buat-kategori-dari-form-produk.md` |
 | Skenario UAT tidak pernah ditulis | Langkah 15 diuji manual tanpa artefak, jadi uji berikutnya setelah perubahan besar (desain v2) tidak punya pembanding yang bisa diulang — hanya ingatan |
 | Crash-free ≥99% tidak terukur | Tidak ada crash terlihat saat uji, tapi itu bukan rate. Menghitungnya butuh telemetri, yang bertabrakan dengan offline-only (ADR-042) |
-| Metrik "produk masuk keranjang ≤2 detik" belum terukur | Scanner sudah terbukti jalan di HP (langkah 15), tapi kecepatannya tidak diukur dengan stopwatch |
+| Metrik "produk masuk keranjang ≤2 detik" belum terukur | Jalur scan lengkap baru benar-benar jalan sejak 2026-11-08 (perbaikan cari barcode), dan kecepatannya belum pernah diukur dengan stopwatch — termasuk sesudah halaman scan jadi potrait |
 | Impl cetak ESC/POS Bluetooth belum ada | Langkah 9 belum tuntas. Butuh printer 58mm fisik + spike 1 hari (PRD §3.4). Metrik "50× cetak ≥95% sukses" belum terukur |
 | Jalur share khusus PDF struk belum terkonfirmasi di device | `SharePlus.instance.share` sendiri sudah terbukti jalan lewat backup langkah 13, jadi yang tersisa hanya jalur PDF-nya (ADR-026 + rebuild penuh belum pernah berjalan bersamaan di HP) |
 | Peringatan `Courier has no Unicode support` di log | Hanya informatif; karakter non-Latin1 dipetakan ke `?` di PDF (ADR-027). Ganti font Unicode kalau katalog butuh |

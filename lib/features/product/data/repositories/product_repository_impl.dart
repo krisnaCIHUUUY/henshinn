@@ -59,7 +59,15 @@ class ProductRepositoryImpl implements ProductRepository {
     String barcode,
   ) async {
     try {
-      final row = await _productDao.getProductByBarcode(barcode);
+      // Dinormalkan sama seperti saat disimpan (`_blankToNull` ikut `trim`).
+      // Tanpa ini jalur tulis dan jalur baca tidak sepakat soal apa kuncinya:
+      // barcode disimpan sudah dipangkas, tapi kode dari scanner dicari apa
+      // adanya, dan `equals` di DAO itu pencocokan persis. Beberapa simbologi
+      // 1D (Code 39) juga mengembalikan rawValue dengan karakter penutup.
+      final normalized = barcode.trim();
+      if (normalized.isEmpty) return const Right(null);
+
+      final row = await _productDao.getProductByBarcode(normalized);
       if (row == null) return const Right(null);
       return Right(ProductModel.toEntity(row));
     } catch (e) {
