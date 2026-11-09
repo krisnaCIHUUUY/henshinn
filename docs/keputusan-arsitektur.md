@@ -934,3 +934,68 @@ Menghapus produknya akan mengosongkan FK yang masih dipakai laporan.
   transaksi. Tiga tes yang ada mengunci aturan utamanya, termasuk bahwa void
   tidak membebaskan produk.
 
+---
+
+## ADR-046 — Lapisan token desain v2 diganti sekaligus, dan layar kamera dikecualikan
+
+**Keputusan.** Langkah D1 `docs/implementasi_design.md`: `AppColor` turun dari
+52 `static const` Material 3 ke **17 token semantik**, `AppSpacing` jadi
+`s1/s2/s3/s4/s6` + `tapMin/tapPrimary/rowMin`, `AppRadius` jadi
+`sm/md/lg/full`, `AppTextStyle` jadi 9 gaya. Semuanya dalam **satu commit**,
+menyentuh 26 file. Empat aturan yang menyertainya:
+
+1. **`fontFamily` dihapus, bukan diganti.** v1 menulis `'Inter'` padahal Inter
+   tidak pernah didaftarkan di `pubspec.yaml`, jadi yang tampil di HP selama
+   ini Roboto bawaan Android — dan desain v2 memilih Roboto secara sadar.
+   Mengisinya lagi berarti menambah aset untuk hasil yang sama.
+2. **`line` dan `lineStrong` adalah dua hal berbeda.** `line` hiasan (pemisah
+   baris, tepi kartu); `lineStrong` satu-satunya garis yang menandai kontrol
+   dan satu-satunya yang lolos 3:1 di atas `surface`. v1 hanya punya
+   `outlineVariant` untuk keduanya, jadi pemisahan ini harus dijaga manual:
+   batas chip filter, kotak ikon, dan titik PIN memakai `lineStrong`.
+3. **Layar scanner sengaja tidak memakai token.** `barcode_scanner_screen.dart`
+   menahan 16 hardcode `Colors.black*/white*` karena isinya gambar kamera,
+   bukan permukaan aplikasi: scrim harus hitam transparan sungguhan dan garis
+   bidik harus putih supaya terlihat di atas apa pun yang disorot. `ink` dan
+   `surface` adalah warna kertas aplikasi dan akan membuat overlay lebih terang
+   dari gambar di belakangnya. Design system v2 tidak mencakup overlay kamera.
+   Alasannya ditulis sebagai komentar di `build` supaya tidak "dirapikan".
+4. **Tidak ada tes untuk perubahan visual.** Tes yang mengunci nilai warna
+   hanya menguji ulang isi file token: ia akan gagal setiap kali desain berubah
+   dan tidak pernah menangkap bug. Gerbang D1 adalah `flutter analyze` + 173
+   tes lama tetap hijau + verifikasi pemilik di HP.
+
+**Alasan satu commit.** Menghapus satu token memaksa setiap pemanggilnya
+berubah bersamaan, kalau tidak aplikasinya tidak kompilasi. Lapisan token
+adalah satu-satunya bagian desain v2 yang **tidak bisa** dibuat bertahap;
+sisanya (D2–D9) per layar.
+
+**Temuan yang hanya muncul setelah token punya arti.** Pengingat backup dan
+banner "perlu restok" keduanya merah, karena v1 memakai `errorContainer` untuk
+keduanya. `tokens.json` v2 menulis eksplisit bahwa `warning` berarti *"Badge
+Stok menipis, notice pengingat backup"* dan merah hanya untuk Void / Habis /
+error. Pemetaan mekanis mewarisi arti yang salah; keduanya dipindah ke pasangan
+kuning. **Pelajarannya untuk langkah berikutnya: rename token tidak pernah
+murni mekanis** — pemetaan nama bisa benar sementara artinya salah, dan hanya
+`tokens.json` yang bisa memutuskan.
+
+**Konsekuensi yang diterima.**
+
+- **Jarak menyusut di 10 tempat.** v2 tidak punya langkah 32px, jadi `xl` → 24.
+- **Sudut membulat lebih besar**: `radius.sm` 4 → 8, `lg` 16 → 20. Ini bukan
+  rename, nilainya memang berubah.
+- **Bottom nav dan bottom sheet jadi putih**, bukan warna halaman seperti v1.
+  `tokens.json` menyebut keduanya eksplisit di bawah `surface`; pemetaan
+  mekanis menaruhnya di `bg` dan itu diperbaiki manual.
+- **`ColorScheme` Material tetap diisi lengkap** walau v2 tidak punya
+  `secondary`/`tertiary`: widget bawaan yang tidak kita beri style sendiri
+  masih membacanya. Slot tanpa padanan diisi token yang paling tidak
+  mengejutkan (`secondary` → `primary`, `tertiary` → `warning`), bukan warna
+  baru. Jangan menambah warna di sana — tambah di `tokens.json` dulu.
+- `dashboard_screen.dart`, `low_stock_screen.dart`, dan `pin_pad.dart` ikut
+  ditokenisasi walau D2/D3 akan membongkar atau menghapusnya. Melewatkannya
+  berarti aplikasinya tidak kompilasi hari itu.
+
+Cross-link: ADR-043 (orientasi scanner) menyentuh file yang sama; aturan nomor
+3 di atas menjelaskan kenapa file itu tidak ikut tokenisasi.
+

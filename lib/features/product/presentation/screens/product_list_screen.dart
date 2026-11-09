@@ -86,7 +86,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text('Hapus', style: TextStyle(color: AppColor.error)),
+            child: Text('Hapus', style: TextStyle(color: AppColor.danger)),
           ),
         ],
       ),
@@ -100,7 +100,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColor.background,
+      backgroundColor: AppColor.bg,
       body: SafeArea(
         child: BlocConsumer<ProductBloc, ProductState>(
           listenWhen: (previous, current) =>
@@ -134,23 +134,23 @@ class _ProductListScreenState extends State<ProductListScreen> {
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.md,
-                    AppSpacing.lg,
+                    AppSpacing.s6,
+                    AppSpacing.s4,
+                    AppSpacing.s6,
                     0,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _HeaderRow(onAddPressed: _openForm),
-                      const SizedBox(height: AppSpacing.lg - 4),
+                      const SizedBox(height: AppSpacing.s6 - 4),
                       _CategoryTabs(
                         categories: visibleCategories,
                         selectedId: selectedCategoryId,
                         onSelected: (id) =>
                             setState(() => _selectedCategoryId = id),
                       ),
-                      const SizedBox(height: AppSpacing.sm),
+                      const SizedBox(height: AppSpacing.s2),
                       if (state.lowStockProducts.isNotEmpty)
                         _LowStockBanner(count: state.lowStockProducts.length),
                     ],
@@ -194,11 +194,11 @@ class _ProductListBody extends StatelessWidget {
     if (products.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
+          padding: const EdgeInsets.all(AppSpacing.s6),
           child: Text(
             'Belum ada produk di sini.\nTekan + untuk menambah produk pertama.',
             textAlign: TextAlign.center,
-            style: AppTextStyle.bodyMd.copyWith(color: AppColor.outline),
+            style: AppTextStyle.body.copyWith(color: AppColor.inkMuted),
           ),
         ),
       );
@@ -206,8 +206,8 @@ class _ProductListBody extends StatelessWidget {
 
     return ListView.separated(
       itemCount: products.length,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s6),
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.s2),
       itemBuilder: (context, index) {
         final product = products[index];
         return _ProductTile(
@@ -243,23 +243,23 @@ class _HeaderRow extends StatelessWidget {
       children: [
         Text(
           'Produk',
-          style: AppTextStyle.headlineLg.copyWith(color: AppColor.onSurface),
+          style: AppTextStyle.title.copyWith(color: AppColor.ink),
         ),
         ElevatedButton(
           onPressed: onAddPressed,
           style: ElevatedButton.styleFrom(
-            foregroundColor: AppColor.onSurface,
-            backgroundColor: AppColor.surfaceContainerLowest,
+            foregroundColor: AppColor.ink,
+            backgroundColor: AppColor.surface,
             fixedSize: Size(
-              AppSpacing.touchTargetMin,
-              AppSpacing.touchTargetMin,
+              AppSpacing.tapMin,
+              AppSpacing.tapMin,
             ),
             padding: EdgeInsets.zero,
             shape: CircleBorder(
-              side: BorderSide(color: AppColor.outlineVariant),
+              side: BorderSide(color: AppColor.line),
             ),
           ),
-          child: Icon(Icons.add, color: AppColor.onSurface),
+          child: Icon(Icons.add, color: AppColor.ink),
         ),
       ],
     );
@@ -288,11 +288,11 @@ class _CategoryTabs extends StatelessWidget {
     ];
 
     return SizedBox(
-      height: AppSpacing.touchTargetMin,
+      height: AppSpacing.tapMin,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: tabs.length,
-        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm + 2),
+        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.s2 + 2),
         itemBuilder: (context, index) {
           final (id, label) = tabs[index];
           final selected = id == selectedId;
@@ -300,23 +300,23 @@ class _CategoryTabs extends StatelessWidget {
             onTap: () => onSelected(id),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s6),
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: selected
-                    ? AppColor.onSurface
-                    : AppColor.surfaceContainerLowest,
+                    ? AppColor.ink
+                    : AppColor.surface,
                 borderRadius: AppRadius.mdAll,
                 border: Border.all(
                   color: selected
-                      ? AppColor.onSurface
-                      : AppColor.outlineVariant,
+                      ? AppColor.ink
+                      : AppColor.lineStrong,
                 ),
               ),
               child: Text(
                 label,
-                style: AppTextStyle.labelSm.copyWith(
-                  color: selected ? AppColor.onPrimary : AppColor.onSurface,
+                style: AppTextStyle.label.copyWith(
+                  color: selected ? AppColor.onPrimary : AppColor.ink,
                 ),
               ),
             ),
@@ -375,21 +375,21 @@ class _ProductTile extends StatelessWidget {
                 children: [
                   Text(
                     product.name,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
+                    style: AppTextStyle.body.copyWith(color: AppColor.ink),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     formatRupiah(product.price),
-                    style: const TextStyle(fontSize: 15, color: Colors.black54),
+                    style: AppTextStyle.bodyStrong.copyWith(
+                      color: AppColor.primary,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'HPP: ${formatRupiah(product.costPrice)} | Stok: ${product.stock}',
-                    style: const TextStyle(fontSize: 13, color: Colors.black45),
+                    style: AppTextStyle.label.copyWith(
+                      color: AppColor.inkMuted,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   _StockBadge(product: product),
@@ -405,7 +405,7 @@ class _ProductTile extends StatelessWidget {
                     child: Icon(
                       Icons.edit_outlined,
                       size: 18,
-                      color: Colors.black45,
+                      color: AppColor.inkMuted,
                     ),
                   ),
                 ),
@@ -416,7 +416,7 @@ class _ProductTile extends StatelessWidget {
                   icon: const Icon(
                     Icons.more_vert,
                     size: 18,
-                    color: Colors.black45,
+                    color: AppColor.inkMuted,
                   ),
                   onSelected: (action) => action?.call(),
                   itemBuilder: (_) => [
@@ -432,7 +432,7 @@ class _ProductTile extends StatelessWidget {
                       value: onDelete,
                       child: Text(
                         'Hapus',
-                        style: TextStyle(color: AppColor.error),
+                        style: TextStyle(color: AppColor.danger),
                       ),
                     ),
                   ],
@@ -452,8 +452,8 @@ class _PlaceholderImage extends StatelessWidget {
     return Container(
       width: 56,
       height: 56,
-      color: const Color(0xFFF0F0F0),
-      child: const Icon(Icons.image_outlined, color: Colors.black26),
+      color: AppColor.surfaceMuted,
+      child: const Icon(Icons.image_outlined, color: AppColor.inkMuted),
     );
   }
 }
@@ -465,26 +465,28 @@ class _StockBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (label, color) = switch (product) {
-      _ when !product.isActive => ('Nonaktif', AppColor.outlineVariant),
-      _ when product.isOutOfStock => ('Stok habis', AppColor.onErrorContainer),
-      _ when product.isLowStock => ('Stok menipis', AppColor.warningColor),
-      _ => ('Stok aman', AppColor.discountBadge),
+    final (label, background, foreground) = switch (product) {
+      _ when !product.isActive =>
+        ('Nonaktif', AppColor.surfaceMuted, AppColor.inkMuted),
+      _ when product.isOutOfStock =>
+        ('Habis', AppColor.dangerSoft, AppColor.danger),
+      _ when product.isLowStock =>
+        ('Stok menipis', AppColor.warningSoft, AppColor.warning),
+      _ => ('Stok aman', AppColor.successSoft, AppColor.success),
     };
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s2,
+        vertical: 2,
+      ),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(6),
+        color: background,
+        borderRadius: AppRadius.smAll,
       ),
       child: Text(
         label,
-        style: TextStyle(
-          fontSize: 13,
-          color: product.isOutOfStock ? AppColor.onError : AppColor.onSurface,
-          fontWeight: FontWeight.w500,
-        ),
+        style: AppTextStyle.caption.copyWith(color: foreground),
       ),
     );
   }
@@ -498,30 +500,29 @@ class _LowStockBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.only(bottom: AppSpacing.s2),
       child: InkWell(
         borderRadius: AppRadius.mdAll,
         onTap: () => context.push(PageRoutes.perluRestok),
         child: Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.all(AppSpacing.s4),
           decoration: BoxDecoration(
-            color: AppColor.errorContainer,
+            color: AppColor.warningSoft,
             borderRadius: AppRadius.mdAll,
           ),
           child: Row(
             children: [
-              Icon(Icons.inventory_2_outlined, color: AppColor.onSurface),
-              const SizedBox(width: AppSpacing.sm),
+              Icon(Icons.inventory_2_outlined, color: AppColor.warning),
+              const SizedBox(width: AppSpacing.s2),
               Expanded(
                 child: Text(
                   '$count produk perlu restok',
-                  style: AppTextStyle.bodyMd.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColor.onSurface,
+                  style: AppTextStyle.bodyStrong.copyWith(
+                    color: AppColor.warning,
                   ),
                 ),
               ),
-              Icon(Icons.chevron_right, color: AppColor.onSurface),
+              Icon(Icons.chevron_right, color: AppColor.warning),
             ],
           ),
         ),

@@ -105,9 +105,9 @@ class _ReceiptPreviewScreenState extends State<ReceiptPreviewScreen> {
     final receipt = _receipt;
 
     return Scaffold(
-      backgroundColor: AppColor.background,
+      backgroundColor: AppColor.bg,
       appBar: AppBar(
-        backgroundColor: AppColor.surface,
+        backgroundColor: AppColor.bg,
         title: Text(widget.isReprint ? 'Cetak Ulang Struk' : 'Struk'),
         actions: [
           if (receipt != null)
@@ -132,9 +132,9 @@ class _ReceiptPreviewScreenState extends State<ReceiptPreviewScreen> {
           ? null
           : SafeArea(
               child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
+                padding: const EdgeInsets.all(AppSpacing.s6),
                 child: SizedBox(
-                  height: AppSpacing.touchTargetMin,
+                  height: AppSpacing.tapMin,
                   child: ElevatedButton.icon(
                     onPressed: _isPrinting ? null : _print,
                     icon: const Icon(Icons.ios_share),
@@ -144,7 +144,7 @@ class _ReceiptPreviewScreenState extends State<ReceiptPreviewScreen> {
                           : sl<PrinterService>().label,
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColor.onSurface,
+                      backgroundColor: AppColor.ink,
                       foregroundColor: AppColor.onPrimary,
                       shape: RoundedRectangleBorder(
                         borderRadius: AppRadius.mdAll,
@@ -169,25 +169,20 @@ class _ReceiptBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.s6),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.all(AppSpacing.s4),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColor.surface,
             borderRadius: AppRadius.mdAll,
             border: Border.all(
-              color: isVoided ? AppColor.error : AppColor.outlineVariant,
+              color: isVoided ? AppColor.danger : AppColor.line,
             ),
           ),
           child: Text(
             lines.join('\n'),
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 13,
-              height: 1.35,
-              color: Colors.black87,
-            ),
+            style: AppTextStyle.receipt.copyWith(color: AppColor.ink),
           ),
         ),
       ),
@@ -205,16 +200,16 @@ class _ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.all(AppSpacing.s6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               message,
               textAlign: TextAlign.center,
-              style: AppTextStyle.bodyMd.copyWith(color: AppColor.error),
+              style: AppTextStyle.body.copyWith(color: AppColor.danger),
             ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.s4),
             OutlinedButton(onPressed: onRetry, child: const Text('Coba lagi')),
           ],
         ),

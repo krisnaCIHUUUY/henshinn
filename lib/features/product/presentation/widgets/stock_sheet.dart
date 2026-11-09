@@ -103,10 +103,10 @@ class _StockSheetState extends State<StockSheet> {
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.lg + MediaQuery.viewInsetsOf(context).bottom,
+        AppSpacing.s6,
+        AppSpacing.s6,
+        AppSpacing.s6,
+        AppSpacing.s6 + MediaQuery.viewInsetsOf(context).bottom,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -114,14 +114,14 @@ class _StockSheetState extends State<StockSheet> {
         children: [
           Text(
             _isRestock ? 'Restok' : 'Koreksi Stok',
-            style: AppTextStyle.headlineLg.copyWith(color: AppColor.onSurface),
+            style: AppTextStyle.heading.copyWith(color: AppColor.ink),
           ),
           const SizedBox(height: 4),
           Text(
             '${widget.product.name} · stok sekarang ${widget.product.stock}',
-            style: AppTextStyle.bodyMd.copyWith(color: AppColor.outline),
+            style: AppTextStyle.body.copyWith(color: AppColor.inkMuted),
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.s6),
           TextField(
             controller: _qty,
             autofocus: true,
@@ -134,14 +134,14 @@ class _StockSheetState extends State<StockSheet> {
               border: OutlineInputBorder(borderRadius: AppRadius.mdAll),
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.s2),
           Text(
             _isRestock
                 ? 'Stok jadi $preview'
                 : 'Selisih ${preview - widget.product.stock} dari stok sekarang',
-            style: AppTextStyle.labelSm.copyWith(color: AppColor.outline),
+            style: AppTextStyle.label.copyWith(color: AppColor.inkMuted),
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.s4),
           TextField(
             controller: _note,
             decoration: InputDecoration(
@@ -152,14 +152,14 @@ class _StockSheetState extends State<StockSheet> {
               border: OutlineInputBorder(borderRadius: AppRadius.mdAll),
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.s6),
           SizedBox(
             width: double.infinity,
-            height: AppSpacing.touchTargetMin,
+            height: AppSpacing.tapMin,
             child: ElevatedButton(
               onPressed: _submit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColor.onSurface,
+                backgroundColor: AppColor.ink,
                 foregroundColor: AppColor.onPrimary,
                 shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
               ),

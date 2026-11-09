@@ -45,18 +45,18 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColor.background,
+      backgroundColor: AppColor.bg,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.s6, AppSpacing.s4, AppSpacing.s6, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _HeaderRow(),
-                  const SizedBox(height: AppSpacing.lg - 4),
+                  const SizedBox(height: AppSpacing.s6 - 4),
                   _FilterTabs(
                     filters: _filters,
                     selectedIndex: _selectedFilterIndex,
@@ -67,7 +67,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       });
                     },
                   ),
-                  const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.s4),
                 ],
               ),
             ),
@@ -93,11 +93,11 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
                   return ListView.separated(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg,
+                      horizontal: AppSpacing.s6,
                     ),
                     itemCount: items.length,
                     separatorBuilder: (_, _) =>
-                        const Divider(height: 1, color: AppColor.divider),
+                        const Divider(height: 1, color: AppColor.line),
                     itemBuilder: (context, index) {
                       final item = items[index];
                       return _TransactionTile(
@@ -141,19 +141,19 @@ class _HeaderRow extends StatelessWidget {
       children: [
         Text(
           'Riwayat',
-          style: AppTextStyle.headlineLg.copyWith(color: AppColor.onSurface),
+          style: AppTextStyle.title.copyWith(color: AppColor.ink),
         ),
         Container(
-          width: AppSpacing.touchTargetMin,
-          height: AppSpacing.touchTargetMin,
+          width: AppSpacing.tapMin,
+          height: AppSpacing.tapMin,
           decoration: BoxDecoration(
-            color: AppColor.surfaceContainerLowest,
+            color: AppColor.surface,
             borderRadius: AppRadius.mdAll,
-            border: Border.all(color: AppColor.outlineVariant),
+            border: Border.all(color: AppColor.lineStrong),
           ),
           child: Icon(
             Icons.file_download_outlined,
-            color: AppColor.onSurface,
+            color: AppColor.ink,
           ),
         ),
       ],
@@ -180,23 +180,23 @@ class _FilterTabs extends StatelessWidget {
       children: List.generate(filters.length, (index) {
         final selected = index == selectedIndex;
         return Padding(
-          padding: EdgeInsets.only(right: index != filters.length - 1 ? AppSpacing.sm + 2 : 0),
+          padding: EdgeInsets.only(right: index != filters.length - 1 ? AppSpacing.s2 + 2 : 0),
           child: GestureDetector(
             onTap: () => onSelected(index),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md - 4),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s6, vertical: AppSpacing.s4 - 4),
               decoration: BoxDecoration(
-                color: selected ? AppColor.onSurface : AppColor.surfaceContainerLowest,
+                color: selected ? AppColor.ink : AppColor.surface,
                 borderRadius: AppRadius.mdAll,
                 border: Border.all(
-                  color: selected ? AppColor.onSurface : AppColor.outlineVariant,
+                  color: selected ? AppColor.ink : AppColor.lineStrong,
                 ),
               ),
               child: Text(
                 filters[index],
-                style: AppTextStyle.labelSm.copyWith(
-                  color: selected ? AppColor.onPrimary : AppColor.onSurface,
+                style: AppTextStyle.label.copyWith(
+                  color: selected ? AppColor.onPrimary : AppColor.ink,
                 ),
               ),
             ),
@@ -220,12 +220,12 @@ class _EmptyOrError extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.all(AppSpacing.s6),
         child: Text(
           message,
           textAlign: TextAlign.center,
-          style: AppTextStyle.bodyMd.copyWith(
-            color: AppColor.onSurfaceVariant,
+          style: AppTextStyle.body.copyWith(
+            color: AppColor.inkMuted,
           ),
         ),
       ),
@@ -255,7 +255,7 @@ class _TransactionTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s4),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -265,16 +265,16 @@ class _TransactionTile extends StatelessWidget {
               children: [
                 Text(
                   invoiceId,
-                  style: AppTextStyle.bodyLg.copyWith(
-                    color: AppColor.onSurface,
+                  style: AppTextStyle.bodyStrong.copyWith(
+                    color: AppColor.ink,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xs),
+                const SizedBox(height: AppSpacing.s1),
                 Text(
                   '$time · $itemCount item',
-                  style: AppTextStyle.labelSm.copyWith(
-                    color: AppColor.onSurfaceVariant,
+                  style: AppTextStyle.label.copyWith(
+                    color: AppColor.inkMuted,
                   ),
                 ),
               ],
@@ -284,12 +284,9 @@ class _TransactionTile extends StatelessWidget {
               children: [
                 Text(
                   amount,
-                  style: AppTextStyle.headlineMd.copyWith(
-                    color: AppColor.onSurface,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppTextStyle.stat.copyWith(color: AppColor.ink),
                 ),
-                const SizedBox(height: AppSpacing.xs + 2),
+                const SizedBox(height: AppSpacing.s1 + 2),
                 _StatusBadge(status: status),
               ],
             ),
@@ -310,17 +307,17 @@ class _StatusBadge extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md - 2,
-        vertical: AppSpacing.xs + 1,
+        horizontal: AppSpacing.s4 - 2,
+        vertical: AppSpacing.s1 + 1,
       ),
       decoration: BoxDecoration(
-        color: isLunas ? AppColor.primaryFixed.withValues(alpha: 0.2) : AppColor.errorContainer,
+        color: isLunas ? AppColor.primarySoft.withValues(alpha: 0.2) : AppColor.dangerSoft,
         borderRadius: AppRadius.fullAll,
       ),
       child: Text(
         isLunas ? 'Lunas' : 'Void',
-        style: AppTextStyle.labelSm.copyWith(
-          color: isLunas ? AppColor.primaryFixedDim : AppColor.onErrorContainer,
+        style: AppTextStyle.label.copyWith(
+          color: isLunas ? AppColor.primarySoft : AppColor.danger,
           fontWeight: FontWeight.w600,
         ),
       ),

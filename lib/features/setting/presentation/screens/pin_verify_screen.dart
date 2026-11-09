@@ -78,9 +78,9 @@ class _PinVerifyViewState extends State<_PinVerifyView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColor.surface,
+      backgroundColor: AppColor.bg,
       appBar: AppBar(
-        backgroundColor: AppColor.surface,
+        backgroundColor: AppColor.bg,
         title: const Text('Masukkan PIN'),
       ),
       body: SafeArea(
@@ -107,7 +107,7 @@ class _PinVerifyViewState extends State<_PinVerifyView> {
             final isBusy = state.status == PinStatus.loading;
 
             return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s6),
               child: PinPad(
                 title: 'Masukkan PIN',
                 subtitle: widget.reason ?? 'PIN pemilik diperlukan',

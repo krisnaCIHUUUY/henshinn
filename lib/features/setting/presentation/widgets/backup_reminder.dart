@@ -23,9 +23,9 @@ class BackupReminder extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.s4),
       decoration: BoxDecoration(
-        color: AppColor.errorContainer,
+        color: AppColor.warningSoft,
         borderRadius: AppRadius.lgAll,
       ),
       child: Column(
@@ -36,30 +36,30 @@ class BackupReminder extends StatelessWidget {
               const Icon(
                 Icons.backup_outlined,
                 size: 20,
-                color: AppColor.onErrorContainer,
+                color: AppColor.warning,
               ),
-              const SizedBox(width: AppSpacing.sm),
+              const SizedBox(width: AppSpacing.s2),
               Expanded(
                 child: Text(
                   days == null
                       ? 'Data belum pernah di-backup'
                       : 'Backup terakhir $days hari lalu',
-                  style: AppTextStyle.bodyMd.copyWith(
+                  style: AppTextStyle.body.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: AppColor.onErrorContainer,
+                    color: AppColor.warning,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: AppSpacing.s1),
           Text(
             'Kalau HP ini hilang atau rusak, data penjualan ikut hilang.',
-            style: AppTextStyle.labelSm.copyWith(
-              color: AppColor.onErrorContainer,
+            style: AppTextStyle.label.copyWith(
+              color: AppColor.warning,
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.s2),
           Align(
             alignment: Alignment.centerLeft,
             child: FilledButton(

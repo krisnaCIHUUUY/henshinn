@@ -1,7 +1,7 @@
 # Progress Henshin POS
 
-Status eksekusi `docs/implementasi.md`. Diperbarui 2026-11-08 (langkah 1–15, plus orientasi scan, perbaikan cari
-barcode, dan kategori produk).
+Status eksekusi `docs/implementasi.md`. Diperbarui 2026-11-09 (langkah 1–15 selesai; kategori produk; desain v2
+langkah D1 dari sembilan).
 
 Keputusan arsitektur yang diambil selama eksekusi dicatat terpisah di
 `docs/keputusan-arsitektur.md`.
@@ -40,9 +40,10 @@ menutupnya: F1→F5 diuji pemilik dalam mode pesawat di HP, median transaksi
 3 item ≤30 detik sesuai PRD §1.5, dan scan barcode akhirnya terbukti jalan di
 perangkat nyata. Yang tersisa bukan langkah rencana, tapi tiga hal yang sudah
 dicatat sebagai utang: impl cetak ESC/POS yang menunggu printer fisik
-(langkah 9), satu pekerjaan yang masih diparkir pemilik di `.scratch/` (desain
-UI v2 — orientasi scanner dan kategori produk sudah dikerjakan), dan dua metrik
-PRD yang belum bisa diukur — lihat tabel utang teknis.
+(langkah 9) dan dua metrik PRD yang belum bisa diukur — lihat tabel utang
+teknis. Pekerjaan yang sedang berjalan sekarang bukan dari
+`docs/implementasi.md` lagi tapi dari `docs/implementasi_design.md`: penerapan
+desain UI v2, D1 dari sembilan langkah.
 
 **Verifikasi saat ini:** 173 tes lolos, `flutter analyze` bersih.
 
@@ -543,6 +544,55 @@ kapitalisasi, berspasi, kosong ditolak, produk langsung memakai id barunya),
 
 ---
 
+## Desain v2 — D1: lapisan token
+
+Rencana lengkapnya `docs/implementasi_design.md` (D1–D9, disusun 2026-11-09).
+D1 dikerjakan dan diverifikasi pemilik 2026-11-09. Alasan tiap aturannya di
+**ADR-046**.
+
+**Yang berubah.** `AppColor` 52 → **17 token semantik**, `AppSpacing` →
+`s1/s2/s3/s4/s6` + `tapMin/tapPrimary/rowMin`, `AppRadius` → `sm/md/lg/full`,
+`AppTextStyle` → 9 gaya v2. 26 file, satu commit — lapisan token adalah
+satu-satunya bagian desain v2 yang tidak bisa bertahap, karena menghapus satu
+token memaksa semua pemanggilnya berubah bersamaan.
+
+**Cara kerjanya**, supaya tidak diulang dengan cara yang salah: penggantian
+berbatas kata lewat skrip, dengan penanda sementara pada hasilnya. Tanpa
+penanda itu `surfaceContainerLowest` → `surface` → `bg` akan membuat semua
+kartu putih berubah jadi warna halaman.
+
+**Yang tidak bisa dimekaniskan**, dan memang dibaca satu per satu:
+
+- Ke-25 `AppColor.outline` ternyata semuanya warna teks/ikon → `inkMuted`.
+  Yang berperan sebagai garis semuanya `outlineVariant`, dan itu dipecah lagi:
+  batas chip filter, kotak ikon, dan titik PIN → `lineStrong` (garis yang
+  menandai kontrol, 3:1), sisanya `line` (hiasan).
+- Delapan `headlineLg`/`headlineMd` tidak punya satu tujuan: omzet → `amount`,
+  total dan kembalian → `stat`, judul sheet → `heading`, judul layar →
+  `title`.
+
+**Dua warna ternyata salah arti, bukan salah nama.** Pengingat backup dan
+banner "perlu restok" keduanya merah karena v1 memakai `errorContainer` untuk
+keduanya. `tokens.json` v2 menulis eksplisit bahwa `warning` berarti "badge
+stok menipis, notice pengingat backup", dan merah hanya untuk Void / Habis /
+error. Keduanya pindah ke pasangan kuning. Ini hanya kelihatan setelah token
+punya arti, bukan dari pemetaan nama.
+
+**Layar scanner sengaja dikecualikan.** 16 dari 24 hardcode `Colors.*` ada di
+`barcode_scanner_screen.dart` dan tetap di sana: isinya gambar kamera, bukan
+permukaan aplikasi. Alasannya ditulis sebagai komentar di `build` supaya tidak
+"dirapikan" nanti (ADR-046).
+
+**Nol tes baru, disengaja.** Tes yang mengunci nilai warna hanya menguji ulang
+isi file token. Gerbangnya `flutter analyze` + 173 tes lama tetap hijau +
+verifikasi pemilik di HP.
+
+Yang akan langsung terasa beda: sudut membulat lebih besar (`radius.sm` 4 → 8,
+`lg` 16 → 20), jarak antar bagian menyusut di 10 tempat (v2 tidak punya langkah
+32px), dan bottom nav serta bottom sheet jadi putih.
+
+---
+
 ## Utang teknis yang masih terbuka
 
 | Hal | Dampak |
@@ -564,6 +614,7 @@ kapitalisasi, berspasi, kosong ditolak, produk langsung memakai id barunya),
 | Nama kategori tidak bisa dihapus atau diganti dari dalam aplikasi | Disengaja (ADR-038): salah ketik hilang dari layar begitu produknya dipindah, tapi barisnya menumpuk di DB selamanya. Diterima karena tidak ada laporan yang membacanya |
 | Kategori bisa lahir tanpa produk | Kalau penyimpanan produk gagal setelah kategorinya dibuat, kategori itu tetap ada. Sengaja tidak dibungkus satu transaksi karena tab kosong tidak pernah ditampilkan (ADR-038) |
 | `lower()` SQLite hanya melipat ASCII | "Café" dan "café" masih bisa jadi dua kategori. Ditandai `shortcut:` di `CategoryDao` (ADR-038) |
+| Desain v2 baru sampai D1 dari sembilan | Lapisan token sudah v2 tapi susunan layarnya masih v1: Dasbor masih ada, Kasir masih di balik tombol, PIN masih layar penuh. Jadi aplikasinya sekarang berwarna v2 dengan navigasi v1 — `docs/implementasi_design.md` D2–D9 |
 | Skenario UAT tidak pernah ditulis | Langkah 15 diuji manual tanpa artefak, jadi uji berikutnya setelah perubahan besar (desain v2) tidak punya pembanding yang bisa diulang — hanya ingatan |
 | Crash-free ≥99% tidak terukur | Tidak ada crash terlihat saat uji, tapi itu bukan rate. Menghitungnya butuh telemetri, yang bertabrakan dengan offline-only (ADR-042) |
 | Metrik "produk masuk keranjang ≤2 detik" belum terukur | Jalur scan lengkap baru benar-benar jalan sejak 2026-11-08 (perbaikan cari barcode), dan kecepatannya belum pernah diukur dengan stopwatch — termasuk sesudah halaman scan jadi potrait |

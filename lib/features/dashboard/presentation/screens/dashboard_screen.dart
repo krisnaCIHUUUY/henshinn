@@ -72,57 +72,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final week = _week;
 
     return Scaffold(
-      backgroundColor: AppColor.background,
+      backgroundColor: AppColor.bg,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _load,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.lg,
+              AppSpacing.s6,
+              AppSpacing.s4,
+              AppSpacing.s6,
               0,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const _GreetingHeader(),
-                const SizedBox(height: AppSpacing.lg - 4),
+                const SizedBox(height: AppSpacing.s6 - 4),
                 if (_store?.backupIsStale(DateTime.now()) ?? false) ...[
                   BackupReminder(store: _store!, onDone: _load),
-                  const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.s4),
                 ],
                 if (_error != null)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    padding: const EdgeInsets.only(bottom: AppSpacing.s4),
                     child: Text(
                       _error!,
-                      style: AppTextStyle.bodyMd.copyWith(
-                        color: AppColor.error,
+                      style: AppTextStyle.body.copyWith(
+                        color: AppColor.danger,
                       ),
                     ),
                   ),
                 if (today == null || week == null)
                   const Padding(
-                    padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+                    padding: EdgeInsets.symmetric(vertical: AppSpacing.s6),
                     child: Center(child: CircularProgressIndicator()),
                   )
                 else ...[
                   _RevenueCard(today: today, week: week),
-                  const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.s4),
                   _StatsRow(report: today),
-                  const SizedBox(height: AppSpacing.lg + 4),
+                  const SizedBox(height: AppSpacing.s6 + 4),
                   const _SectionTitle(title: 'Produk terlaris hari ini'),
-                  const SizedBox(height: AppSpacing.xs),
+                  const SizedBox(height: AppSpacing.s1),
                   BestSellerList(
                     items: today.bestSellers,
                     empty: 'Belum ada penjualan hari ini',
                   ),
                 ],
-                const SizedBox(height: AppSpacing.lg - 4),
+                const SizedBox(height: AppSpacing.s6 - 4),
                 _StartTransactionButton(onReturn: _load),
-                const SizedBox(height: AppSpacing.lg),
+                const SizedBox(height: AppSpacing.s6),
               ],
             ),
           ),
@@ -144,14 +144,14 @@ class _GreetingHeader extends StatelessWidget {
         Expanded(
           child: Text(
             'Henshin',
-            style: AppTextStyle.headlineMd.copyWith(color: AppColor.onSurface),
+            style: AppTextStyle.title.copyWith(color: AppColor.ink),
           ),
         ),
         TextButton.icon(
           onPressed: () => context.push(PageRoutes.laporan),
           icon: const Icon(Icons.bar_chart, size: 18),
           label: const Text('Laporan'),
-          style: TextButton.styleFrom(foregroundColor: AppColor.onSurface),
+          style: TextButton.styleFrom(foregroundColor: AppColor.ink),
         ),
       ],
     );
@@ -176,9 +176,9 @@ class _RevenueCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.s6),
       decoration: const BoxDecoration(
-        color: AppColor.surfaceContainerLow,
+        color: AppColor.surfaceMuted,
         borderRadius: AppRadius.lgAll,
       ),
       child: Column(
@@ -186,11 +186,11 @@ class _RevenueCard extends StatelessWidget {
         children: [
           Text(
             'Pendapatan hari ini',
-            style: AppTextStyle.labelSm.copyWith(
-              color: AppColor.onSurfaceVariant,
+            style: AppTextStyle.label.copyWith(
+              color: AppColor.inkMuted,
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.s2),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -200,8 +200,8 @@ class _RevenueCard extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     formatRupiah(today.revenue),
-                    style: AppTextStyle.headlineLg.copyWith(
-                      color: AppColor.onSurface,
+                    style: AppTextStyle.amount.copyWith(
+                      color: AppColor.ink,
                       height: 1.0,
                     ),
                   ),
@@ -210,27 +210,27 @@ class _RevenueCard extends StatelessWidget {
               // Badge hanya kalau ada pembanding: tanpa penjualan kemarin,
               // persentasenya tidak punya arti.
               if (growth != null) ...[
-                const SizedBox(width: AppSpacing.sm + 2),
+                const SizedBox(width: AppSpacing.s2 + 2),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm + 2,
-                    vertical: AppSpacing.xs + 1,
+                    horizontal: AppSpacing.s2 + 2,
+                    vertical: AppSpacing.s1 + 1,
                   ),
                   decoration: const BoxDecoration(
-                    color: AppColor.tertiaryFixed,
+                    color: AppColor.warningSoft,
                     borderRadius: AppRadius.fullAll,
                   ),
                   child: Text(
                     '${growth >= 0 ? '+' : ''}$growth%',
-                    style: AppTextStyle.labelSm.copyWith(
-                      color: AppColor.tertiary,
+                    style: AppTextStyle.label.copyWith(
+                      color: AppColor.warning,
                     ),
                   ),
                 ),
               ],
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.s6),
           SizedBox(height: 130, child: _RevenueChart(daily: daily)),
         ],
       ),
@@ -280,11 +280,11 @@ class _RevenueChart extends StatelessWidget {
                 }
                 return SideTitleWidget(
                   meta: meta,
-                  space: AppSpacing.sm,
+                  space: AppSpacing.s2,
                   child: Text(
                     _dayLabels[daily[index].date.weekday - 1],
-                    style: AppTextStyle.labelSm.copyWith(
-                      color: AppColor.onSurfaceVariant,
+                    style: AppTextStyle.label.copyWith(
+                      color: AppColor.inkMuted,
                       fontWeight: index == daily.length - 1
                           ? FontWeight.w600
                           : FontWeight.w400,
@@ -297,11 +297,11 @@ class _RevenueChart extends StatelessWidget {
         ),
         barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(
-            getTooltipColor: (_) => AppColor.onSurface,
+            getTooltipColor: (_) => AppColor.ink,
             getTooltipItem: (group, groupIndex, rod, rodIndex) =>
                 BarTooltipItem(
                   formatRupiah(daily[group.x].revenue),
-                  AppTextStyle.labelSm.copyWith(
+                  AppTextStyle.label.copyWith(
                     color: AppColor.onPrimary,
                     fontWeight: FontWeight.w600,
                   ),
@@ -320,10 +320,10 @@ class _RevenueChart extends StatelessWidget {
                       ? (peak == 0 ? 1 : peak * 1.15) * 0.02
                       : daily[i].revenue.toDouble(),
                   width: 32,
-                  borderRadius: AppRadius.defaultAll,
+                  borderRadius: AppRadius.smAll,
                   color: i == daily.length - 1
                       ? AppColor.primary
-                      : AppColor.secondaryFixed,
+                      : AppColor.primarySoft,
                 ),
               ],
             ),
@@ -350,11 +350,11 @@ class _StatsRow extends StatelessWidget {
             value: '${report.transactionCount}',
           ),
         ),
-        const SizedBox(width: AppSpacing.md - 4),
+        const SizedBox(width: AppSpacing.s4 - 4),
         Expanded(
           child: StatBox(label: 'Item terjual', value: '${report.itemCount}'),
         ),
-        const SizedBox(width: AppSpacing.md - 4),
+        const SizedBox(width: AppSpacing.s4 - 4),
         Expanded(
           child: StatBox(
             label: 'Laba kotor',
@@ -376,8 +376,8 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style: AppTextStyle.headlineMd.copyWith(
-        color: AppColor.onSurface,
+      style: AppTextStyle.heading.copyWith(
+        color: AppColor.ink,
         fontWeight: FontWeight.w700,
       ),
     );
@@ -397,7 +397,7 @@ class _StartTransactionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: AppSpacing.xxxl + AppSpacing.sm + 2,
+      height: AppSpacing.tapMin + AppSpacing.s2 + 2,
       child: ElevatedButton.icon(
         onPressed: () async {
           // push, bukan go: kasir ditumpuk di atas dashboard supaya tombol
@@ -408,7 +408,7 @@ class _StartTransactionButton extends StatelessWidget {
         icon: const Icon(Icons.add, color: AppColor.onPrimary),
         label: Text(
           'Mulai transaksi baru',
-          style: AppTextStyle.bodyMd.copyWith(
+          style: AppTextStyle.body.copyWith(
             color: AppColor.onPrimary,
             fontWeight: FontWeight.w600,
           ),

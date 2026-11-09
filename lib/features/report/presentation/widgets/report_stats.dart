@@ -18,11 +18,11 @@ class StatBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.md + 2,
+        horizontal: AppSpacing.s4,
+        vertical: AppSpacing.s4 + 2,
       ),
       decoration: const BoxDecoration(
-        color: AppColor.surfaceContainerLow,
+        color: AppColor.surfaceMuted,
         borderRadius: AppRadius.lgAll,
       ),
       child: Column(
@@ -30,20 +30,17 @@ class StatBox extends StatelessWidget {
         children: [
           Text(
             label,
-            style: AppTextStyle.labelSm.copyWith(
-              color: AppColor.onSurfaceVariant,
+            style: AppTextStyle.label.copyWith(
+              color: AppColor.inkMuted,
             ),
           ),
-          const SizedBox(height: AppSpacing.xs + 2),
+          const SizedBox(height: AppSpacing.s1 + 2),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
               value,
-              style: AppTextStyle.headlineMd.copyWith(
-                color: AppColor.onSurface,
-                fontWeight: FontWeight.w800,
-              ),
+              style: AppTextStyle.stat.copyWith(color: AppColor.ink),
             ),
           ),
         ],
@@ -62,11 +59,11 @@ class BestSellerList extends StatelessWidget {
   Widget build(BuildContext context) {
     if (items.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s4),
         child: Text(
           empty,
-          style: AppTextStyle.bodyMd.copyWith(
-            color: AppColor.onSurfaceVariant,
+          style: AppTextStyle.body.copyWith(
+            color: AppColor.inkMuted,
           ),
         ),
       );
@@ -76,40 +73,40 @@ class BestSellerList extends StatelessWidget {
       children: [
         for (var i = 0; i < items.length; i++) ...[
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.s4),
             child: Row(
               children: [
                 SizedBox(
                   width: 24,
                   child: Text(
                     '${i + 1}',
-                    style: AppTextStyle.bodyMd.copyWith(
-                      color: AppColor.onSurfaceVariant,
+                    style: AppTextStyle.body.copyWith(
+                      color: AppColor.inkMuted,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.md - 4),
+                const SizedBox(width: AppSpacing.s4 - 4),
                 Expanded(
                   child: Text(
                     items[i].name,
-                    style: AppTextStyle.bodyMd.copyWith(
-                      color: AppColor.onSurface,
+                    style: AppTextStyle.body.copyWith(
+                      color: AppColor.ink,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
                 Text(
                   '${items[i].qtySold} terjual',
-                  style: AppTextStyle.labelSm.copyWith(
-                    color: AppColor.onSurfaceVariant,
+                  style: AppTextStyle.label.copyWith(
+                    color: AppColor.inkMuted,
                   ),
                 ),
               ],
             ),
           ),
           if (i != items.length - 1)
-            const Divider(height: 1, color: AppColor.divider),
+            const Divider(height: 1, color: AppColor.line),
         ],
       ],
     );

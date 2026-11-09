@@ -174,7 +174,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       ..showSnackBar(
         SnackBar(
           duration: const Duration(seconds: 4),
-          backgroundColor: AppColor.error,
+          backgroundColor: AppColor.danger,
           content: Text(message, style: const TextStyle(color: Colors.white)),
         ),
       );
@@ -227,6 +227,12 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     }
   }
 
+  // Layar ini sengaja TIDAK memakai token warna. Isinya gambar kamera, bukan
+  // permukaan aplikasi: scrim harus hitam transparan sungguhan dan garis bidik
+  // harus putih supaya terlihat di atas apa pun yang sedang disorot. Token v2
+  // (`ink`, `surface`) adalah warna untuk kertas aplikasi dan akan membuat
+  // overlay-nya lebih terang dari gambar di belakangnya. Design system v2 tidak
+  // mencakup overlay kamera.
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -28,9 +28,9 @@ class _LowStockScreenState extends State<LowStockScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColor.background,
+      backgroundColor: AppColor.bg,
       appBar: AppBar(
-        backgroundColor: AppColor.surface,
+        backgroundColor: AppColor.bg,
         title: const Text('Perlu Restok'),
       ),
       body: SafeArea(
@@ -43,12 +43,12 @@ class _LowStockScreenState extends State<LowStockScreen> {
             if (products.isEmpty) {
               return Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  padding: const EdgeInsets.all(AppSpacing.s6),
                   child: Text(
                     'Semua stok masih aman.',
                     textAlign: TextAlign.center,
-                    style: AppTextStyle.bodyMd.copyWith(
-                      color: AppColor.outline,
+                    style: AppTextStyle.body.copyWith(
+                      color: AppColor.inkMuted,
                     ),
                   ),
                 ),
@@ -56,17 +56,17 @@ class _LowStockScreenState extends State<LowStockScreen> {
             }
 
             return ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: const EdgeInsets.all(AppSpacing.s6),
               itemCount: products.length,
-              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.s2),
               itemBuilder: (context, index) {
                 final product = products[index];
                 return Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
+                  padding: const EdgeInsets.all(AppSpacing.s4),
                   decoration: BoxDecoration(
-                    color: AppColor.surfaceContainerLowest,
+                    color: AppColor.surface,
                     borderRadius: AppRadius.mdAll,
-                    border: Border.all(color: AppColor.outlineVariant),
+                    border: Border.all(color: AppColor.line),
                   ),
                   child: Row(
                     children: [
@@ -76,9 +76,9 @@ class _LowStockScreenState extends State<LowStockScreen> {
                           children: [
                             Text(
                               product.name,
-                              style: AppTextStyle.bodyMd.copyWith(
+                              style: AppTextStyle.body.copyWith(
                                 fontWeight: FontWeight.w700,
-                                color: AppColor.onSurface,
+                                color: AppColor.ink,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -86,10 +86,10 @@ class _LowStockScreenState extends State<LowStockScreen> {
                               product.isOutOfStock
                                   ? 'Stok habis · batas ${product.lowStockThreshold}'
                                   : 'Sisa ${product.stock} · batas ${product.lowStockThreshold}',
-                              style: AppTextStyle.labelSm.copyWith(
+                              style: AppTextStyle.label.copyWith(
                                 color: product.isOutOfStock
-                                    ? AppColor.error
-                                    : AppColor.outline,
+                                    ? AppColor.danger
+                                    : AppColor.inkMuted,
                               ),
                             ),
                           ],

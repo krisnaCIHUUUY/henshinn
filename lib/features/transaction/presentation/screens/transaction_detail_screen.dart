@@ -113,9 +113,9 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     final receipt = _receipt;
 
     return Scaffold(
-      backgroundColor: AppColor.background,
+      backgroundColor: AppColor.bg,
       appBar: AppBar(
-        backgroundColor: AppColor.surface,
+        backgroundColor: AppColor.bg,
         title: Text('Transaksi #${widget.transactionId}'),
       ),
       body: SafeArea(
@@ -129,12 +129,12 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
           ? null
           : SafeArea(
               child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
+                padding: const EdgeInsets.all(AppSpacing.s6),
                 child: Row(
                   children: [
                     Expanded(
                       child: SizedBox(
-                        height: AppSpacing.touchTargetMin,
+                        height: AppSpacing.tapMin,
                         child: OutlinedButton.icon(
                           onPressed: _reprint,
                           icon: const Icon(Icons.receipt_long_outlined),
@@ -143,16 +143,16 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                       ),
                     ),
                     if (!receipt.isVoided) ...[
-                      const SizedBox(width: AppSpacing.md),
+                      const SizedBox(width: AppSpacing.s4),
                       Expanded(
                         child: SizedBox(
-                          height: AppSpacing.touchTargetMin,
+                          height: AppSpacing.tapMin,
                           child: ElevatedButton.icon(
                             onPressed: _voiding ? null : _void,
                             icon: const Icon(Icons.block),
                             label: Text(_voiding ? 'Memproses...' : 'Void'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColor.error,
+                              backgroundColor: AppColor.danger,
                               foregroundColor: AppColor.onPrimary,
                               shape: RoundedRectangleBorder(
                                 borderRadius: AppRadius.mdAll,
@@ -178,21 +178,21 @@ class _DetailBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.s6),
       children: [
         if (receipt.isVoided)
           Container(
-            margin: const EdgeInsets.only(bottom: AppSpacing.md),
-            padding: const EdgeInsets.all(AppSpacing.md),
+            margin: const EdgeInsets.only(bottom: AppSpacing.s4),
+            padding: const EdgeInsets.all(AppSpacing.s4),
             decoration: BoxDecoration(
-              color: AppColor.errorContainer,
+              color: AppColor.dangerSoft,
               borderRadius: AppRadius.mdAll,
             ),
             child: Text(
               'Transaksi ini sudah di-void.'
               '${receipt.voidReason == null ? '' : '\nAlasan: ${receipt.voidReason}'}',
-              style: AppTextStyle.bodyMd.copyWith(
-                color: AppColor.onErrorContainer,
+              style: AppTextStyle.body.copyWith(
+                color: AppColor.danger,
               ),
             ),
           ),
@@ -200,14 +200,14 @@ class _DetailBody extends StatelessWidget {
           // Format angka, bukan nama bulan: nama bulan lokal butuh data locale
           // intl yang belum diinisialisasi di app ini.
           DateFormat('dd/MM/yyyy HH:mm').format(receipt.dateTime),
-          style: AppTextStyle.bodyMd.copyWith(
-            color: AppColor.onSurfaceVariant,
+          style: AppTextStyle.body.copyWith(
+            color: AppColor.inkMuted,
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.s6),
         for (final line in receipt.lines)
           Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+            padding: const EdgeInsets.only(bottom: AppSpacing.s4),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -217,15 +217,15 @@ class _DetailBody extends StatelessWidget {
                     children: [
                       Text(
                         line.name,
-                        style: AppTextStyle.bodyLg.copyWith(
-                          color: AppColor.onSurface,
+                        style: AppTextStyle.bodyStrong.copyWith(
+                          color: AppColor.ink,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       Text(
                         '${line.qty} x ${formatRupiah(line.unitPrice)}',
-                        style: AppTextStyle.labelSm.copyWith(
-                          color: AppColor.onSurfaceVariant,
+                        style: AppTextStyle.label.copyWith(
+                          color: AppColor.inkMuted,
                         ),
                       ),
                     ],
@@ -233,14 +233,14 @@ class _DetailBody extends StatelessWidget {
                 ),
                 Text(
                   formatRupiah(line.subtotal),
-                  style: AppTextStyle.bodyLg.copyWith(
-                    color: AppColor.onSurface,
+                  style: AppTextStyle.bodyStrong.copyWith(
+                    color: AppColor.ink,
                   ),
                 ),
               ],
             ),
           ),
-        const Divider(color: AppColor.divider),
+        const Divider(color: AppColor.line),
         _TotalRow(label: 'Total', value: receipt.total, emphasized: true),
         _TotalRow(label: 'Bayar', value: receipt.paymentAmount),
         _TotalRow(label: 'Kembali', value: receipt.change),
@@ -263,14 +263,11 @@ class _TotalRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = emphasized
-        ? AppTextStyle.headlineMd.copyWith(
-            color: AppColor.onSurface,
-            fontWeight: FontWeight.w700,
-          )
-        : AppTextStyle.bodyMd.copyWith(color: AppColor.onSurfaceVariant);
+        ? AppTextStyle.stat.copyWith(color: AppColor.ink)
+        : AppTextStyle.body.copyWith(color: AppColor.inkMuted);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s1),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -343,16 +340,16 @@ class _ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.all(AppSpacing.s6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               message,
               textAlign: TextAlign.center,
-              style: AppTextStyle.bodyMd.copyWith(color: AppColor.error),
+              style: AppTextStyle.body.copyWith(color: AppColor.danger),
             ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.s4),
             OutlinedButton(onPressed: onRetry, child: const Text('Coba lagi')),
           ],
         ),

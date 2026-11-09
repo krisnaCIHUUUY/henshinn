@@ -82,9 +82,9 @@ class _PinCreateViewState extends State<_PinCreateView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColor.surface,
+      backgroundColor: AppColor.bg,
       appBar: AppBar(
-        backgroundColor: AppColor.surface,
+        backgroundColor: AppColor.bg,
         title: const Text('Atur PIN'),
       ),
       body: SafeArea(
@@ -106,7 +106,7 @@ class _PinCreateViewState extends State<_PinCreateView> {
             final isSaving = state.status == PinStatus.loading;
 
             return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s6),
               child: PinPad(
                 title: _isRepeatStage ? 'Ulangi PIN' : 'Buat PIN',
                 subtitle: _isRepeatStage

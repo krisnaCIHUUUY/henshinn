@@ -50,7 +50,7 @@ class _BottomNavBar extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: AppColor.surface,
-        border: Border(top: BorderSide(color: AppColor.divider)),
+        border: Border(top: BorderSide(color: AppColor.line)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -91,9 +91,9 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColor.primary : AppColor.onSurface;
+    final color = selected ? AppColor.primary : AppColor.ink;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s2),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

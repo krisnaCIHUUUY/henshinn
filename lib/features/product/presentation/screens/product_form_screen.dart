@@ -185,16 +185,16 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColor.surface,
+        backgroundColor: AppColor.bg,
         appBar: AppBar(
-          backgroundColor: AppColor.surface,
+          backgroundColor: AppColor.bg,
           title: Text(_isEdit ? 'Ubah Produk' : 'Tambah Produk'),
         ),
         body: SafeArea(
           child: Form(
             key: _formKey,
             child: ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: const EdgeInsets.all(AppSpacing.s6),
               children: [
                 _Field(
                   controller: _name,
@@ -210,13 +210,13 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                   helper: 'Kosongkan kalau produk tidak punya barcode',
                   keyboardType: TextInputType.number,
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                const SizedBox(height: AppSpacing.s2),
                 _CategoryPicker(
                   value: _categoryId,
                   onChanged: (id) => setState(() => _categoryId = id),
                 ),
                 if (_categoryId == _newCategoryOption) ...[
-                  const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.s4),
                   _Field(
                     controller: _newCategoryName,
                     label: 'Nama kategori baru',
@@ -227,7 +227,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                         : null,
                   ),
                 ],
-                const SizedBox(height: AppSpacing.lg),
+                const SizedBox(height: AppSpacing.s6),
                 _Field(
                   controller: _price,
                   label: 'Harga jual',
@@ -250,7 +250,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                   price: _intOf(_price),
                   costPrice: _intOf(_costPrice),
                 ),
-                const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: AppSpacing.s4),
                 _Field(
                   controller: _stock,
                   label: _isEdit ? 'Stok saat ini' : 'Stok awal',
@@ -272,30 +272,30 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   validator: _requiredAmount,
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                const SizedBox(height: AppSpacing.s2),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   value: _isActive,
                   onChanged: (value) => setState(() => _isActive = value),
-                  title: Text('Produk aktif', style: AppTextStyle.bodyMd),
+                  title: Text('Produk aktif', style: AppTextStyle.body),
                   subtitle: Text(
                     _isActive
                         ? 'Muncul di kasir'
                         : 'Disembunyikan dari kasir, riwayat tetap utuh',
-                    style: AppTextStyle.labelSm.copyWith(
-                      color: AppColor.outline,
+                    style: AppTextStyle.label.copyWith(
+                      color: AppColor.inkMuted,
                     ),
                   ),
-                  activeThumbColor: AppColor.surfaceContainerLowest,
-                  activeTrackColor: AppColor.onSurface,
+                  activeThumbColor: AppColor.surface,
+                  activeTrackColor: AppColor.ink,
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.s6),
                 SizedBox(
-                  height: AppSpacing.touchTargetMin,
+                  height: AppSpacing.tapMin,
                   child: ElevatedButton(
                     onPressed: _saving ? null : _save,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColor.onSurface,
+                      backgroundColor: AppColor.ink,
                       foregroundColor: AppColor.onPrimary,
                       shape: RoundedRectangleBorder(
                         borderRadius: AppRadius.mdAll,
@@ -347,7 +347,7 @@ class _Field extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.only(bottom: AppSpacing.s4),
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
@@ -423,8 +423,8 @@ class _MarginHint extends StatelessWidget {
       isLoss
           ? 'Rugi ${formatRupiah(-margin)} per unit — modal lebih besar dari harga jual'
           : 'Laba ${formatRupiah(margin)} per unit',
-      style: AppTextStyle.labelSm.copyWith(
-        color: isLoss ? AppColor.error : AppColor.outline,
+      style: AppTextStyle.label.copyWith(
+        color: isLoss ? AppColor.danger : AppColor.inkMuted,
       ),
     );
   }

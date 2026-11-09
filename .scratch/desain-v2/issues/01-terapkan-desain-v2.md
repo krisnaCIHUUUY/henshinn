@@ -1,7 +1,11 @@
 # Terapkan desain UI v2
 
-Status: ready-for-human
+Status: ready-for-agent
 Type: task
+
+Rancangan bertahapnya ada di `docs/implementasi_design.md` (D1-D9, disusun
+2026-11-09). Ketujuh pertanyaan terbuka sudah dijawab pemilik di sana - empat
+di antaranya tidak ada di tiket ini dan baru muncul saat mockup dibaca.
 
 Diminta pemilik 2026-11-07: `design/design_v2/` berisi desain UI baru lengkap
 (design system + sembilan layar). Pemilik minta **dikerjakan nanti** — tiket ini

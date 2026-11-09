@@ -105,7 +105,7 @@ class _SettingScreenState extends State<SettingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColor.surface,
+      backgroundColor: AppColor.bg,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -115,7 +115,7 @@ class _SettingScreenState extends State<SettingScreen> {
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
-                color: AppColor.onSurface,
+                color: AppColor.ink,
               ),
             ),
             const SizedBox(height: 28),
@@ -130,7 +130,7 @@ class _SettingScreenState extends State<SettingScreen> {
                       : _store.name,
                   trailing: const Icon(
                     Icons.chevron_right,
-                    color: AppColor.outline,
+                    color: AppColor.inkMuted,
                   ),
                   onTap: _openStoreInfo,
                 ),
@@ -142,7 +142,7 @@ class _SettingScreenState extends State<SettingScreen> {
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
-                      color: AppColor.onSurface,
+                      color: AppColor.ink,
                     ),
                   ),
                   onTap: () {
@@ -173,7 +173,7 @@ class _SettingScreenState extends State<SettingScreen> {
                   trailing: _hasPin
                       ? const _StatusBadge(label: 'Aktif')
                       : const Icon(Icons.chevron_right,
-                          color: AppColor.outline),
+                          color: AppColor.inkMuted),
                   onTap: _openPinScreen,
                   isLast: true,
                 ),
@@ -193,7 +193,7 @@ class _SettingScreenState extends State<SettingScreen> {
                   trailing: _store.backupIsStale(DateTime.now())
                       ? const _WarningBadge(label: 'Perlu backup')
                       : const Icon(Icons.chevron_right,
-                          color: AppColor.outline),
+                          color: AppColor.inkMuted),
                   onTap: _runBackup,
                 ),
                 _SettingsRow(
@@ -201,7 +201,7 @@ class _SettingScreenState extends State<SettingScreen> {
                   subtitle: 'Timpa data HP ini dengan file backup · perlu PIN',
                   trailing: const Icon(
                     Icons.chevron_right,
-                    color: AppColor.outline,
+                    color: AppColor.inkMuted,
                   ),
                   onTap: () => RestoreAction.run(context),
                   isLast: true,
@@ -241,8 +241,8 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: AppTextStyle.labelSm.copyWith(
-        color: AppColor.outline,
+      style: AppTextStyle.label.copyWith(
+        color: AppColor.inkMuted,
         fontSize: 15,
       ),
     );
@@ -260,7 +260,7 @@ class _SettingsGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColor.surfaceContainerLow,
+        color: AppColor.surfaceMuted,
         borderRadius: AppRadius.lgAll,
       ),
       child: Column(children: children),
@@ -290,7 +290,7 @@ class _SettingsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      // splashColor: AppColor.onSecondaryContainer,
+      // splashColor: AppColor.primary,
       borderRadius: isLast
           ? const BorderRadius.vertical(bottom: Radius.circular(16))
           : null,
@@ -306,9 +306,9 @@ class _SettingsRow extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        style: AppTextStyle.bodyMd.copyWith(
+                        style: AppTextStyle.body.copyWith(
                           fontWeight: FontWeight.w700,
-                          color: titleColor ?? AppColor.onSurface,
+                          color: titleColor ?? AppColor.ink,
                         ),
                       ),
                       if (subtitle != null) ...[
@@ -317,7 +317,7 @@ class _SettingsRow extends StatelessWidget {
                           subtitle!,
                           style: const TextStyle(
                             fontSize: 15,
-                            color: AppColor.outline,
+                            color: AppColor.inkMuted,
                           ),
                         ),
                       ],
@@ -336,7 +336,7 @@ class _SettingsRow extends StatelessWidget {
               height: 1,
               indent: 16,
               endIndent: 16,
-              color: AppColor.outlineVariant,
+              color: AppColor.line,
             ),
         ],
       ),
@@ -358,14 +358,14 @@ class _WarningBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: const BoxDecoration(
-        color: AppColor.errorContainer,
+        color: AppColor.dangerSoft,
         borderRadius: AppRadius.fullAll,
       ),
       child: Text(
         label,
-        style: AppTextStyle.labelSm.copyWith(
+        style: AppTextStyle.label.copyWith(
           fontWeight: FontWeight.w600,
-          color: AppColor.onErrorContainer,
+          color: AppColor.danger,
         ),
       ),
     );
@@ -384,14 +384,14 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColor.tertiaryFixed,
+        color: AppColor.warningSoft,
         borderRadius: AppRadius.fullAll,
       ),
       child: Text(
         label,
-        style: AppTextStyle.labelSm.copyWith(
+        style: AppTextStyle.label.copyWith(
           fontWeight: FontWeight.w600,
-          color: AppColor.onTertiaryFixed,
+          color: AppColor.warning,
         ),
       ),
     );

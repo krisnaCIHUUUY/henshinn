@@ -71,9 +71,9 @@ class _ReportScreenState extends State<ReportScreen> {
     final report = _report;
 
     return Scaffold(
-      backgroundColor: AppColor.background,
+      backgroundColor: AppColor.bg,
       appBar: AppBar(
-        backgroundColor: AppColor.surface,
+        backgroundColor: AppColor.bg,
         title: const Text('Laporan'),
       ),
       body: SafeArea(
@@ -82,16 +82,16 @@ class _ReportScreenState extends State<ReportScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.md,
+                AppSpacing.s6,
+                AppSpacing.s4,
+                AppSpacing.s6,
+                AppSpacing.s4,
               ),
               child: Row(
                 children: [
                   for (final period in ReportPeriod.values)
                     Padding(
-                      padding: const EdgeInsets.only(right: AppSpacing.sm + 2),
+                      padding: const EdgeInsets.only(right: AppSpacing.s2 + 2),
                       child: _PeriodChip(
                         label: period.label,
                         selected: period == _period,
@@ -105,18 +105,18 @@ class _ReportScreenState extends State<ReportScreen> {
               child: switch ((report, _error)) {
                 (_, final String error) => Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    padding: const EdgeInsets.all(AppSpacing.s6),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           error,
                           textAlign: TextAlign.center,
-                          style: AppTextStyle.bodyMd.copyWith(
-                            color: AppColor.error,
+                          style: AppTextStyle.body.copyWith(
+                            color: AppColor.danger,
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.md),
+                        const SizedBox(height: AppSpacing.s4),
                         OutlinedButton(
                           onPressed: _load,
                           child: const Text('Coba lagi'),
@@ -145,17 +145,17 @@ class _ReportBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
+        AppSpacing.s6,
         0,
-        AppSpacing.lg,
-        AppSpacing.lg,
+        AppSpacing.s6,
+        AppSpacing.s6,
       ),
       children: [
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: const EdgeInsets.all(AppSpacing.s6),
           decoration: const BoxDecoration(
-            color: AppColor.surfaceContainerLow,
+            color: AppColor.surfaceMuted,
             borderRadius: AppRadius.lgAll,
           ),
           child: Column(
@@ -163,33 +163,33 @@ class _ReportBody extends StatelessWidget {
             children: [
               Text(
                 'Omzet · ${report.period.label.toLowerCase()}',
-                style: AppTextStyle.labelSm.copyWith(
-                  color: AppColor.onSurfaceVariant,
+                style: AppTextStyle.label.copyWith(
+                  color: AppColor.inkMuted,
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.s2),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: Text(
                   formatRupiah(report.revenue),
-                  style: AppTextStyle.headlineLg.copyWith(
-                    color: AppColor.onSurface,
+                  style: AppTextStyle.amount.copyWith(
+                    color: AppColor.ink,
                     height: 1.0,
                   ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.s2),
               Text(
                 'Laba kotor ${formatRupiah(report.grossProfit)}',
-                style: AppTextStyle.bodyMd.copyWith(
-                  color: AppColor.onSurfaceVariant,
+                style: AppTextStyle.body.copyWith(
+                  color: AppColor.inkMuted,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.s4),
         Row(
           children: [
             Expanded(
@@ -198,14 +198,14 @@ class _ReportBody extends StatelessWidget {
                 value: '${report.transactionCount}',
               ),
             ),
-            const SizedBox(width: AppSpacing.md - 4),
+            const SizedBox(width: AppSpacing.s4 - 4),
             Expanded(
               child: StatBox(
                 label: 'Item terjual',
                 value: '${report.itemCount}',
               ),
             ),
-            const SizedBox(width: AppSpacing.md - 4),
+            const SizedBox(width: AppSpacing.s4 - 4),
             Expanded(
               child: StatBox(
                 label: 'Rata-rata',
@@ -214,11 +214,11 @@ class _ReportBody extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.s6),
         Text(
           'Produk terlaris',
-          style: AppTextStyle.headlineMd.copyWith(
-            color: AppColor.onSurface,
+          style: AppTextStyle.heading.copyWith(
+            color: AppColor.ink,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -226,10 +226,10 @@ class _ReportBody extends StatelessWidget {
           items: report.bestSellers,
           empty: 'Belum ada penjualan di periode ini',
         ),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.s4),
         Text(
           'Transaksi yang sudah di-void tidak dihitung.',
-          style: AppTextStyle.labelSm.copyWith(color: AppColor.outline),
+          style: AppTextStyle.label.copyWith(color: AppColor.inkMuted),
         ),
       ],
     );
@@ -253,22 +253,22 @@ class _PeriodChip extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md - 4,
+          horizontal: AppSpacing.s6,
+          vertical: AppSpacing.s4 - 4,
         ),
         decoration: BoxDecoration(
           color: selected
-              ? AppColor.onSurface
-              : AppColor.surfaceContainerLowest,
+              ? AppColor.ink
+              : AppColor.surface,
           borderRadius: AppRadius.mdAll,
           border: Border.all(
-            color: selected ? AppColor.onSurface : AppColor.outlineVariant,
+            color: selected ? AppColor.ink : AppColor.lineStrong,
           ),
         ),
         child: Text(
           label,
-          style: AppTextStyle.labelSm.copyWith(
-            color: selected ? AppColor.onPrimary : AppColor.onSurface,
+          style: AppTextStyle.label.copyWith(
+            color: selected ? AppColor.onPrimary : AppColor.ink,
           ),
         ),
       ),

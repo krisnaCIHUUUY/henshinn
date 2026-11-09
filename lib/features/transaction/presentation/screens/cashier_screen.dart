@@ -88,7 +88,7 @@ class _CashierViewState extends State<_CashierView> {
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text('Keluar', style: TextStyle(color: AppColor.error)),
+            child: Text('Keluar', style: TextStyle(color: AppColor.danger)),
           ),
         ],
       ),
@@ -137,9 +137,9 @@ class _CashierViewState extends State<_CashierView> {
 
   Widget _buildScaffold(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColor.background,
+      backgroundColor: AppColor.bg,
       appBar: AppBar(
-        backgroundColor: AppColor.surface,
+        backgroundColor: AppColor.bg,
         title: const Text('Kasir'),
         leading: IconButton(
           tooltip: 'Kembali ke dashboard',
@@ -215,7 +215,7 @@ class _ProductPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.s4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -233,9 +233,9 @@ class _ProductPicker extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
+              const SizedBox(width: AppSpacing.s2),
               SizedBox(
-                height: AppSpacing.touchTargetMin,
+                height: AppSpacing.tapMin,
                 child: FilledButton.icon(
                   onPressed: onScanPressed,
                   icon: const Icon(Icons.qr_code_scanner),
@@ -244,7 +244,7 @@ class _ProductPicker extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.s2),
           BlocBuilder<ProductBloc, ProductState>(
             buildWhen: (p, c) => p.products != c.products,
             builder: (context, state) {
@@ -263,8 +263,8 @@ class _ProductPicker extends StatelessWidget {
                   keyword.isEmpty
                       ? 'Belum ada produk siap jual.'
                       : 'Tidak ada produk cocok "$keyword".',
-                  style: AppTextStyle.labelSm.copyWith(
-                    color: AppColor.outline,
+                  style: AppTextStyle.label.copyWith(
+                    color: AppColor.inkMuted,
                   ),
                 );
               }
@@ -275,7 +275,7 @@ class _ProductPicker extends StatelessWidget {
                   scrollDirection: Axis.horizontal,
                   itemCount: available.length,
                   separatorBuilder: (_, _) =>
-                      const SizedBox(width: AppSpacing.sm),
+                      const SizedBox(width: AppSpacing.s2),
                   itemBuilder: (context, index) {
                     final product = available[index];
                     return ActionChip(
@@ -307,18 +307,18 @@ class _CartList extends StatelessWidget {
     if (cart.items.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
+          padding: const EdgeInsets.all(AppSpacing.s6),
           child: Text(
             'Keranjang kosong.\nPilih produk di atas untuk mulai.',
             textAlign: TextAlign.center,
-            style: AppTextStyle.bodyMd.copyWith(color: AppColor.outline),
+            style: AppTextStyle.body.copyWith(color: AppColor.inkMuted),
           ),
         ),
       );
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
       itemCount: cart.items.length,
       separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (context, index) => _CartRow(item: cart.items[index]),
@@ -337,7 +337,7 @@ class _CartRow extends StatelessWidget {
     final id = item.product.id;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s2),
       child: Row(
         children: [
           Expanded(
@@ -346,23 +346,23 @@ class _CartRow extends StatelessWidget {
               children: [
                 Text(
                   item.product.name,
-                  style: AppTextStyle.bodyMd.copyWith(
+                  style: AppTextStyle.body.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: AppColor.onSurface,
+                    color: AppColor.ink,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   '${formatRupiah(item.product.price)} × ${item.qty}',
-                  style: AppTextStyle.labelSm.copyWith(
-                    color: AppColor.outline,
+                  style: AppTextStyle.label.copyWith(
+                    color: AppColor.inkMuted,
                   ),
                 ),
                 if (item.exceedsStock)
                   Text(
                     'Stok tinggal ${item.product.stock}',
-                    style: AppTextStyle.labelSm.copyWith(
-                      color: AppColor.error,
+                    style: AppTextStyle.label.copyWith(
+                      color: AppColor.danger,
                     ),
                   ),
               ],
@@ -374,7 +374,7 @@ class _CartRow extends StatelessWidget {
             onPressed: () =>
                 bloc.add(CartEvent.qtyChanged(id, item.qty - 1)),
           ),
-          Text('${item.qty}', style: AppTextStyle.bodyMd),
+          Text('${item.qty}', style: AppTextStyle.body),
           IconButton(
             tooltip: 'Tambah',
             icon: const Icon(Icons.add_circle_outline),
@@ -386,15 +386,15 @@ class _CartRow extends StatelessWidget {
             child: Text(
               formatRupiah(item.subtotal),
               textAlign: TextAlign.right,
-              style: AppTextStyle.bodyMd.copyWith(
+              style: AppTextStyle.body.copyWith(
                 fontWeight: FontWeight.w700,
-                color: AppColor.onSurface,
+                color: AppColor.ink,
               ),
             ),
           ),
           IconButton(
             tooltip: 'Hapus',
-            icon: Icon(Icons.close, color: AppColor.outline),
+            icon: Icon(Icons.close, color: AppColor.inkMuted),
             onPressed: () => bloc.add(CartEvent.itemRemoved(id)),
           ),
         ],
@@ -417,14 +417,14 @@ class _PaymentPanel extends StatelessWidget {
 
     return Container(
       padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.md,
-        AppSpacing.lg,
-        AppSpacing.md + MediaQuery.viewInsetsOf(context).bottom,
+        AppSpacing.s6,
+        AppSpacing.s4,
+        AppSpacing.s6,
+        AppSpacing.s4 + MediaQuery.viewInsetsOf(context).bottom,
       ),
       decoration: BoxDecoration(
-        color: AppColor.surfaceContainerLowest,
-        border: Border(top: BorderSide(color: AppColor.outlineVariant)),
+        color: AppColor.surface,
+        border: Border(top: BorderSide(color: AppColor.line)),
       ),
       child: Column(
         children: [
@@ -433,7 +433,7 @@ class _PaymentPanel extends StatelessWidget {
             value: formatRupiah(cart.total),
             emphasize: true,
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.s2),
           TextField(
             controller: controller,
             keyboardType: TextInputType.number,
@@ -448,16 +448,16 @@ class _PaymentPanel extends StatelessWidget {
               border: OutlineInputBorder(borderRadius: AppRadius.mdAll),
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.s2),
           _Line(
             label: cart.change < 0 ? 'Masih kurang' : 'Kembalian',
             value: formatRupiah(cart.change.abs()),
             isError: cart.change < 0,
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.s4),
           SizedBox(
             width: double.infinity,
-            height: AppSpacing.touchTargetMin,
+            height: AppSpacing.tapMin,
             child: ElevatedButton(
               onPressed: cart.canCheckout
                   ? () => context.read<CartBloc>().add(
@@ -465,7 +465,7 @@ class _PaymentPanel extends StatelessWidget {
                     )
                   : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColor.onSurface,
+                backgroundColor: AppColor.ink,
                 foregroundColor: AppColor.onPrimary,
                 shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
               ),
@@ -494,9 +494,9 @@ class _Line extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = emphasize
-        ? AppTextStyle.headlineLg.copyWith(color: AppColor.onSurface)
-        : AppTextStyle.bodyMd.copyWith(
-            color: isError ? AppColor.error : AppColor.onSurface,
+        ? AppTextStyle.stat.copyWith(color: AppColor.ink)
+        : AppTextStyle.body.copyWith(
+            color: isError ? AppColor.danger : AppColor.ink,
           );
 
     return Row(
@@ -504,8 +504,8 @@ class _Line extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppTextStyle.bodyMd.copyWith(
-            color: isError ? AppColor.error : AppColor.outline,
+          style: AppTextStyle.body.copyWith(
+            color: isError ? AppColor.danger : AppColor.inkMuted,
           ),
         ),
         Text(value, style: style),
