@@ -999,3 +999,236 @@ murni mekanis** — pemetaan nama bisa benar sementara artinya salah, dan hanya
 Cross-link: ADR-043 (orientasi scanner) menyentuh file yang sama; aturan nomor
 3 di atas menjelaskan kenapa file itu tidak ikut tokenisasi.
 
+---
+
+## ADR-047 — Dasbor dibuang; Pengaturan turun dari tab jadi ikon gear
+
+**Keputusan.** Desain v2 tidak punya Dasbor, dan ini bukan "belum digambar":
+`lib/features/dashboard/` dihapus seluruhnya di D2, beserta rute `dashboard`.
+Kasir jadi tab pertama dan layar pembuka. Tab keempat yang dulu Pengaturan
+diisi Laporan; Pengaturan dibuka dari ikon gear di app bar Laporan.
+
+**Alasan.** Dasbor adalah layar yang tidak dipakai saat bekerja: pemilik warung
+membuka aplikasi untuk melayani pembeli, bukan untuk melihat angka. Menaruh
+Kasir di balik satu ketukan tombol di Dasbor membuat pekerjaan yang dilakukan
+ratusan kali sehari selalu satu langkah lebih jauh (PRD §1.5 menuntut
+transaksi 3 item ≤ 30 detik). Pengaturan sebaliknya: dibuka beberapa kali
+sebulan, jadi tidak layak memegang satu dari empat slot tab.
+
+**Ke mana isi Dasbor pindah.**
+
+| Bagian Dasbor | Rumah barunya |
+|---|---|
+| Omzet hari ini (`_RevenueCard`, `_StatsRow`) | Laporan, chip "Hari ini" — sudah ada di sana |
+| Grafik 7 hari (`_RevenueChart`) | **dibuang**; v2 mengganti grafik dengan laba kotor (D8) |
+| `BackupReminder` | Pengaturan, sebagai `Notice` (D8) |
+| Tombol "Mulai transaksi" | **dibuang**; Kasir sudah jadi tab pertama |
+| `_RestockList` (sudah di-comment) | **dihapus**; chip "Perlu restok" di Produk (D6) |
+
+**Konsekuensi yang diterima.**
+
+- **`SettingScreen` sekarang wajib punya app bar.** Sebagai tab ia tidak
+  pernah butuh tombol kembali; sebagai layar yang di-*push*, tanpa app bar
+  tidak ada jalan keluar. Jangan hapus app bar itu selama Pengaturan bukan tab.
+- **Pengingat backup hilang dari mata pemilik sampai D8.** Yang tersisa badge
+  "Perlu backup" di baris Backup di dalam Pengaturan — artinya pengingat itu
+  hanya terlihat kalau pemilik sudah membuka Pengaturan, padahal gunanya justru
+  mengingatkan orang yang tidak membukanya. Ini utang dengan batas waktu: D8.
+- **`LowStockScreen` dihapus bersamaan**, jadi banner "N produk perlu restok"
+  di layar Produk tidak bisa diketuk lagi sampai chip penggantinya lahir di D6.
+  Bannernya dibiarkan tampil (informasinya masih benar), hanya `onTap`-nya
+  dicabut — rute yang menuju layar yang sudah tidak ada akan melempar.
+- `PageRoutes.mulaiTransaksi` berganti nama jadi `kasir`: rutenya berubah arti
+  dari aksi ("mulai transaksi") jadi tempat (tab Kasir).
+
+Cross-link: ADR-048 (umur `CartBloc`, konsekuensi langsung dari Kasir jadi
+tab), ADR-012 (kenapa tidak ada tes widget untuk navigasinya).
+
+---
+
+## ADR-048 — `CartBloc` hidup di atas shell navigasi, bukan di dalam layar Kasir
+
+**Keputusan.** `BlocProvider<CartBloc>` ada di `main.dart`, di atas
+`MaterialApp.router`. `CashierScreen` **tidak** membuatnya.
+
+**Alasan.** Selama Kasir masih rute penuh, keranjang lahir dan mati bersama
+layarnya dan itu benar: keluar dari kasir memang berarti membatalkan
+transaksi. Begitu Kasir jadi `StatefulShellBranch` (ADR-047), pindah ke tab
+Produk bukan lagi "keluar dari kasir" — pemilik justru pindah ke sana untuk
+mengecek stok atau menambah produk di tengah transaksi, lalu kembali. Kalau
+blocnya tetap dibuat di dalam layar, `StatefulShellRoute` membangun ulang
+branch-nya dan **keranjang yang sudah berisi 8 item hasil scan jadi kosong**,
+tanpa pesan apa pun.
+
+**Konsekuensi yang diterima.**
+
+- **Keranjang seumur aplikasi.** Isinya baru hilang kalau dikosongkan,
+  dibayar, atau aplikasinya ditutup. Itu memang yang diinginkan — tapi berarti
+  keranjang yang ditinggalkan semalam masih ada besok pagi dengan harga yang
+  mungkin sudah berubah. `priceAtSale` disnapshot saat bayar, bukan saat masuk
+  keranjang, jadi angka yang tersimpan tetap harga saat transaksi.
+- **Tombol back di tab Kasir menutup aplikasi**, karena tidak ada rute di
+  bawahnya untuk di-pop. Konfirmasi "Tutup aplikasi? Keranjang yang belum
+  dibayar akan hilang." tetap ada dan keluarnya lewat `SystemNavigator.pop()`.
+  Jangan ganti dengan `Navigator.pop()`: di rute paling bawah itu tidak
+  melakukan apa pun, jadi tombol Keluar akan terasa rusak.
+- **Tidak ada tes otomatis yang menjaga ini.** `CartBloc` tidak punya konsep
+  tab; yang menentukan keranjang bertahan adalah **posisi providernya di widget
+  tree**, bukan isi blocnya, jadi tes bloc untuk ini hanya akan menguji ulang
+  `flutter_bloc`. Penggantinya tiga komentar peringatan (`main.dart`,
+  `injection_container.dart`, dartdoc `CashierScreen`) dan satu langkah uji
+  manual: isi keranjang → pindah tab → kembali.
+- Registrasinya di get_it tetap `registerFactory`, tapi dipanggil sekali saja
+  dari `main.dart`. Komentar "tiap kunjungan ke kasir mulai dengan keranjang
+  kosong" di `injection_container.dart` sudah **tidak benar** dan diperbarui.
+
+Cross-link: ADR-047 (yang memicunya), ADR-051 (bug layout di layar yang sama).
+
+---
+
+## ADR-049 — PIN jadi bottom sheet; wadahnya berubah, aturannya tidak
+
+**Keputusan.** `PinGate.require` membuka `PinVerifySheet` lewat
+`showModalBottomSheet`, bukan `context.push` ke `PinVerifyScreen`. Rute
+`verifikasi-pin` dan layarnya dihapus.
+
+**Alasan.** Layar penuh membuang konteks: pemilik yang sedang mem-void
+transaksi kehilangan tampilan transaksi itu persis saat ia harus memastikan
+sedang mem-void yang benar. Sheet menyisakannya terlihat di belakang.
+
+**Batas yang tidak boleh ikut berubah.** Sheet **hanya** mengganti wadah:
+
+- Jeda bertingkat setelah salah berulang (5s → 30s → 5 menit) dan seluruh
+  aturan `PinRepository` tetap apa adanya. Gerbangnya eksplisit: 9 tes
+  `pin_repository_impl_test.dart` harus hijau **tanpa diubah**. Kalau suatu
+  saat salah satunya perlu diubah demi wadah barunya, itu tanda wadahnya ikut
+  mengubah aturan — hentikan, jangan sesuaikan tesnya.
+- `PopScope(canPop: false)` selama status `loading`, supaya tombol kembali
+  tidak membatalkan di tengah verifikasi: hitungan gagal sudah tercatat di
+  titik itu, jadi membatalkannya diam-diam akan membuat jeda muncul tanpa
+  sebab yang terlihat.
+- Empat pemanggil (void, restore, ubah harga/modal, ganti PIN) tidak disentuh
+  satu baris pun. Itu alasan `PinGate` dibuat sebagai pintu tunggal (ADR-028).
+
+**Konsekuensi yang diterima.**
+
+- Sheet bisa ditutup dengan menggeser ke bawah atau mengetuk latar — sama
+  artinya dengan membatalkan (`false`), persis seperti tombol kembali di layar
+  lama. Tidak ada aksi sensitif yang lolos karena ini: `require` hanya
+  mengembalikan `true` kalau blocnya melaporkan sukses.
+- Tes widget alur PIN sekarang masuk lewat `PinGate.require`, bukan dengan
+  mendorong layar verifikasi langsung — kebetulan jadi lebih jujur: yang diuji
+  jalur yang sungguhan dipakai, termasuk cabang "PIN belum dibuat".
+- Penantian PBKDF2 di tes itu diganti dari satu `Future.delayed(3s)` tetap
+  menjadi menunggu sampai UI-nya benar-benar berubah (maksimal 12 detik).
+  Alasannya bukan selera: delay tetap itu **gagal sekali** saat suite penuh
+  jalan paralel di mesin sibuk. Jangan kembalikan ke delay tetap; kalau butuh
+  pola yang sama di tes lain, pakai `waitUntil` di file itu sebagai contoh.
+
+Cross-link: ADR-028 (`PinGate` sebagai helper statis), ADR-012 (fake-async),
+ADR-047 (D2 yang mendahuluinya).
+
+---
+
+## ADR-050 — Query terlaris kedua untuk kasir, dan apa yang mengisi "Sering dibeli"
+
+**Keputusan.** `ProductDao.watchFrequentProducts()` ditambahkan **di samping**
+`ReportDao.getBestSellers`, bukan menggantinya. Query baru mengelompokkan
+`transaction_items.productId` lalu join ke `products` dan mengembalikan baris
+produk utuh: 30 hari terakhir, hanya transaksi `completed`, hanya produk aktif
+dan berstok, urut jumlah terjual, limit 5.
+
+**Alasan.** `getBestSellers` mengelompokkan `transaction_items.productName` —
+**snapshot nama**, tanpa id dan tanpa harga. Itu tepat untuk laporan (nama
+historis harus ikut nama saat terjual, bukan nama produk sekarang), tapi
+hasilnya tidak bisa dimasukkan ke keranjang: `CartItem` butuh `ProductEntity`
+utuh. Memaksa yang lama dipakai berarti mencari produk berdasarkan nama, dan
+nama bukan kunci — produk yang sudah di-rename atau dihapus akan cocok ke
+produk yang salah atau tidak cocok sama sama sekali.
+
+Jadi dua query ini memang menjawab dua pertanyaan berbeda: "apa yang terjual"
+(sejarah, nama snapshot) dan "apa yang bisa saya jual sekarang" (produk hidup).
+Jangan digabung.
+
+**Yang disaring di SQL, dan kenapa.** Produk nonaktif dan stok habis tidak
+muncul karena tidak bisa masuk keranjang — kalau disaring di UI, `limit 5`
+sudah terpakai oleh baris yang kemudian dibuang, dan daftarnya bisa tampil
+berisi dua produk padahal ada lima yang layak. Transaksi `voided` tidak
+dihitung: void berarti penjualan itu dianggap tidak pernah terjadi.
+
+**Isi daftarnya saat belum ada riwayat.** Toko baru tidak punya penjualan, jadi
+query ini mengembalikan kosong. Kalau dibiarkan, kasir tidak punya apa pun
+untuk diketuk sampai transaksi pertama selesai — padahal transaksi pertama itu
+yang sedang coba dilakukan. Jadi ada fallback: judulnya berganti jadi "Produk
+siap jual" dan isinya produk aktif berstok dari `ProductBloc`, tanpa query
+tambahan.
+
+**Chip kategori di Kasir mengganti daftarnya** (keputusan pemilik 2026-11-10;
+mockup tidak menjelaskan chip itu memfilter apa). "Semua" + kotak cari kosong
+→ terlaris 30 hari. Pilih kategori atau ketik di kotak cari → daftar berganti
+jadi produk kategori itu / hasil cari, difilter dari state `ProductBloc` tanpa
+query baru. Chip hanya muncul untuk kategori yang punya produk **siap jual**:
+aturan yang sama dengan layar Produk (ADR-038), bedanya di sini stok ikut
+dihitung karena yang habis tidak bisa dijual.
+
+**Konsekuensi yang diterima.**
+
+- `since` dihitung sekali saat stream dibuat (`initState`), jadi aplikasi yang
+  dibiarkan terbuka berhari-hari memakai jendela 30 hari yang ikut menua.
+  Ditandai `shortcut:` di DAO. Naikkan ke tanggal SQL kalau jadi masalah nyata.
+- `ProductDao` sekarang ikut membaca `TransactionItems` dan `Transactions`.
+  Itu melebar dari "DAO satu tabel", tapi query ini **harus** join, dan
+  rumahnya di DAO produk karena yang dikembalikan baris produk.
+- Kalau nanti biayanya terasa tidak sepadan, pilihan "daftar produk aktif
+  biasa" tinggal menghapus satu `StreamBuilder` — tapi itu keputusan pemilik,
+  bukan keputusan saat menulis kode.
+
+Cross-link: ADR-032 (agregat laporan dihitung di memori), ADR-038 (chip
+kategori hanya untuk kategori berisi).
+
+---
+
+## ADR-051 — `Column` di dalam `bottomNavigationBar` wajib `mainAxisSize.min`
+
+**Keputusan.** Setiap `Column` yang jadi isi `Scaffold.bottomNavigationBar`
+harus `mainAxisSize: MainAxisSize.min`, atau tingginya dibatasi `SizedBox`.
+Berlaku untuk PayBar Kasir, batang "Selesaikan transaksi", dan batang tombol
+di layar Struk.
+
+**Bug yang melahirkannya** (ditemukan pemilik saat verifikasi D2–D5): begitu
+satu produk masuk keranjang, **keranjang dan daftar produk hilang sama sekali**
+dan tombol Bayar mengambang di tengah layar.
+
+**Penyebabnya.** `Scaffold` melayout `bottomNavigationBar` dengan batas
+**longgar setinggi layar penuh**, bukan setinggi isinya. `Column` default
+`mainAxisSize.max`, jadi ia mengambil seluruh 844 px yang ditawarkan. PayBar
+jadi setinggi layar, `body` Scaffold kebagian **0 px**, dan `ListView` yang
+tingginya nol **tidak membangun satu pun anaknya** — itu sebabnya dua bagian
+hilang bersamaan padahal keduanya ada di tree. Gejalanya menyesatkan: yang
+terlihat "memenuhi layar" bukan yang rusak, tapi batang di bawahnya.
+
+**Pelajarannya, dan ini yang penting untuk D6–D9.** Batas longgar bukan batas
+ketat: `maxHeight` yang besar tetap "boleh dipakai seluruhnya", dan setiap
+widget yang rakus (`Column` max, `Expanded`, `Spacer`) akan memakainya. Setiap
+batang bawah yang ditambahkan nanti harus dibaca dengan asumsi itu.
+
+**Batas ADR-012 yang jadi jelas.** Kelas bug ini **bisa** dijaga
+`testWidgets`, karena yang diuji **geometri, bukan data**: tidak ada stream
+Drift yang perlu maju. `test/features/transaction/cashier_layout_test.dart`
+memalsukan semua repository dengan stream kosong (`Fake` + `Stream.value`),
+dan hanya satu `WatchFrequentProducts` didaftarkan ke get_it — tanpa
+`initDependencies`, jadi tanpa DB, tanpa timer, tanpa isolate. Tesnya
+dibuktikan dua arah: merah sebelum perbaikan (`Found 0 widgets with text
+"Keranjang · 1 produk"`), hijau sesudah.
+
+Jadi aturan ADR-012 dipertajam, bukan dibatalkan: yang tidak bisa diuji
+`testWidgets` adalah alur yang **menunggu data dari Drift**. Layout, validator,
+dan teks tetap bisa — dan untuk layar yang punya batang bawah, memang harus.
+
+**Konsekuensi yang diterima.** Perbaikan ini juga dipasang di batang bawah
+layar Struk walau pemilik belum pernah melihat layar itu rusak: bentuknya
+identik, jadi menunggu bug yang sama muncul lagi hanya membuang satu putaran
+verifikasi.
+
+Cross-link: ADR-012 (batas tes widget, dipertajam di sini), ADR-048 (layar yang
+sama), ADR-013 (bug yang lolos karena layarnya tidak punya tes).

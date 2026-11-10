@@ -96,9 +96,9 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     setState(() => _voiding = false);
 
     result.fold(
-      (failure) => ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(failure.message))),
+      (failure) =>
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(failure.message))),
       (_) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Transaksi di-void, stok dikembalikan')),
@@ -116,7 +116,10 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       backgroundColor: AppColor.bg,
       appBar: AppBar(
         backgroundColor: AppColor.bg,
-        title: Text('Transaksi #${widget.transactionId}'),
+        title: Text(
+          'Transaksi #${widget.transactionId}',
+          style: AppTextStyle.title.copyWith(color: AppColor.ink),
+        ),
       ),
       body: SafeArea(
         child: switch ((receipt, _error)) {
@@ -191,18 +194,14 @@ class _DetailBody extends StatelessWidget {
             child: Text(
               'Transaksi ini sudah di-void.'
               '${receipt.voidReason == null ? '' : '\nAlasan: ${receipt.voidReason}'}',
-              style: AppTextStyle.body.copyWith(
-                color: AppColor.danger,
-              ),
+              style: AppTextStyle.body.copyWith(color: AppColor.danger),
             ),
           ),
         Text(
           // Format angka, bukan nama bulan: nama bulan lokal butuh data locale
           // intl yang belum diinisialisasi di app ini.
           DateFormat('dd/MM/yyyy HH:mm').format(receipt.dateTime),
-          style: AppTextStyle.body.copyWith(
-            color: AppColor.inkMuted,
-          ),
+          style: AppTextStyle.body.copyWith(color: AppColor.inkMuted),
         ),
         const SizedBox(height: AppSpacing.s6),
         for (final line in receipt.lines)
@@ -233,9 +232,7 @@ class _DetailBody extends StatelessWidget {
                 ),
                 Text(
                   formatRupiah(line.subtotal),
-                  style: AppTextStyle.bodyStrong.copyWith(
-                    color: AppColor.ink,
-                  ),
+                  style: AppTextStyle.bodyStrong.copyWith(color: AppColor.ink),
                 ),
               ],
             ),

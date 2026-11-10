@@ -5,6 +5,9 @@ permintaan pemilik. Pelengkap `docs/implementasi.md` (langkah 1–15, **sudah
 selesai semua**), bukan penggantinya — penomorannya dipisah **D1–D9** supaya
 tidak pernah tertukar dengan "langkah" rencana lama.
 
+**Status:** D1 selesai & diverifikasi 2026-11-09. **D2–D5 selesai &
+diverifikasi 2026-11-10** (ADR-047 s/d ADR-051). Berikutnya D6.
+
 **Sumber kebenaran desain**, berurutan:
 
 1. `design/design_v2/henshin-design-system-v2/tokens.json` — angka token.

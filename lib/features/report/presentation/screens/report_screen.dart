@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:henshin/core/theme/app_color.dart';
 import 'package:henshin/core/theme/app_radius.dart';
 import 'package:henshin/core/theme/app_spacing.dart';
 import 'package:henshin/core/theme/app_text_style.dart';
 import 'package:henshin/core/utils/currency_formatter.dart';
+import 'package:henshin/core/utils/page_routes.dart';
 import 'package:henshin/features/report/domain/entities/sales_report.dart';
 import 'package:henshin/features/report/domain/repositories/report_repository.dart';
 import 'package:henshin/features/report/presentation/widgets/report_stats.dart';
@@ -75,6 +77,14 @@ class _ReportScreenState extends State<ReportScreen> {
       appBar: AppBar(
         backgroundColor: AppColor.bg,
         title: const Text('Laporan'),
+        // Pengaturan bukan tab lagi (D2) — ini satu-satunya pintunya.
+        actions: [
+          IconButton(
+            tooltip: 'Pengaturan',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => context.push(PageRoutes.setting),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(

@@ -16,6 +16,7 @@ import 'package:henshin/features/product/domain/usecases/delete_product.dart';
 import 'package:henshin/features/product/domain/usecases/find_or_create_category.dart';
 import 'package:henshin/features/product/domain/usecases/get_product_by_barcode.dart';
 import 'package:henshin/features/product/domain/usecases/update_product.dart';
+import 'package:henshin/features/product/domain/usecases/watch_frequent_products.dart';
 import 'package:henshin/features/product/presentation/bloc/product_bloc.dart';
 import 'package:henshin/features/report/data/repositories/report_repository_impl.dart';
 import 'package:henshin/features/report/domain/repositories/report_repository.dart';
@@ -74,6 +75,9 @@ void initDependencies() {
   sl.registerLazySingleton<FindOrCreateCategory>(
     () => FindOrCreateCategory(sl()),
   );
+  sl.registerLazySingleton<WatchFrequentProducts>(
+    () => WatchFrequentProducts(sl()),
+  );
   sl.registerFactory<ProductBloc>(
     () => ProductBloc(
       repository: sl(),
@@ -91,7 +95,8 @@ void initDependencies() {
   // (PRD §2.8). Tukar baris ini saat impl ESC/POS siap — lihat ADR-023.
   sl.registerLazySingleton<PrinterService>(() => PdfPrinterService());
   sl.registerLazySingleton<CreateSale>(() => CreateSale(sl()));
-  // factory, bukan singleton: tiap kunjungan ke kasir mulai dengan keranjang kosong
+  // factory, tapi dibuat sekali saja di main.dart — umurnya seumur aplikasi
+  // supaya keranjang bertahan saat pindah tab (ADR-048).
   sl.registerFactory<CartBloc>(() => CartBloc(createSale: sl()));
 
   // ===== report =====

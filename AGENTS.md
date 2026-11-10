@@ -49,6 +49,11 @@ docs/struktur_folder.md        # ASPIRATIONAL — differs from code, do not foll
 - Money input: parse with `parseRupiah`, display with `formatRupiah` (`core/utils/currency_formatter.dart`).
 - Navigation: add routes via `PageRoutes` constants + `app_router.dart`. Bottom tabs = `StatefulShellBranch`; full-screen routes (cashier) = top-level `GoRoute`.
 - UI: use `AppColor/AppSpacing/AppRadius/AppTextStyle` tokens; format via `currency_formatter`.
+- A `Column` inside `Scaffold.bottomNavigationBar` MUST set
+  `mainAxisSize: MainAxisSize.min` (or be height-capped by a `SizedBox`).
+  Scaffold lays that slot out with loose constraints as tall as the screen, so a
+  default `Column` eats the whole screen, the body collapses to 0 px, and a
+  zero-height `ListView` silently builds none of its children (ADR-051).
 - Tests: flows that hit the DB go in repository/bloc tests (plain `test()`, real async). `testWidgets` runs in fake-async, so Drift streams stall and `pumpAndSettle` times out — keep widget tests to pure-UI assertions. Fake plugins via their platform interface (`FlutterSecureStoragePlatform.instance`, `PathProviderPlatform.instance`), never via a wrapper in production code (ADR-012).
 
 ## 4. Run / test / build

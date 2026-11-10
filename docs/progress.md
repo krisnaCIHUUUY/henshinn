@@ -1,7 +1,7 @@
 # Progress Henshin POS
 
-Status eksekusi `docs/implementasi.md`. Diperbarui 2026-11-09 (langkah 1–15 selesai; kategori produk; desain v2
-langkah D1 dari sembilan).
+Status eksekusi `docs/implementasi.md`. Diperbarui 2026-11-10 (langkah 1–15 selesai; kategori produk; desain v2
+langkah D1–D5 dari sembilan).
 
 Keputusan arsitektur yang diambil selama eksekusi dicatat terpisah di
 `docs/keputusan-arsitektur.md`.
@@ -43,9 +43,11 @@ dicatat sebagai utang: impl cetak ESC/POS yang menunggu printer fisik
 (langkah 9) dan dua metrik PRD yang belum bisa diukur — lihat tabel utang
 teknis. Pekerjaan yang sedang berjalan sekarang bukan dari
 `docs/implementasi.md` lagi tapi dari `docs/implementasi_design.md`: penerapan
-desain UI v2, D1 dari sembilan langkah.
+desain UI v2, D1–D5 dari sembilan langkah. Sejak D2 isi `docs/implementasi.md`
+sudah tidak menggambarkan susunan layar aplikasi: Dasbor (langkah 12) dibuang
+dan Kasir (langkah 6) pindah jadi tab pertama.
 
-**Verifikasi saat ini:** 173 tes lolos, `flutter analyze` bersih.
+**Verifikasi saat ini:** 189 tes lolos, `flutter analyze` bersih.
 
 Uji manual di device oleh pemilik repo: langkah 1–5, 7, dan 10–15 ✅; langkah 6
 (kasir) dan 8 (struk) sebagian — lima bug ditemukan dan sudah diperbaiki, lihat
@@ -593,28 +595,105 @@ Yang akan langsung terasa beda: sudut membulat lebih besar (`radius.sm` 4 → 8,
 
 ---
 
+## Desain v2 — D2–D5: navigasi, PIN sheet, Kasir, Pembayaran
+
+Empat langkah dikerjakan sekaligus atas permintaan pemilik, diverifikasi di HP
+2026-11-10. Alasan tiap keputusannya di **ADR-047** sampai **ADR-051**.
+
+### D2 — Kasir jadi tab pertama, Dasbor dibuang
+
+Empat tab **Kasir · Produk · Riwayat · Laporan**. `lib/features/dashboard/` dan
+`low_stock_screen.dart` dihapus seluruhnya, beserta rute `dashboard` dan
+`perlu-restok`. Pengaturan turun dari tab jadi ikon gear di app bar Laporan —
+dan karena sekarang di-*push*, layar itu diberi app bar sendiri: tanpa itu
+tidak ada jalan kembali. Ke mana tiap bagian Dasbor pindah: ADR-047.
+
+**Yang paling mudah dibatalkan tanpa sengaja: `CartBloc` naik ke `main.dart`,**
+di atas `StatefulShellRoute`. Kalau diturunkan lagi ke dalam `CashierScreen`,
+pindah tab di tengah transaksi akan mengosongkan keranjang. Peringatannya
+ditulis di tiga tempat (`main.dart`, `injection_container.dart`, dartdoc
+`CashierScreen`) karena tidak ada tes yang bisa menjaganya (ADR-048).
+
+### D3 — PIN jadi bottom sheet
+
+`PinGate.require` membuka `showModalBottomSheet`, bukan rute penuh, jadi
+transaksi yang sedang di-void tetap terlihat di belakangnya. Empat
+pemanggilnya tidak disentuh sama sekali — itu gunanya pintu tunggal. Jeda
+bertingkat 5s → 30s → 5 menit dan seluruh `PinRepository` tidak berubah: 9
+tesnya hijau tanpa satu baris diubah, yang memang jadi syaratnya di rencana
+(ADR-049).
+
+### D4 — Kasir + "Sering dibeli" + PayBar
+
+`ProductDao.watchFrequentProducts()` adalah query **kedua** di samping
+`ReportDao.getBestSellers`, dan memang harus baru: yang lama mengelompokkan
+nama snapshot tanpa id dan harga, jadi hasilnya tidak bisa dimasukkan ke
+keranjang (ADR-050). 30 hari, transaksi lunas saja, produk aktif dan berstok,
+limit 5 — lima tes repository menjaga tiap aturannya.
+
+Chip kategori mengganti daftarnya: "Semua" + kotak cari kosong → terlaris;
+pilih kategori atau ketik → daftar produk kategori/hasil cari. Keputusan
+pemilik 2026-11-10, karena mockup tidak menjelaskan chip itu memfilter apa.
+
+### D5 — Pembayaran jadi layar sendiri + Struk
+
+`_PaymentPanel` keluar dari Kasir jadi `payment_screen.dart`. Tombol cepat
+**tidak pernah menawarkan uang yang kurang dari total** — "Uang pas" plus
+pecahan yang lebih besar saja; empat tes fungsi murni menjaganya. Struk
+menggantikan layar bayar (`pushReplacement`), dapat `Notice` hijau dan tombol
+"Transaksi baru" yang kembali ke Kasir dengan keranjang kosong. `int` rupiah
+dan simpan-atomik tidak tersentuh.
+
+### Bug yang ditemukan pemilik saat verifikasi: PayBar memenuhi layar
+
+Keranjang dan daftar produk hilang sama sekali begitu satu produk masuk,
+sementara tombol Bayar mengambang di tengah layar. Sebabnya `Scaffold` memberi
+`bottomNavigationBar` batas longgar **setinggi layar penuh**, dan satu `Column`
+tanpa `mainAxisSize` di dalam PayBar memakan semuanya — `body` jadi 0 px, dan
+`ListView` setinggi nol tidak membangun satu pun anaknya. Perbaikannya
+`MainAxisSize.min`, sekalian di batang bawah layar Struk yang bentuknya sama.
+
+Ini kelas bug yang **bisa** dijaga `testWidgets`, karena yang diuji geometri
+dan bukan data: `test/features/transaction/cashier_layout_test.dart` dibuktikan
+merah sebelum perbaikan dan hijau sesudah, dengan semua repository dipalsukan
+stream kosong supaya tidak ada DB dan tidak ada stream Drift yang menggantung
+(ADR-051 — batas yang memperjelas ADR-012).
+
+### Tes
+
+173 → 189. Lima tes query terlaris, empat tes tombol cepat, lima tes chip
+kategori + inisial avatar, dua tes geometri Kasir. `pin_flow_widget_test`
+sekalian diperbaiki: penantian PBKDF2-nya dulu satu `Future.delayed(3s)` tetap
+yang sempat kehabisan waktu saat suite penuh jalan paralel, sekarang menunggu
+sampai UI-nya benar-benar berubah — dan filenya jadi 24 detik → 7 detik.
+
+---
+
 ## Utang teknis yang masih terbuka
 
 | Hal | Dampak |
 |---|---|
-| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (173 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
+| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (189 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
 | `settings.schemaVersion` hanya diisi saat seed | Jadi basi setelah bump versi berikutnya. Ditandai `shortcut:` di kode |
 | `decrementStock`/`incrementStock` lama di `ProductDao` tidak menulis ledger dan **tidak dipakai siapa pun** | Langkah 6 dan 11 tidak memakainya (keduanya lewat `TransactionDao`). Sekarang murni mati — kandidat dihapus |
 | `setting_screen.dart` masih memuat baris dummy "Pajak (PPN) 11%" dan "Printer thermal BT-01" | Keduanya di luar scope atau belum ada (AGENTS.md §6, langkah 9), perlu dibersihkan sebelum rilis. Baris "Export laporan CSV" sudah dihapus di langkah 13 |
 | Riwayat pergerakan stok belum punya tampilan | Ledger ditulis (termasuk oleh void) tapi belum bisa dilihat pemilik. Riwayat langkah 10 menampilkan transaksi, bukan ledger |
 | Layar riwayat + detail transaksi belum punya tes widget | Logikanya teruji di tes repository, navigasi dan dialog alasan void hanya terverifikasi manual (ADR-012, ADR-028) |
 | Ikon ekspor di header riwayat masih mati | Peninggalan UI dummy; ekspor CSV di luar scope (AGENTS.md §6). Perlu dihapus atau diganti fungsi lain |
-| Layar `StockSheet`, `LowStockScreen`, jalur PinGate-saat-ubah-harga, dan alur simpan form sampai layarnya tertutup belum punya tes | Terverifikasi manual, bukan otomatis. Celah inilah yang melewatkan bug ADR-013. Lihat ADR-012 |
-| Sapaan dashboard masih hardcoded `'Henshin Store · kasir 1'` | Nama toko asli sudah ada di tabel `settings` sejak langkah 8 tapi tidak dipakai di header dashboard |
-| Blok `_RestockList` di `dashboard_screen.dart` masih di-comment | Peninggalan UI dummy; `LowStockScreen` sudah menanganinya. Kandidat hapus |
+| Layar `StockSheet`, jalur PinGate-saat-ubah-harga, dan alur simpan form sampai layarnya tertutup belum punya tes | Terverifikasi manual, bukan otomatis. Celah inilah yang melewatkan bug ADR-013. Lihat ADR-012 |
 | Angka 30 hari menjumlahkan header transaksi di memori | Aman untuk satu warung; perlu pindah ke agregat SQL (dengan offset zona waktu eksplisit) kalau datanya jadi tahunan. ADR-032 |
-| Dashboard dan `ReportScreen` belum punya tes widget | Angkanya dijaga 13 tes repository; chart fl_chart merender di canvas jadi tes widget hanya bisa memastikan widget-nya ada |
+| `ReportScreen` belum punya tes widget | Angkanya dijaga 13 tes repository. Dasbor sudah tidak ada lagi sejak D2 (ADR-047), jadi chart fl_chart ikut hilang dari aplikasi |
 | Barcode yang beda hanya nol di depan tidak dicocokkan | Kemasan UPC-A mencetak 12 digit sementara scanner bisa melaporkannya sebagai EAN-13 dengan nol tambahan. Pencocokan longgar sengaja ditolak: dua produk yang beda hanya nol di depan akan saling tertukar (ADR-044) |
 | Produk yang pernah terjual tidak bisa dihapus selamanya | Hanya bisa dinonaktifkan: hilang dari kasir, tetap di daftar produk. Void tidak membebaskannya. Kalau daftarnya jadi penuh, yang dibutuhkan fitur "sembunyikan dari daftar produk", bukan hapus (ADR-045) |
 | Nama kategori tidak bisa dihapus atau diganti dari dalam aplikasi | Disengaja (ADR-038): salah ketik hilang dari layar begitu produknya dipindah, tapi barisnya menumpuk di DB selamanya. Diterima karena tidak ada laporan yang membacanya |
 | Kategori bisa lahir tanpa produk | Kalau penyimpanan produk gagal setelah kategorinya dibuat, kategori itu tetap ada. Sengaja tidak dibungkus satu transaksi karena tab kosong tidak pernah ditampilkan (ADR-038) |
 | `lower()` SQLite hanya melipat ASCII | "Café" dan "café" masih bisa jadi dua kategori. Ditandai `shortcut:` di `CategoryDao` (ADR-038) |
-| Desain v2 baru sampai D1 dari sembilan | Lapisan token sudah v2 tapi susunan layarnya masih v1: Dasbor masih ada, Kasir masih di balik tombol, PIN masih layar penuh. Jadi aplikasinya sekarang berwarna v2 dengan navigasi v1 — `docs/implementasi_design.md` D2–D9 |
+| Desain v2 baru sampai D5 dari sembilan | Kasir, Pembayaran, dan Struk sudah v2; Produk, Riwayat, Laporan, dan Pengaturan masih susunan v1 di dalam navigasi v2 — `docs/implementasi_design.md` D6–D9 |
+| "Keranjang bertahan saat pindah tab" tidak dijaga tes otomatis | Yang menentukan bukan isi `CartBloc` tapi posisi providernya di widget tree (ADR-048). Tes bloc untuk itu hanya akan menguji ulang `flutter_bloc`, jadi ini terverifikasi manual saja |
+| Pengingat backup kehilangan rumahnya | `BackupReminder` dulu di Dasbor; pindahnya ke Pengaturan baru di D8. Sementara ini yang tersisa badge "Perlu backup" di baris Backup (ADR-047) |
+| Banner "N produk perlu restok" di Produk tidak bisa diketuk | `LowStockScreen` dihapus di D2, chip penggantinya lahir di D6 (ADR-047) |
+| Field uang diterima tidak memakai pemisah ribuan | Tombol cepat mengisi `50000`, bukan `50.000`. Pengelompokan saat mengetik butuh `TextInputFormatter` sendiri; ditandai `shortcut:` di `payment_screen.dart` |
+| Batas 30 hari daftar "Sering dibeli" dihitung sekali saat stream dibuat | Kalau aplikasi dibiarkan terbuka berhari-hari, jendelanya ikut menua. Ditandai `shortcut:` di `ProductDao.watchFrequentProducts` (ADR-050) |
 | Skenario UAT tidak pernah ditulis | Langkah 15 diuji manual tanpa artefak, jadi uji berikutnya setelah perubahan besar (desain v2) tidak punya pembanding yang bisa diulang — hanya ingatan |
 | Crash-free ≥99% tidak terukur | Tidak ada crash terlihat saat uji, tapi itu bukan rate. Menghitungnya butuh telemetri, yang bertabrakan dengan offline-only (ADR-042) |
 | Metrik "produk masuk keranjang ≤2 detik" belum terukur | Jalur scan lengkap baru benar-benar jalan sejak 2026-11-08 (perbaikan cari barcode), dan kecepatannya belum pernah diukur dengan stopwatch — termasuk sesudah halaman scan jadi potrait |

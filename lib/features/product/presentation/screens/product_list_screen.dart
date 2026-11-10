@@ -11,8 +11,6 @@ import 'package:henshin/features/product/presentation/bloc/product_event.dart';
 import 'package:henshin/features/product/presentation/bloc/product_state.dart';
 import 'package:henshin/features/product/presentation/screens/product_form_screen.dart';
 import 'package:henshin/features/product/presentation/widgets/stock_sheet.dart';
-import 'package:go_router/go_router.dart';
-import 'package:henshin/core/utils/page_routes.dart';
 
 /// Kategori yang punya minimal satu produk aktif.
 ///
@@ -501,30 +499,27 @@ class _LowStockBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.s2),
-      child: InkWell(
-        borderRadius: AppRadius.mdAll,
-        onTap: () => context.push(PageRoutes.perluRestok),
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.s4),
-          decoration: BoxDecoration(
-            color: AppColor.warningSoft,
-            borderRadius: AppRadius.mdAll,
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.inventory_2_outlined, color: AppColor.warning),
-              const SizedBox(width: AppSpacing.s2),
-              Expanded(
-                child: Text(
-                  '$count produk perlu restok',
-                  style: AppTextStyle.bodyStrong.copyWith(
-                    color: AppColor.warning,
-                  ),
+      // Tidak bisa diketuk lagi: LowStockScreen dihapus di D2 dan chip
+      // "Perlu restok" penggantinya lahir di D6.
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.s4),
+        decoration: BoxDecoration(
+          color: AppColor.warningSoft,
+          borderRadius: AppRadius.mdAll,
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.inventory_2_outlined, color: AppColor.warning),
+            const SizedBox(width: AppSpacing.s2),
+            Expanded(
+              child: Text(
+                '$count produk perlu restok',
+                style: AppTextStyle.bodyStrong.copyWith(
+                  color: AppColor.warning,
                 ),
               ),
-              Icon(Icons.chevron_right, color: AppColor.warning),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

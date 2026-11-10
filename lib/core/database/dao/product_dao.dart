@@ -3,7 +3,9 @@ import 'package:henshin/core/database/app_database.dart';
 
 part 'product_dao.g.dart';
 
-@DriftAccessor(tables: [Products, Categories, StockMovements])
+@DriftAccessor(
+  tables: [Products, Categories, StockMovements, TransactionItems, Transactions],
+)
 class ProductDao extends DatabaseAccessor<AppDatabase> with _$ProductDaoMixin {
   ProductDao(super.db);
 
@@ -40,6 +42,53 @@ class ProductDao extends DatabaseAccessor<AppDatabase> with _$ProductDaoMixin {
           ..where((p) => p.isActive.equals(true))
           ..orderBy([(p) => OrderingTerm.asc(p.stock)]))
         .watch();
+  }
+
+  /// Produk yang paling banyak terjual dalam [window], untuk daftar "Sering
+  /// dibeli" di kasir.
+  ///
+  /// Query kedua di samping `ReportDao.getBestSellers`, dan memang harus
+  /// terpisah: yang itu mengelompokkan `transaction_items.productName`
+  /// (snapshot nama, tanpa id dan harga) sehingga hasilnya tidak bisa
+  /// dimasukkan ke keranjang. Yang ini mengelompokkan `productId` lalu join ke
+  /// `products`, jadi barisnya produk utuh (ADR-050).
+  ///
+  /// Transaksi void tidak dihitung, dan produk nonaktif atau stok habis tidak
+  /// muncul karena tidak bisa dijual.
+  ///
+  /// shortcut: `since` dihitung sekali saat stream dibuat, jadi kalau aplikasi
+  /// dibiarkan terbuka berhari-hari batas 30 harinya ikut menua. Pindahkan ke
+  /// query tanggal SQL kalau itu jadi masalah nyata.
+  Stream<List<Product>> watchFrequentProducts({
+    int limit = 5,
+    Duration window = const Duration(days: 30),
+  }) {
+    final since = DateTime.now().subtract(window);
+    final qtySum = transactionItems.qty.sum();
+
+    final query = select(products).join([
+      innerJoin(
+        transactionItems,
+        transactionItems.productId.equalsExp(products.id),
+        useColumns: false,
+      ),
+      innerJoin(
+        transactions,
+        transactions.id.equalsExp(transactionItems.transactionId),
+        useColumns: false,
+      ),
+    ])
+      ..where(products.isActive.equals(true))
+      ..where(products.stock.isBiggerThanValue(0))
+      ..where(transactions.date.isBiggerOrEqualValue(since))
+      ..where(transactions.status.equals('completed'))
+      ..groupBy([products.id])
+      ..orderBy([OrderingTerm.desc(qtySum)])
+      ..limit(limit);
+
+    return query.watch().map(
+      (rows) => rows.map((row) => row.readTable(products)).toList(),
+    );
   }
 
   /// Insert produk + baris ledger untuk stok awal, dalam satu transaksi.

@@ -106,19 +106,16 @@ class _SettingScreenState extends State<SettingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColor.bg,
+      // App bar-nya wajib: sejak D2 layar ini di-push dari ikon gear di
+      // Laporan, bukan tab lagi, jadi tanpa ini tidak ada jalan kembali.
+      appBar: AppBar(
+        backgroundColor: AppColor.bg,
+        title: const Text('Pengaturan'),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           children: [
-            const Text(
-              'Pengaturan',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: AppColor.ink,
-              ),
-            ),
-            const SizedBox(height: 28),
             const _SectionLabel(label: 'Toko'),
             const SizedBox(height: 10),
             _SettingsGroup(
