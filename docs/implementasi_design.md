@@ -5,9 +5,11 @@ permintaan pemilik. Pelengkap `docs/implementasi.md` (langkah 1–15, **sudah
 selesai semua**), bukan penggantinya — penomorannya dipisah **D1–D9** supaya
 tidak pernah tertukar dengan "langkah" rencana lama.
 
-**Status:** D1 selesai & diverifikasi 2026-11-09. D2–D5 selesai &
-diverifikasi 2026-11-10 (ADR-047 s/d ADR-051). **D6–D7 selesai &
-diverifikasi 2026-11-12** (ADR-052 s/d ADR-055). Berikutnya D8.
+**Status: SELESAI — D1–D9, sembilan dari sembilan.** D1 diverifikasi
+2026-11-09; D2–D5 2026-11-10 (ADR-047 s/d ADR-051); D6–D7 2026-11-12
+(ADR-052 s/d ADR-055); **D8–D9 2026-11-12 (ADR-056 s/d ADR-059)**. Seluruh
+layar aplikasi sekarang berdiri di desain v2; tidak ada langkah berikutnya di
+dokumen ini.
 
 **Sumber kebenaran desain**, berurutan:
 

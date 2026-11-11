@@ -31,7 +31,6 @@ drift_schemas/                 # schema snapshot per version — COMMIT THESE, t
 test/drift/                    # generated migration tests + seed tests
 test/features/                 # repository / bloc / widget tests
 test/injection_container_test.dart  # resolves the whole DI graph — catches runtime-only wiring breaks
-test/widget_test.dart          # STALE counter template — broken, ignore it (makes bare `flutter test` fail)
 docs/struktur_folder.md        # ASPIRATIONAL — differs from code, do not follow blindly
 ```
 
@@ -54,6 +53,15 @@ docs/struktur_folder.md        # ASPIRATIONAL — differs from code, do not foll
   Scaffold lays that slot out with loose constraints as tall as the screen, so a
   default `Column` eats the whole screen, the body collapses to 0 px, and a
   zero-height `ListView` silently builds none of its children (ADR-051).
+- `CrossAxisAlignment.stretch` is only safe when the parent's height is already
+  decided. Inside a `ListView`, a scrollable `Column` or a
+  `SingleChildScrollView` it asks the child for an **infinite** height and
+  crashes on the first frame — wrap the `Row` in `IntrinsicHeight` (or cap it
+  with a `SizedBox`) (ADR-058).
+- In `app_theme.dart`, `styleFrom(...).copyWith(backgroundColor: ...)` replaces
+  the colour for **every** `WidgetState` at once, `disabled` included. Any
+  `resolveWith` added there must name `WidgetState.disabled` explicitly, or
+  buttons whose `onPressed` is null will still look pressable (ADR-059).
 - In the barcode scanner, anything between a detection and `Navigator.pop()`
   must sit **behind the `_isBusy` guard**, set before the first `await` — even
   an `await` that looks harmless like haptic feedback. A printed barcode is
@@ -74,8 +82,9 @@ flutter run          # barcode/Bluetooth features need a physical Android device
 #   pubspec package added    -> full `flutter run`; native side is not recompiled
 #                               by a restart (symptom: MissingPluginException)
 flutter analyze
-flutter test test/drift test/features test/injection_container_test.dart   # the real suite
-flutter test test/some_file_test.dart   # single file; bare `flutter test` fails on widget_test.dart
+flutter test                            # whole suite; the stale counter template that used to
+                                        # break this was deleted in design-v2 step D9
+flutter test test/some_file_test.dart   # single file
 dart run drift_dev make-migrations      # schema snapshot + migration steps + test template
 flutter build apk --release
 ```

@@ -13,6 +13,11 @@ import 'package:flutter/material.dart';
 class AppTextStyle {
   AppTextStyle._();
 
+  /// `tnum`: tiap digit selebar digit lain, jadi angka yang bertumpuk di satu
+  /// kolom tetap sejajar. Dipasang di **semua** gaya yang pernah memuat angka
+  /// di dalam daftar — bukan hanya gaya uang yang besar: harga per baris
+  /// produk memakai `label`, dan `#id · jam` di Riwayat memakai `body` (D9).
+  /// Tidak berefek pada teks tanpa digit, jadi tidak perlu gaya kembar.
   static const List<FontFeature> _tabular = [FontFeature.tabularFigures()];
 
   /// Satu angka terpenting di layar: total bayar, omzet hari ini.
@@ -52,6 +57,7 @@ class AppTextStyle {
     fontSize: 16,
     fontWeight: FontWeight.w400,
     height: 24 / 16,
+    fontFeatures: _tabular,
   );
 
   /// Harga di baris produk dan keranjang, label tombol.
@@ -67,6 +73,7 @@ class AppTextStyle {
     fontSize: 14,
     fontWeight: FontWeight.w500,
     height: 20 / 14,
+    fontFeatures: _tabular,
   );
 
   /// Badge dan label bottom nav **saja**. Jangan untuk informasi yang harus
@@ -75,6 +82,7 @@ class AppTextStyle {
     fontSize: 12,
     fontWeight: FontWeight.w500,
     height: 16 / 12,
+    fontFeatures: _tabular,
   );
 
   /// Preview struk 58mm (32 karakter per baris). Hanya di komponen Receipt.

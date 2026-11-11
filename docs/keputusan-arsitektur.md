@@ -1409,3 +1409,145 @@ Cross-link: ADR-012 (batas tes widget; ini kasus yang benar-benar di luar
 jangkauannya, berbeda dari ADR-051 yang justru bisa diuji), ADR-043 (layar
 scanner yang sama), ADR-025 (aturan operasional yang harus ikut ditulis di
 `AGENTS.md`, bukan hanya di ADR).
+
+---
+
+## ADR-056 — Preset laporan terpanjang adalah bulan **kalender**, bukan 30 hari bergulir
+
+**Keputusan.** Chip ketiga di Laporan berbunyi "Bulan ini" dan rentangnya
+tanggal 1 bulan berjalan sampai akhir hari ini. Preset "30 hari" yang ada sejak
+langkah 12 dihapus, bukan ditambahi.
+
+**Kenapa, dan kenapa ini pertanyaan untuk pemilik.** Mockup v2 menulis
+"30 hari" sementara `docs/implementasi_design.md` tidak menyebut keduanya, jadi
+kode lama dan gambar baru saling bertentangan tanpa satu pun yang berwenang.
+Pemilik memilih bulan kalender: angka yang dipakainya adalah setoran bulanan,
+dan "30 hari terakhir" pada tanggal 5 menjawab pertanyaan yang tidak pernah
+ditanyakan — ia mencampur dua bulan.
+
+**Konsekuensi yang diterima.** Tanggal 1, "Bulan ini" hanya memuat satu hari
+dan grafiknya satu titik. Itu benar, bukan bug: bulan itu memang baru satu
+hari. Dan panjang periode sekarang berubah-ubah 28–31 hari, jadi
+`ReportPeriod.days` yang tetap **dihapus**; penghitung hari diturunkan dari
+rentangnya (`_daily` menerima `start` dan `end`, bukan jumlah hari). Satu
+konstanta yang tidak bisa lagi benar lebih berbahaya daripada tidak ada
+konstanta.
+
+**Batas hari kalender tetap sama seperti sebelumnya.** `end` = awal hari esok
+minus satu mikrodetik, dan perulangan harinya memakai `DateTime(y, m, d + i)`,
+bukan `add(Duration(days: i))`, supaya pergantian DST tidak menggeser ember
+harian. Aturan yang sama dipakai `historyRange` di Riwayat.
+
+Cross-link: ADR-032 (agregasi laporan masih di memori; preset terpanjang
+sekarang sebulan, bukan 30 hari), ADR-047 (Dasbor dibuang, jadi Laporan satu-
+satunya tempat angka periode).
+
+---
+
+## ADR-057 — Laba kotor: angkanya dihilangkan dari widget tree sampai PIN benar
+
+**Keputusan.** Nilai laba kotor di Laporan ditampilkan `••••••` + ikon kunci.
+Setelah `PinGate.require` sukses, baru `formatRupiah(report.grossProfit)` yang
+dirender. Sebelum itu angkanya **tidak pernah masuk widget tree**.
+
+**Kenapa dipilih pemilik, dari tiga pilihan.** Rencana sengaja menyisakan
+pertanyaan ini. Pilihan "biarkan terbuka" ditolak pemilik; pilihan "tutup
+dengan blur/opacity" ditolak di sini karena menyembunyikan dengan `Opacity`
+atau warna transparan hanya menipu mata: angkanya tetap ada di tree, terbaca
+oleh screen reader, dan ikut tertangkap screenshot tool atau dump widget.
+Ambang yang dipakai: **tidak ada di tree** = benar-benar tidak ada.
+
+**Kapan terkunci lagi.** Dua pemicu, keduanya disengaja:
+
+1. ganti chip periode — angka periode baru belum pernah dibuka;
+2. `didChangeAppLifecycleState != resumed` — HP dikunci atau aplikasi
+   ditinggalkan.
+
+**Yang tidak dibangun, dan konsekuensinya.** Tidak ada timeout. Selama layarnya
+tetap terbuka dan aplikasi tetap di depan, angkanya terlihat sampai pemilik
+pindah periode. Kalau HP berpindah tangan dalam keadaan itu, angkanya terbaca.
+Diterima: ini satu HP satu pemilik (PRD §1.6), dan timeout yang mengunci
+sendiri saat pemilik sedang membaca lebih mengganggu daripada melindungi.
+
+**`PinGate` dibuka ke pemakai kelima tanpa diubah.** Jalurnya sama dengan void,
+restore, dan ubah harga/modal — tidak ada mekanisme PIN baru, tidak ada
+`PinBloc` kedua. Yang bertambah hanya satu `reason` baru.
+
+**Dijaga tes, dan ini bagian yang mudah rusak tanpa sadar.**
+`test/features/report/report_profit_lock_test.dart` memastikan `Rp 312.000`
+`findsNothing` sementara omzet dan jumlah transaksi `findsOneWidget`. Siapa pun
+yang nanti mengganti cara menyembunyikannya dengan trik visual akan
+menjatuhkan tes itu — itu memang tujuannya. Yang **tidak** diuji: jalur PIN
+benar, karena `PinGate` memanggil `sl<PinRepository>()` yang tidak dipalsukan
+di tes itu.
+
+Cross-link: ADR-028 (empat pemanggil `PinGate` sebelumnya), ADR-049 (PIN jadi
+sheet), ADR-054 (pengecualian: void memasang keypad sendiri), ADR-012 (batas
+tes widget — geometri dan visibilitas bisa diuji, DB tidak).
+
+---
+
+## ADR-058 — `CrossAxisAlignment.stretch` di dalam area yang bisa di-scroll wajib dibungkus `IntrinsicHeight`
+
+**Keputusan.** Dua kartu angka berdampingan di Laporan dibungkus
+`IntrinsicHeight`, bukan dibiarkan `Row(crossAxisAlignment: stretch)` saja.
+
+**Bug yang melahirkannya.** Versi pertama D8 crash begitu Laporan dibuka:
+
+```
+BoxConstraints forces an infinite height.
+The offending constraints were:
+  BoxConstraints(0.0<=w<=Infinity, h=Infinity)
+```
+
+**Penyebabnya.** `stretch` meminta anak setinggi batas atas tinggi `Row`.
+Di dalam `ListView` batas itu tak terbatas, jadi anaknya diminta setinggi
+infinity. `IntrinsicHeight` yang mengukur anak tertinggi lebih dulu dan
+memberi `Row` tinggi nyata.
+
+**Kenapa bukan dengan membuang `stretch`.** Keduanya memang harus sama tinggi:
+ikon kunci 16 px di kartu laba membuat sisi itu beberapa piksel lebih tinggi
+dari kartu Transaksi, dan dua kartu berdampingan yang beda tinggi beberapa
+piksel terlihat seperti salah render. `IntrinsicHeight` satu baris; mematok
+tinggi dengan angka tetap akan patah begitu ukuran font sistem dinaikkan.
+
+**Yang menarik: ini ditemukan suite, bukan HP.** Tes widget yang ditulis untuk
+alasan lain (kunci laba, ADR-057) yang menjatuhkannya. Pasangan ADR ini yang
+menandai batas tes widget di proyek ini dengan tepat: **geometri bisa diuji**
+(ADR-058 dan ADR-051 sama-sama soal constraint), **kamera tidak** (ADR-055).
+Jangan pakai ADR-055 sebagai alasan melewatkan tes layout.
+
+**Aturan umumnya,** ikut ditulis di `AGENTS.md` §3 karena harus dipatuhi saat
+menulis kode: `stretch` hanya aman kalau tinggi induknya sudah pasti. Di dalam
+`ListView`, `Column` yang bisa di-scroll, atau `SingleChildScrollView`,
+bungkus `IntrinsicHeight` atau patok `SizedBox`.
+
+Cross-link: ADR-051 (keluarga bug yang sama dari sisi lain: slot dengan
+constraint longgar di `bottomNavigationBar`), ADR-012, ADR-057 (tes yang
+menemukannya).
+
+---
+
+## ADR-059 — `styleFrom(...).copyWith(backgroundColor:)` wajib menangani `WidgetState.disabled`
+
+**Keputusan.** Cabang `disabled → AppColor.surfaceMuted` di
+`elevatedButtonTheme` bukan hiasan; tanpa itu tema ini salah.
+
+**Kenapa.** `ElevatedButton.styleFrom` mengisi warna disabled sendiri, tapi
+`copyWith(backgroundColor: ...)` menggantinya untuk **semua** `WidgetState`
+sekaligus — termasuk disabled. Jadi menambahkan warna tekan (`primaryPressed`,
+D9) ikut menghidupkan kembali tampilan tombol yang sedang mati: "Menyimpan..."
+saat form sedang menyimpan dan "Bayar" saat uang belum cukup akan tampak bisa
+ditekan padahal `onPressed` null. Pemilik akan menekannya berulang dan menyimpulkan
+aplikasinya menggantung.
+
+**Konsekuensi.** Setiap penambahan state ke `backgroundColor` tombol di tema
+ini harus menyebut `disabled` secara eksplisit, karena `resolveWith` tidak
+mewarisi apa pun dari `styleFrom`. Aturan ini ikut ditulis di `AGENTS.md` §3.
+
+**Ditemukan saat memperbaiki kesalahan lain** (splice tema D9 meninggalkan koma
+nyasar), bukan oleh tes: warna tombol mati tidak dijaga tes mana pun, dan
+menulisnya berarti menguji ulang Material. Penggantinya aturan di atas.
+
+Cross-link: ADR-046 (lapisan token v2; `primaryPressed` lahir di sana tanpa
+pemakai sampai D9).

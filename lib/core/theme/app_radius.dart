@@ -22,7 +22,9 @@ class AppRadius {
 
   static const BorderRadius smAll = BorderRadius.all(Radius.circular(sm));
   static const BorderRadius mdAll = BorderRadius.all(Radius.circular(md));
-  static const BorderRadius lgAll = BorderRadius.all(Radius.circular(lg));
+  // `lgAll` dihapus di D9: setelah semua layar jadi v2, satu-satunya tempat
+  // radius 20 dipakai adalah sudut atas sheet — `sheetTop` di bawah. `lg`
+  // sendiri tetap, karena itu sumber nilainya.
   static const BorderRadius fullAll = BorderRadius.all(Radius.circular(full));
 
   /// Sheet hanya membulat di atas.

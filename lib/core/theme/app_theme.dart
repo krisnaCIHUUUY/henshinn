@@ -84,6 +84,10 @@ class AppTheme {
         clipBehavior: Clip.antiAlias,
       ),
 
+      // `primaryPressed` sempat jadi token tanpa pemakai: tombol primary tidak
+      // pernah menggelap saat ditekan, padahal design system v2 menetapkan
+      // warnanya. Diselesaikan dengan memakai tokennya, bukan menghapusnya —
+      // yang hilang kalau dihapus adalah aturan desainnya (D9).
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColor.primary,
@@ -92,6 +96,20 @@ class AppTheme {
           shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
           textStyle: AppTextStyle.bodyStrong,
           elevation: 0,
+        ).copyWith(
+          // Keadaan mati ikut ditangani di sini. `styleFrom` biasanya yang
+          // mengurusnya, tapi `copyWith` mengganti warna untuk **semua**
+          // keadaan sekaligus — tanpa cabang disabled ini tombol "Menyimpan..."
+          // dan "Bayar" yang sedang mati akan tetap tampak hidup.
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return AppColor.surfaceMuted;
+            }
+            if (states.contains(WidgetState.pressed)) {
+              return AppColor.primaryPressed;
+            }
+            return AppColor.primary;
+          }),
         ),
       ),
 

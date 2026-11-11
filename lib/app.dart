@@ -36,10 +36,13 @@ class _BottomNavBar extends StatelessWidget {
 
   /// Urutannya harus sama dengan urutan branch di `app_router.dart`.
   static const _items = [
-    _NavItemData(icon: Icons.point_of_sale, label: 'Kasir'),
+    // Keempatnya outlined. Ini satu-satunya tempat empat ikon berdiri
+    // bersebelahan, jadi satu ikon solid di antaranya langsung terlihat lebih
+    // berat dari tetangganya (D9).
+    _NavItemData(icon: Icons.point_of_sale_outlined, label: 'Kasir'),
     _NavItemData(icon: Icons.inventory_2_outlined, label: 'Produk'),
     _NavItemData(icon: Icons.receipt_long_outlined, label: 'Riwayat'),
-    _NavItemData(icon: Icons.bar_chart, label: 'Laporan'),
+    _NavItemData(icon: Icons.bar_chart_outlined, label: 'Laporan'),
   ];
 
   @override
