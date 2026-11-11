@@ -1,7 +1,7 @@
 # Progress Henshin POS
 
-Status eksekusi `docs/implementasi.md`. Diperbarui 2026-11-10 (langkah 1–15 selesai; kategori produk; desain v2
-langkah D1–D5 dari sembilan).
+Status eksekusi `docs/implementasi.md`. Diperbarui 2026-11-12 (langkah 1–15 selesai; kategori produk; desain v2
+langkah D1–D7 dari sembilan).
 
 Keputusan arsitektur yang diambil selama eksekusi dicatat terpisah di
 `docs/keputusan-arsitektur.md`.
@@ -43,11 +43,13 @@ dicatat sebagai utang: impl cetak ESC/POS yang menunggu printer fisik
 (langkah 9) dan dua metrik PRD yang belum bisa diukur — lihat tabel utang
 teknis. Pekerjaan yang sedang berjalan sekarang bukan dari
 `docs/implementasi.md` lagi tapi dari `docs/implementasi_design.md`: penerapan
-desain UI v2, D1–D5 dari sembilan langkah. Sejak D2 isi `docs/implementasi.md`
+desain UI v2, D1–D7 dari sembilan langkah. Sejak D2 isi `docs/implementasi.md`
 sudah tidak menggambarkan susunan layar aplikasi: Dasbor (langkah 12) dibuang
-dan Kasir (langkah 6) pindah jadi tab pertama.
+dan Kasir (langkah 6) pindah jadi tab pertama. Sejak D7 alur void (langkah 11)
+juga berbeda dari yang ditulis di sana: PIN dan alasan sekarang satu sheet,
+bukan dua langkah berurutan.
 
-**Verifikasi saat ini:** 189 tes lolos, `flutter analyze` bersih.
+**Verifikasi saat ini:** 205 tes lolos, `flutter analyze` bersih.
 
 Uji manual di device oleh pemilik repo: langkah 1–5, 7, dan 10–15 ✅; langkah 6
 (kasir) dan 8 (struk) sebagian — lima bug ditemukan dan sudah diperbaiki, lihat
@@ -58,6 +60,14 @@ terbukti di HP — sementara `SystemNavigator.pop()` justru terbukti **tidak**
 cukup, lihat "Perbaikan setelah verifikasi manual". Langkah 15 menutup lubang
 terlama: **scanner barcode akhirnya jalan di HP fisik**, yang sejak langkah 7
 hanya pernah diuji di emulator.
+
+Desain v2 diverifikasi pemilik per kelompok langkah: D1 (2026-11-09), D2–D5
+(2026-11-10), D6–D7 (2026-11-12). Dua bug ditemukan pemilik di HP dan tidak
+akan pernah ditemukan suite: PayBar yang menelan seluruh layar (ADR-051) dan
+assert `!_debugLocked` saat men-scan barcode terdaftar dari layar Produk
+(ADR-055). Yang kedua menegaskan batas yang sudah dicatat: bug di dalam layar
+scanner tidak bisa dijaga tes karena controller kameranya butuh platform
+channel yang tidak ada di `flutter test`.
 
 **Masih belum pernah diuji di HP:** cetak ESC/POS ke printer thermal (belum ada
 implementasinya, dan printernya belum ada — langkah 9), dan jalur share khusus
@@ -669,17 +679,93 @@ sampai UI-nya benar-benar berubah — dan filenya jadi 24 detik → 7 detik.
 
 ---
 
+## Desain v2 — D6–D7: Produk, Tambah produk, Riwayat, Void
+
+Diverifikasi pemilik di HP 2026-11-12. ADR-052 s/d ADR-055.
+
+**`lib/core/widgets/` akhirnya lahir.** Rencana sudah menetapkan foldernya dan
+aturannya ("tulis inline di layar pertama, angkat begitu layar kedua
+membutuhkannya"), dan D6–D7 adalah tempat pemakai kedua itu muncul. Enam
+widget diangkat dari salinan privat Kasir: `AppCard`, `AppChip` + `ChipRow`,
+`AppAvatar` + `productInitial`, `AppBadge`, `SectionHeader`, `SearchRow`. Kasir
+sekarang mengimpor, bukan menyimpan salinan — `cashier_screen.dart` susut 246
+baris. Tidak ada widget yang dibuat "untuk nanti": `Field` tetap privat di form
+produk karena pemakai keduanya baru ada di D8.
+
+**Produk (D6).** Cari + scan, chip `Semua / Perlu restok · N / <kategori>`,
+baris beravatar inisial, tombol "Tambah produk" melayang di atas bottom nav.
+Chip restok memakai `lowStockProducts` yang sudah ada di state — tidak ada
+query baru, dan banner yang tidak bisa diketuk sejak D2 ikut hilang. Badge
+"Stok aman" dibuang: di daftar 86 produk, 86 badge hijau menenggelamkan 4 yang
+perlu tindakan (ADR-052).
+
+**Dua keputusan yang ditanyakan ke pemilik lebih dulu,** karena mockup dan
+rencana tidak menjawabnya:
+
+1. **Aksi baris produk.** Baris v2 tidak punya ikon, jadi Ubah/Restok/Koreksi/
+   Hapus tidak punya tempat. Pemilik memilih sheet aksi saat baris diketuk
+   (ADR-053) dari tiga pilihan; geser-baris ditolak karena menambah paket untuk
+   aksi tanpa petunjuk di layar.
+2. **Tombol scan di Produk.** Scanner selama ini terikat keranjang Kasir.
+   Pemilik memilih "isi kolom cari dengan barcode-nya", jadi scanner dapat mode
+   `returnsCode: true` yang mem-pop barcode tanpa menyentuh keranjang. Jalur
+   Kasir tidak berubah sebaris pun.
+
+**Tambah produk (D6).** Harga jual + modal berdampingan, stok awal +
+"Ingatkan jika sisa" berdampingan, baris laba kotor per pcs berlatar
+`primarySoft` (merah kalau rugi), catatan "Mengubah harga nanti perlu PIN"
+ditulis di muka supaya sheet PIN tidak datang sebagai kejutan, dan "Simpan
+produk" turun ke batang bawah. Tiga tes widget form lama tetap hijau.
+
+**Riwayat (D7).** App bar dikosongkan — ikon ekspor yang mati dihapus dan ikon
+"Cari transaksi" di mockup tidak dibangun (keputusan pemilik 6), menutup satu
+baris utang. Chip `Hari ini / Kemarin / 7 hari / Pilih tanggal`, judul bagian
+"<rentang> · N transaksi" + jumlah void, total dicoret untuk yang void supaya
+tidak ikut dijumlahkan pemilik saat membaca daftar.
+
+**Satu perubahan menembus ke lapisan data.** `watchHistory` dapat parameter
+`until` (DAO + interface + impl): "Kemarin" dan satu hari pilihan butuh batas
+atas, dan menyaringnya di memori berarti menarik seluruh riwayat lebih dulu.
+`historyRange` dipisah jadi fungsi murni dan diuji 6 kasus — termasuk bahwa
+"Kemarin" tidak menyentuh hari ini, aturan hari kalender yang sama dengan
+`ReportPeriod.rangeFrom`.
+
+**Void jadi satu sheet (D7).** Ringkasan dampak, chip alasan, PIN pad, dan
+tombol merah dalam satu tampilan; `_VoidReasonDialog` dan alur dua langkah
+dihapus. PIN sengaja **tidak** auto-submit di sheet ini — tombol "Void
+transaksi" yang memicu, supaya alasan tidak bisa terlewat dan pemilik masih
+bisa batal setelah mengetik PIN (ADR-054). `PinBloc`/`PinRepository` tidak
+disentuh dan `voidTransaction` tetap dipanggil layar detail, jadi 9 tes PIN dan
+seluruh tes void di repository hijau tanpa diubah.
+
+**Bug yang ditemukan pemilik saat verifikasi D6.** Men-scan barcode produk yang
+**sudah terdaftar** dari layar Produk melempar assert `!_debugLocked` di
+`navigator.dart`. Penyebabnya bukan lookup produk — di mode itu tidak ada
+lookup: barcode cetak asli terbaca berkali-kali per detik, deteksi kedua jatuh
+di celah `await HapticFeedback` dan memanggil `pop()` di tengah `pop()`
+pertama. Penjaganya sudah ada di file itu sejak awal (`_isBusy`) dan jalur
+keranjang memakainya; early-return mode baru ditulis di atas blok `setState`
+itu sehingga melewatinya. Perbaikannya satu baris, memakai penjaga yang sama
+(ADR-055). Aturannya ikut ditulis di `AGENTS.md` §3 karena ini aturan yang
+harus dipatuhi **saat menulis kode**, bukan hanya catatan keputusan (ADR-025).
+
+**Tes: 189 → 205.** `visibleProducts` 9 tes (termasuk bahwa produk stok 0 ikut
+di chip restok), `historyRange` 6 tes, dan 1 tes repository untuk filter
+`until`. Tidak ada tes baru untuk bug scanner — lihat ADR-055 untuk alasannya
+dan pemeriksaan manual penggantinya.
+
+---
+
 ## Utang teknis yang masih terbuka
 
 | Hal | Dampak |
 |---|---|
-| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (189 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
+| `test/widget_test.dart` masih template counter bawaan yang rusak | `flutter test` tanpa argumen gagal (205 lolos, 1 gagal). AGENTS.md menandainya "ignore", belum diputuskan mau dihapus |
 | `settings.schemaVersion` hanya diisi saat seed | Jadi basi setelah bump versi berikutnya. Ditandai `shortcut:` di kode |
 | `decrementStock`/`incrementStock` lama di `ProductDao` tidak menulis ledger dan **tidak dipakai siapa pun** | Langkah 6 dan 11 tidak memakainya (keduanya lewat `TransactionDao`). Sekarang murni mati — kandidat dihapus |
 | `setting_screen.dart` masih memuat baris dummy "Pajak (PPN) 11%" dan "Printer thermal BT-01" | Keduanya di luar scope atau belum ada (AGENTS.md §6, langkah 9), perlu dibersihkan sebelum rilis. Baris "Export laporan CSV" sudah dihapus di langkah 13 |
 | Riwayat pergerakan stok belum punya tampilan | Ledger ditulis (termasuk oleh void) tapi belum bisa dilihat pemilik. Riwayat langkah 10 menampilkan transaksi, bukan ledger |
-| Layar riwayat + detail transaksi belum punya tes widget | Logikanya teruji di tes repository, navigasi dan dialog alasan void hanya terverifikasi manual (ADR-012, ADR-028) |
-| Ikon ekspor di header riwayat masih mati | Peninggalan UI dummy; ekspor CSV di luar scope (AGENTS.md §6). Perlu dihapus atau diganti fungsi lain |
+| Layar riwayat + detail transaksi belum punya tes widget | Logikanya teruji di tes repository; rentang chip sekarang dijaga `historyRange` (6 tes), tapi navigasi dan `VoidSheet` hanya terverifikasi manual (ADR-012, ADR-054) |
 | Layar `StockSheet`, jalur PinGate-saat-ubah-harga, dan alur simpan form sampai layarnya tertutup belum punya tes | Terverifikasi manual, bukan otomatis. Celah inilah yang melewatkan bug ADR-013. Lihat ADR-012 |
 | Angka 30 hari menjumlahkan header transaksi di memori | Aman untuk satu warung; perlu pindah ke agregat SQL (dengan offset zona waktu eksplisit) kalau datanya jadi tahunan. ADR-032 |
 | `ReportScreen` belum punya tes widget | Angkanya dijaga 13 tes repository. Dasbor sudah tidak ada lagi sejak D2 (ADR-047), jadi chart fl_chart ikut hilang dari aplikasi |
@@ -688,15 +774,19 @@ sampai UI-nya benar-benar berubah — dan filenya jadi 24 detik → 7 detik.
 | Nama kategori tidak bisa dihapus atau diganti dari dalam aplikasi | Disengaja (ADR-038): salah ketik hilang dari layar begitu produknya dipindah, tapi barisnya menumpuk di DB selamanya. Diterima karena tidak ada laporan yang membacanya |
 | Kategori bisa lahir tanpa produk | Kalau penyimpanan produk gagal setelah kategorinya dibuat, kategori itu tetap ada. Sengaja tidak dibungkus satu transaksi karena tab kosong tidak pernah ditampilkan (ADR-038) |
 | `lower()` SQLite hanya melipat ASCII | "Café" dan "café" masih bisa jadi dua kategori. Ditandai `shortcut:` di `CategoryDao` (ADR-038) |
-| Desain v2 baru sampai D5 dari sembilan | Kasir, Pembayaran, dan Struk sudah v2; Produk, Riwayat, Laporan, dan Pengaturan masih susunan v1 di dalam navigasi v2 — `docs/implementasi_design.md` D6–D9 |
+| Desain v2 baru sampai D7 dari sembilan | Kasir, Pembayaran, Struk, Produk, Tambah produk, Riwayat, dan Void sudah v2; **Laporan dan Pengaturan masih susunan v1** di dalam navigasi v2 — `docs/implementasi_design.md` D8–D9 |
 | "Keranjang bertahan saat pindah tab" tidak dijaga tes otomatis | Yang menentukan bukan isi `CartBloc` tapi posisi providernya di widget tree (ADR-048). Tes bloc untuk itu hanya akan menguji ulang `flutter_bloc`, jadi ini terverifikasi manual saja |
 | Pengingat backup kehilangan rumahnya | `BackupReminder` dulu di Dasbor; pindahnya ke Pengaturan baru di D8. Sementara ini yang tersisa badge "Perlu backup" di baris Backup (ADR-047) |
-| Banner "N produk perlu restok" di Produk tidak bisa diketuk | `LowStockScreen` dihapus di D2, chip penggantinya lahir di D6 (ADR-047) |
 | Field uang diterima tidak memakai pemisah ribuan | Tombol cepat mengisi `50000`, bukan `50.000`. Pengelompokan saat mengetik butuh `TextInputFormatter` sendiri; ditandai `shortcut:` di `payment_screen.dart` |
 | Batas 30 hari daftar "Sering dibeli" dihitung sekali saat stream dibuat | Kalau aplikasi dibiarkan terbuka berhari-hari, jendelanya ikut menua. Ditandai `shortcut:` di `ProductDao.watchFrequentProducts` (ADR-050) |
 | Skenario UAT tidak pernah ditulis | Langkah 15 diuji manual tanpa artefak, jadi uji berikutnya setelah perubahan besar (desain v2) tidak punya pembanding yang bisa diulang — hanya ingatan |
 | Crash-free ≥99% tidak terukur | Tidak ada crash terlihat saat uji, tapi itu bukan rate. Menghitungnya butuh telemetri, yang bertabrakan dengan offline-only (ADR-042) |
 | Metrik "produk masuk keranjang ≤2 detik" belum terukur | Jalur scan lengkap baru benar-benar jalan sejak 2026-11-08 (perbaikan cari barcode), dan kecepatannya belum pernah diukur dengan stopwatch — termasuk sesudah halaman scan jadi potrait |
+| Layar Produk belum punya tes yang me-render daftar terisi | Tes yang ada hanya menguji daftar kosong + validator form. Baris produk, badge, dan chip hanya terverifikasi manual — lubang yang sempat membuat saya salah menduga penyebab bug scanner |
+| Bug di dalam layar scanner tidak bisa dijaga tes otomatis | `MobileScannerController` butuh platform channel kamera yang tidak ada di `flutter test`, dan memalsukannya dilarang ADR-012. Dua bug scanner (ADR-044, ADR-055) sama-sama hanya tertangkap mata pemilik di HP |
+| Kalender "Pilih tanggal" di Riwayat berbahasa Inggris | `showDatePicker` memakai locale ambient dan app ini belum pernah menginisialisasi locale `intl`. Sama sebabnya dengan tanggal yang ditulis `dd/MM/yyyy`, bukan nama bulan |
+| Angka chip "Perlu restok · N" lebih besar dari jumlah badge `Sisa N` yang terlihat | Disengaja: chip ikut menghitung produk habis, badge tidak (produk habis sudah dapat badge `Habis`). Selisihnya benar, jangan diseragamkan — ADR-052 |
+| `ProductActionSheet` membuka Hapus satu ketukan dari daftar | Lebih aman dari menu tiga titik yang dulu, tapi produk yang belum pernah terjual tetap bisa hilang permanen setelah satu dialog konfirmasi (ADR-053) |
 | Impl cetak ESC/POS Bluetooth belum ada | Langkah 9 belum tuntas. Butuh printer 58mm fisik + spike 1 hari (PRD §3.4). Metrik "50× cetak ≥95% sukses" belum terukur |
 | Jalur share khusus PDF struk belum terkonfirmasi di device | `SharePlus.instance.share` sendiri sudah terbukti jalan lewat backup langkah 13, jadi yang tersisa hanya jalur PDF-nya (ADR-026 + rebuild penuh belum pernah berjalan bersamaan di HP) |
 | Peringatan `Courier has no Unicode support` di log | Hanya informatif; karakter non-Latin1 dipetakan ke `?` di PDF (ADR-027). Ganti font Unicode kalau katalog butuh |

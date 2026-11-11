@@ -5,6 +5,7 @@ import 'package:henshin/core/theme/app_color.dart';
 import 'package:henshin/core/theme/app_radius.dart';
 import 'package:henshin/core/theme/app_spacing.dart';
 import 'package:henshin/core/theme/app_text_style.dart';
+import 'package:henshin/core/theme/app_theme.dart';
 import 'package:henshin/core/utils/currency_formatter.dart';
 import 'package:henshin/features/product/domain/entities/product.dart';
 import 'package:henshin/features/product/domain/usecases/find_or_create_category.dart';
@@ -188,7 +189,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         backgroundColor: AppColor.bg,
         appBar: AppBar(
           backgroundColor: AppColor.bg,
-          title: Text(_isEdit ? 'Ubah Produk' : 'Tambah Produk'),
+          title: Text(_isEdit ? 'Ubah produk' : 'Tambah produk'),
         ),
         body: SafeArea(
           child: Form(
@@ -228,49 +229,85 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                   ),
                 ],
                 const SizedBox(height: AppSpacing.s6),
-                _Field(
-                  controller: _price,
-                  label: 'Harga jual',
-                  prefix: 'Rp ',
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  onChanged: (_) => setState(() {}),
-                  validator: _requiredAmount,
+                // Berdampingan supaya harga jual dan modal terbaca sebagai satu
+                // keputusan, bukan dua angka terpisah: laba kotor di bawahnya
+                // hanya punya arti kalau keduanya terlihat bersamaan.
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _Field(
+                        controller: _price,
+                        label: 'Harga jual',
+                        prefix: 'Rp ',
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        onChanged: (_) => setState(() {}),
+                        validator: _requiredAmount,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.s3),
+                    Expanded(
+                      child: _Field(
+                        controller: _costPrice,
+                        label: 'Harga modal',
+                        prefix: 'Rp ',
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        onChanged: (_) => setState(() {}),
+                        validator: _requiredAmount,
+                      ),
+                    ),
+                  ],
                 ),
-                _Field(
-                  controller: _costPrice,
-                  label: 'Harga modal',
-                  prefix: 'Rp ',
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  onChanged: (_) => setState(() {}),
-                  validator: _requiredAmount,
-                ),
-                _MarginHint(
+                _MarginNotice(
                   price: _intOf(_price),
                   costPrice: _intOf(_costPrice),
                 ),
                 const SizedBox(height: AppSpacing.s4),
-                _Field(
-                  controller: _stock,
-                  label: _isEdit ? 'Stok saat ini' : 'Stok awal',
-                  // Saat ubah produk stok hanya tampilan: perubahan stok wajib
-                  // lewat Restok/Koreksi supaya ledger tidak bolong.
-                  readOnly: _isEdit,
-                  helper: _isEdit
-                      ? 'Ubah lewat Restok atau Koreksi Stok di daftar produk'
-                      : null,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: _requiredAmount,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _Field(
+                        controller: _stock,
+                        label: _isEdit ? 'Stok saat ini' : 'Stok awal',
+                        // Saat ubah produk stok hanya tampilan: perubahan stok
+                        // wajib lewat Restok/Koreksi supaya ledger tidak bolong.
+                        readOnly: _isEdit,
+                        helper: _isEdit ? 'Ubah lewat Restok/Koreksi' : null,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        validator: _requiredAmount,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.s3),
+                    Expanded(
+                      child: _Field(
+                        controller: _threshold,
+                        label: 'Ingatkan jika sisa',
+                        helper: 'Menipis saat stok segini',
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        validator: _requiredAmount,
+                      ),
+                    ),
+                  ],
                 ),
-                _Field(
-                  controller: _threshold,
-                  label: 'Batas stok menipis',
-                  helper: 'Produk ditandai menipis saat stok <= angka ini',
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: _requiredAmount,
+                // PRD 1.6 diberitahukan di muka, bukan sebagai kejutan saat
+                // simpan: sheet PIN yang muncul tanpa peringatan terbaca
+                // seperti kerusakan.
+                Text(
+                  'Mengubah harga jual atau modal nanti perlu PIN pemilik.',
+                  style: AppTextStyle.label.copyWith(color: AppColor.inkMuted),
                 ),
                 const SizedBox(height: AppSpacing.s2),
                 SwitchListTile(
@@ -289,22 +326,33 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                   activeThumbColor: AppColor.surface,
                   activeTrackColor: AppColor.ink,
                 ),
-                const SizedBox(height: AppSpacing.s6),
-                SizedBox(
-                  height: AppSpacing.tapMin,
-                  child: ElevatedButton(
-                    onPressed: _saving ? null : _save,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColor.ink,
-                      foregroundColor: AppColor.onPrimary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppRadius.mdAll,
-                      ),
-                    ),
-                    child: Text(_saving ? 'Menyimpan...' : 'Simpan'),
-                  ),
-                ),
               ],
+            ),
+          ),
+        ),
+        bottomNavigationBar: Container(
+          decoration: const BoxDecoration(
+            color: AppColor.surface,
+            boxShadow: AppTheme.sheet,
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.s4,
+                AppSpacing.s3,
+                AppSpacing.s4,
+                AppSpacing.s4,
+              ),
+              // Tinggi dipatok SizedBox: slot bottomNavigationBar diberi batas
+              // longgar setinggi layar oleh Scaffold (ADR-051).
+              child: SizedBox(
+                height: AppSpacing.tapPrimary,
+                child: ElevatedButton(
+                  onPressed: _saving ? null : _save,
+                  child: Text(_saving ? 'Menyimpan...' : 'Simpan produk'),
+                ),
+              ),
             ),
           ),
         ),
@@ -406,8 +454,11 @@ class _CategoryPicker extends StatelessWidget {
   }
 }
 
-class _MarginHint extends StatelessWidget {
-  const _MarginHint({required this.price, required this.costPrice});
+/// Baris laba kotor per pcs. Berlatar `primarySoft` karena ini satu-satunya
+/// angka di form yang dihitung, bukan diisi — pemilik perlu melihatnya berubah
+/// saat mengetik harga.
+class _MarginNotice extends StatelessWidget {
+  const _MarginNotice({required this.price, required this.costPrice});
 
   final int price;
   final int costPrice;
@@ -419,12 +470,32 @@ class _MarginHint extends StatelessWidget {
     final margin = price - costPrice;
     final isLoss = margin < 0;
 
-    return Text(
-      isLoss
-          ? 'Rugi ${formatRupiah(-margin)} per unit — modal lebih besar dari harga jual'
-          : 'Laba ${formatRupiah(margin)} per unit',
-      style: AppTextStyle.label.copyWith(
-        color: isLoss ? AppColor.danger : AppColor.inkMuted,
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s4,
+        vertical: AppSpacing.s3,
+      ),
+      decoration: BoxDecoration(
+        color: isLoss ? AppColor.dangerSoft : AppColor.primarySoft,
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              isLoss ? 'Rugi per pcs' : 'Laba kotor per pcs',
+              style: AppTextStyle.label.copyWith(
+                color: isLoss ? AppColor.danger : AppColor.primary,
+              ),
+            ),
+          ),
+          Text(
+            formatRupiah(isLoss ? -margin : margin),
+            style: AppTextStyle.bodyStrong.copyWith(
+              color: isLoss ? AppColor.danger : AppColor.primary,
+            ),
+          ),
+        ],
       ),
     );
   }

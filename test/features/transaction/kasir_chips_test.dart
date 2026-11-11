@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:henshin/features/product/domain/entities/product.dart';
+import 'package:henshin/core/widgets/app_avatar.dart';
 import 'package:henshin/features/transaction/presentation/screens/cashier_screen.dart';
 
 /// Chip kategori di Kasir hanya untuk kategori yang punya produk **siap jual**.

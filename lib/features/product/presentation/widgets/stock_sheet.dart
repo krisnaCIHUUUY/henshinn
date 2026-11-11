@@ -103,15 +103,26 @@ class _StockSheetState extends State<StockSheet> {
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        AppSpacing.s6,
-        AppSpacing.s6,
-        AppSpacing.s6,
-        AppSpacing.s6 + MediaQuery.viewInsetsOf(context).bottom,
+        AppSpacing.s4,
+        AppSpacing.s2,
+        AppSpacing.s4,
+        AppSpacing.s4 + MediaQuery.viewInsetsOf(context).bottom,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColor.line,
+                borderRadius: AppRadius.fullAll,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s4),
           Text(
             _isRestock ? 'Restok' : 'Koreksi Stok',
             style: AppTextStyle.heading.copyWith(color: AppColor.ink),
@@ -155,14 +166,9 @@ class _StockSheetState extends State<StockSheet> {
           const SizedBox(height: AppSpacing.s6),
           SizedBox(
             width: double.infinity,
-            height: AppSpacing.tapMin,
+            height: AppSpacing.tapPrimary,
             child: ElevatedButton(
               onPressed: _submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColor.ink,
-                foregroundColor: AppColor.onPrimary,
-                shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
-              ),
               child: Text(_isRestock ? 'Simpan restok' : 'Simpan koreksi'),
             ),
           ),

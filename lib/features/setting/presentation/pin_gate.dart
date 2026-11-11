@@ -22,8 +22,26 @@ class PinGate {
     BuildContext context, {
     required String reason,
   }) async {
-    final hasPin = (await sl<PinRepository>().hasPin()).getOrElse(() => false);
+    if (!await hasPinOrWarn(context) || !context.mounted) return false;
 
+    // Sheet, bukan rute: konteks di belakangnya tetap terlihat (ADR-049).
+    // isScrollControlled supaya keypad tidak terpotong di HP pendek.
+    final verified = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => PinVerifySheet(reason: reason),
+    );
+    return verified ?? false;
+  }
+
+  /// `true` kalau PIN sudah pernah dibuat; kalau belum, pesannya ditampilkan
+  /// dan pemanggil harus berhenti.
+  ///
+  /// Terbuka sendiri karena sheet void memasang keypad-nya sendiri (satu sheet
+  /// untuk alasan + PIN, ADR-054) tapi tetap harus menolak di pintu yang sama —
+  /// bukan dengan salinan pemeriksaan ini.
+  static Future<bool> hasPinOrWarn(BuildContext context) async {
+    final hasPin = (await sl<PinRepository>().hasPin()).getOrElse(() => false);
     if (!context.mounted) return false;
 
     if (!hasPin) {
@@ -34,14 +52,6 @@ class PinGate {
       );
       return false;
     }
-
-    // Sheet, bukan rute: konteks di belakangnya tetap terlihat (ADR-049).
-    // isScrollControlled supaya keypad tidak terpotong di HP pendek.
-    final verified = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => PinVerifySheet(reason: reason),
-    );
-    return verified ?? false;
+    return true;
   }
 }

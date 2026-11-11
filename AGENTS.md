@@ -54,6 +54,12 @@ docs/struktur_folder.md        # ASPIRATIONAL — differs from code, do not foll
   Scaffold lays that slot out with loose constraints as tall as the screen, so a
   default `Column` eats the whole screen, the body collapses to 0 px, and a
   zero-height `ListView` silently builds none of its children (ADR-051).
+- In the barcode scanner, anything between a detection and `Navigator.pop()`
+  must sit **behind the `_isBusy` guard**, set before the first `await` — even
+  an `await` that looks harmless like haptic feedback. A printed barcode is
+  detected several times per second, so a second detection lands in that gap
+  and calls `pop()` inside the first one: assert `!_debugLocked` in
+  `navigator.dart` (ADR-055).
 - Tests: flows that hit the DB go in repository/bloc tests (plain `test()`, real async). `testWidgets` runs in fake-async, so Drift streams stall and `pumpAndSettle` times out — keep widget tests to pure-UI assertions. Fake plugins via their platform interface (`FlutterSecureStoragePlatform.instance`, `PathProviderPlatform.instance`), never via a wrapper in production code (ADR-012).
 
 ## 4. Run / test / build

@@ -18,8 +18,16 @@ import 'package:permission_handler/permission_handler.dart';
 /// Scan berturut: kamera tetap hidup, tiap barcode yang dikenali langsung
 /// masuk keranjang. Harus di-push dengan `BlocProvider.value` dari kasir
 /// supaya memakai `CartBloc` yang sama — bukan rute top-level.
+///
+/// Dengan `returnsCode: true` layar ini tidak menyentuh keranjang sama sekali:
+/// barcode pertama yang terbaca di-pop sebagai `String` dan layarnya tutup.
+/// Mode itu dipakai layar Produk, yang tidak punya `CartBloc` di atasnya —
+/// jadi di mode itu tidak boleh ada satu pun `context.read<CartBloc>()`.
 class BarcodeScannerScreen extends StatefulWidget {
-  const BarcodeScannerScreen({super.key});
+  const BarcodeScannerScreen({super.key, this.returnsCode = false});
+
+  /// `true`: pop barcode-nya, jangan cari produknya dan jangan isi keranjang.
+  final bool returnsCode;
 
   @override
   State<BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
@@ -125,6 +133,21 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         .firstWhere((value) => value != null && value.isNotEmpty, orElse: () => null);
     if (code == null) return;
     if (_isDuplicate(code)) return;
+
+    // Mode "kembalikan barcode": berhenti di sini — tidak ada lookup produk,
+    // tidak ada keranjang. Pemanggilnya yang memutuskan arti barcode itu.
+    if (widget.returnsCode) {
+      // `_isBusy` wajib diset SEBELUM await: barcode yang jelas terbaca
+      // berkali-kali per detik, dan deteksi kedua yang jatuh di celah await
+      // akan memanggil pop() di tengah pop pertama — assert `!_debugLocked`
+      // di navigator.dart, bukan sekadar pop ganda yang tidak kelihatan.
+      // Penjaga ini yang dipakai jalur keranjang di bawah; di sini sempat
+      // terlewat (ADR-055).
+      setState(() => _isBusy = true);
+      await HapticFeedback.mediumImpact();
+      if (mounted) Navigator.of(context).pop(code);
+      return;
+    }
 
     setState(() {
       _isBusy = true;
@@ -258,7 +281,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             left: 0,
             right: 0,
             bottom: 0,
-            child: const _CartSummaryBar(),
+            child: widget.returnsCode
+                ? const SizedBox.shrink()
+                : const _CartSummaryBar(),
           ),
           if (_isBusy)
             const ColoredBox(

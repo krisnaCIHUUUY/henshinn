@@ -1232,3 +1232,180 @@ verifikasi.
 
 Cross-link: ADR-012 (batas tes widget, dipertajam di sini), ADR-048 (layar yang
 sama), ADR-013 (bug yang lolos karena layarnya tidak punya tes).
+
+---
+
+## ADR-052 — Chip "Perlu restok" memakai query lama, dan isinya beda dari `isLowStock`
+
+**Keputusan.** Chip `Perlu restok · N` di layar Produk disaring dengan
+`ProductState.lowStockProducts` — hasil `watchLowStockProducts()` yang sudah
+ada sejak awal — bukan dengan getter `ProductEntity.isLowStock`, dan bukan
+dengan query baru.
+
+**Kenapa bukan query baru.** Daftarnya sudah di state: `LowStockScreen` dulu
+memakainya, dan ketika layar itu dihapus di D2 querynya tetap berlangganan
+untuk banner. Chip ini hanya mengganti cara menampilkannya.
+
+**Yang harus tidak diubah karena terlihat seperti kesalahan.** Dua definisi
+"stok menipis" di aplikasi ini **sengaja berbeda**:
+
+| Sumber | Aturan | Stok 0 |
+|---|---|---|
+| `ProductDao.watchLowStockProducts` | `stock <= lowStockThreshold` | **ikut** |
+| `ProductEntity.isLowStock` | `stock > 0 && stock <= threshold` | tidak |
+
+Chip memakai yang pertama: produk habis adalah yang **paling** perlu restok,
+jadi mengeluarkannya dari daftar restok akan menyembunyikan justru yang
+mendesak. Badge di baris memakai yang kedua, karena badge `Habis` merah sudah
+mengambil kasus stok 0 dan dua badge di satu baris tidak berguna.
+
+Konsekuensinya angka N di chip **lebih besar** dari jumlah badge `Sisa N` yang
+terlihat, sebanyak produk yang habis. Itu benar, bukan selisih yang perlu
+"diperbaiki" dengan menyeragamkan kedua definisi. `visibleProducts` menerima
+daftar low-stock sebagai parameter justru supaya aturan ini tidak bisa
+diam-diam dihitung ulang di presentation, dan tesnya mengunci bahwa produk
+stok 0 ikut muncul.
+
+**Badge "Stok aman" dibuang.** Dulu setiap produk dapat badge, termasuk hijau
+"Stok aman". Di daftar 86 produk hasilnya 86 badge hijau yang menenggelamkan
+4 yang benar-benar butuh tindakan. Sekarang hanya keadaan yang perlu
+tindakan yang diberi badge: `Nonaktif`, `Habis`, `Sisa N`.
+
+Cross-link: ADR-038 (kategori kosong tidak jadi chip, aturan yang sama dipakai
+chip kategori di sini), ADR-047 (`LowStockScreen` dihapus, chip ini
+penggantinya), ADR-012 (`visibleProducts` dipisah jadi fungsi murni supaya
+bisa diuji `test()`).
+
+---
+
+## ADR-053 — Aksi baris produk pindah ke satu sheet, bukan ikon di baris
+
+**Keputusan.** Mengetuk baris produk membuka `ProductActionSheet` berisi empat
+pilihan: Ubah produk, Restok, Koreksi stok, Hapus. Ikon pensil dan menu tiga
+titik di baris dihapus.
+
+**Kenapa.** Baris produk di mockup v2 adalah satu tombol tanpa ikon, dan di
+390 px baris yang memuat avatar, nama, kategori, stok, badge, harga, **plus**
+dua sasaran ketuk 48 px tidak punya ruang tanpa memotong nama produk. Pemilik
+memilih opsi ini dari tiga yang ditawarkan; dua lainnya (geser baris dengan
+`flutter_slidable`, dan mempertahankan ikon) ditolak karena yang pertama
+menambah paket untuk aksi yang tidak punya petunjuk di layar, dan yang kedua
+tidak pernah bisa sama dengan mockup.
+
+**Keuntungan yang tidak direncanakan tapi nyata.** "Hapus" tidak lagi bisa
+tersenggol: dulu ia satu ketukan di dalam menu yang dibuka ikon kecil di
+sebelah ikon Ubah, sekarang ia selalu butuh satu ketukan niat di sheet yang
+menyebut nama produknya. Produk yang pernah terjual tetap tidak bisa dihapus
+(ADR-045), tapi yang belum pernah terjual **bisa**, dan itu kerugian data yang
+tidak bisa dibatalkan.
+
+**Sheet-nya hanya memilih, tidak mengerjakan.** `ProductActionSheet.show`
+mengembalikan `ProductAction?` dan pemanggil yang menjalankan aksinya. Itu
+bukan selera: Restok dan Koreksi membuka `StockSheet`, dan membuka sheet dari
+dalam sheet yang belum tertutup meninggalkan sheet pertama menggantung di
+bawah yang kedua. Jangan dipindah ke dalam sheet ini.
+
+Cross-link: ADR-045 (produk yang pernah terjual tidak boleh dihapus),
+ADR-011 (perubahan stok wajib lewat Restok/Koreksi supaya ledger tidak bolong —
+sebabnya kedua aksi itu harus tetap ada di sini).
+
+---
+
+## ADR-054 — Void jadi satu sheet: dampak, alasan, dan PIN dalam satu tampilan
+
+**Keputusan.** Void transaksi sekarang **satu** `VoidSheet`: ringkasan dampak,
+chip alasan, PIN pad, tombol "Void transaksi". Alur dua langkah (sheet PIN
+dulu, lalu `AlertDialog` alasan) dihapus beserta `_VoidReasonDialog`.
+
+**Kenapa.** Di alur lama pemilik memasukkan PIN **sebelum** tahu alasan apa
+yang akan dicatat dan berapa stok yang akan kembali — menyetujui gerbang untuk
+sesuatu yang baru dijelaskan di layar berikutnya. Void mengubah stok dan uang,
+dan di sinilah PIN betul-betul menjaga sesuatu, jadi yang dijaga harus terbaca
+saat gerbangnya dilewati.
+
+**PIN sengaja tidak auto-submit di sheet ini.** `PinVerifySheet` mengirim PIN
+begitu angka ke-6 ditekan; di sini tidak. Tombol "Void transaksi" yang memicu,
+karena:
+
+1. alasan wajib terisi dan auto-submit membuat PIN bisa benar sementara alasan
+   masih kosong, dan
+2. pemilik harus tetap bisa batal **setelah** mengetik PIN — di alur lama,
+   angka ke-6 langsung melewati gerbang.
+
+Tombolnya mati sampai alasan terisi **dan** enam angka lengkap.
+
+**Yang tidak berubah, dan harus tetap begitu.** `PinBloc`/`PinRepository` tidak
+disentuh: jeda bertingkat, hitungan gagal, dan hash di secure storage tetap
+sama, buktinya 9 tes `pin_repository_impl_test` hijau tanpa diubah. Sheet ini
+mem-`pop` **alasannya**, bukan mem-void sendiri; `voidTransaction` tetap
+dipanggil `TransactionDetailScreen`, jadi validasi repository (alasan kosong
+ditolak, transaksi yang sudah void ditolak) tetap jaring terakhir dan tes void
+di repository tetap hijau tanpa diubah.
+
+**`PinGate.hasPinOrWarn` dibuka.** Sheet ini memasang keypad-nya sendiri
+sehingga tidak lewat `PinGate.require`, tapi pemeriksaan "PIN belum pernah
+dibuat" tidak boleh disalin: kalau gerbangnya nanti berubah, salinan itu yang
+akan ketinggalan. `require` sekarang memanggil helper yang sama.
+
+**Chip alasan menggantikan ketik bebas, tapi tidak menghapusnya.** `Lainnya`
+tetap membuka kolom teks: `voidReason` wajib terisi dan alasan di luar tiga
+pilihan itu harus tetap bisa dicatat.
+
+Cross-link: ADR-049 (PIN jadi sheet; sheet ini pengecualian yang memasang
+keypad sendiri), ADR-028 (empat pemanggil `PinGate` tidak berubah), ADR-051
+(tombol di sheet ini dipatok `SizedBox`, bukan dibiarkan `Column` mengambil
+ruang).
+
+---
+
+## ADR-055 — `pop()` dari dalam listener barcode wajib menutup celah `await` lebih dulu
+
+**Keputusan.** Mode `BarcodeScannerScreen(returnsCode: true)` men-set
+`_isBusy = true` **sebelum** `await` apa pun, bukan sesudah.
+
+**Bug yang melahirkannya** (ditemukan pemilik saat verifikasi D6, hanya untuk
+produk yang **sudah terdaftar**):
+
+```
+Exception caught by widgets library
+'package:flutter/src/widgets/navigator.dart': Failed assertion:
+line 4128 pos 12: '!_debugLocked': is not true.
+```
+
+**Penyebabnya.** `!_debugLocked` berarti `Navigator.pop()` dipanggil sementara
+`pop()` lain masih mengubah widget tree. Urutannya: barcode terbaca →
+`await HapticFeedback.mediumImpact()` → **deteksi kedua masuk di celah await
+itu** → lolos semua penjaga → `pop()` kedua jatuh di tengah `pop()` pertama.
+
+**Kenapa hanya produk terdaftar.** Bukan karena lookup produknya — di mode ini
+tidak ada lookup sama sekali. Produk terdaftar punya barcode **cetak asli**
+yang dikenali kamera berkali-kali per detik; kode uji yang belum terdaftar
+biasanya terbaca sekali, jadi celahnya tidak pernah terisi. Gejala yang
+seolah-olah berkaitan dengan status pendaftaran sebenarnya berkaitan dengan
+**laju deteksi**.
+
+**Kenapa jalur keranjang tidak pernah kena.** Penjaganya sudah ada sejak awal:
+`_onDetect` dibuka `if (_isBusy) return;`, dan jalur keranjang men-set
+`_isBusy = true` sebelum `await` lookup database. Early-return mode
+`returnsCode` ditulis **di atas** blok `setState` itu, jadi satu-satunya
+mekanisme yang membuat `pop` di file ini aman justru terlewat. Perbaikannya
+memakai penjaga yang sama, bukan mekanisme baru.
+
+**Aturan umumnya, untuk setiap `pop` berikutnya di layar ini.** Antara deteksi
+dan `pop` tidak boleh ada `await` yang belum dilindungi `_isBusy` — termasuk
+`await` yang kelihatan tidak berbahaya seperti haptic.
+
+**Tidak bisa dijaga tes otomatis, dan jangan dipaksakan.** `_onDetect` hidup di
+dalam `State` yang membuat `MobileScannerController`, dan controller itu butuh
+platform channel kamera yang tidak ada di `flutter test`
+(`MissingPluginException`); memalsukannya berarti memalsukan plugin di kode
+produksi, yang dilarang ADR-012. Tes yang mem-pop dua kali lewat `Navigator`
+biasa hanya menguji ulang Flutter, bukan kode ini. Penggantinya pemeriksaan
+manual yang spesifik: tahan barcode terdaftar 2–3 detik di depan kamera dari
+**Produk → scan**, ulangi 3–4 kali — menahannyalah yang memicu deteksi
+berturut, dan sekali lolos belum berarti sembuh.
+
+Cross-link: ADR-012 (batas tes widget; ini kasus yang benar-benar di luar
+jangkauannya, berbeda dari ADR-051 yang justru bisa diuji), ADR-043 (layar
+scanner yang sama), ADR-025 (aturan operasional yang harus ikut ditulis di
+`AGENTS.md`, bukan hanya di ADR).

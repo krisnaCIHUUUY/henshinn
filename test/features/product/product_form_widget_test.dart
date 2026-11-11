@@ -69,9 +69,9 @@ void main() {
     await pumpList(tester);
     await tester.tap(find.byIcon(Icons.add));
     await tester.pumpAndSettle();
-    expect(find.text('Tambah Produk'), findsWidgets);
+    expect(find.text('Tambah produk'), findsWidgets);
 
-    final save = find.widgetWithText(ElevatedButton, 'Simpan');
+    final save = find.widgetWithText(ElevatedButton, 'Simpan produk');
     await tester.ensureVisible(save);
     await tester.pumpAndSettle();
     await tester.tap(save);
@@ -81,7 +81,7 @@ void main() {
     expect(find.text('Wajib diisi'), findsWidgets);
     expect(find.text('Pilih kategori'), findsOneWidget);
     // form masih terbuka, tidak ada yang tersimpan
-    expect(find.text('Tambah Produk'), findsWidgets);
+    expect(find.text('Tambah produk'), findsWidgets);
   });
 
   testWidgets('opsi "+ Kategori baru" memunculkan field nama yang wajib diisi',
@@ -99,7 +99,7 @@ void main() {
 
     expect(find.text('Nama kategori baru'), findsOneWidget);
 
-    final save = find.widgetWithText(ElevatedButton, 'Simpan');
+    final save = find.widgetWithText(ElevatedButton, 'Simpan produk');
     await tester.ensureVisible(save);
     await tester.pumpAndSettle();
     await tester.tap(save);

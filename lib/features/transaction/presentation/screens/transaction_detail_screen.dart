@@ -4,10 +4,10 @@ import 'package:henshin/core/theme/app_radius.dart';
 import 'package:henshin/core/theme/app_spacing.dart';
 import 'package:henshin/core/theme/app_text_style.dart';
 import 'package:henshin/core/utils/currency_formatter.dart';
-import 'package:henshin/features/setting/presentation/pin_gate.dart';
 import 'package:henshin/features/transaction/domain/entities/receipt.dart';
 import 'package:henshin/features/transaction/domain/repositories/transaction_repository.dart';
 import 'package:henshin/features/transaction/presentation/screens/receipt_preview_screen.dart';
+import 'package:henshin/features/transaction/presentation/widgets/void_sheet.dart';
 import 'package:henshin/injection_container.dart';
 import 'package:intl/intl.dart';
 
@@ -70,20 +70,17 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   }
 
   /// Void wajib lewat PIN **dan** alasan: dua-duanya syarat audit pemilik
-  /// (PRD §2.4). PIN dulu, baru alasan, supaya orang yang tidak berhak tidak
-  /// sempat mengetik apa pun.
+  /// (PRD §2.4). Keduanya sekarang di satu sheet bersama ringkasan dampaknya —
+  /// pemilik melihat apa yang akan berubah sebelum menyetujui (ADR-054).
   Future<void> _void() async {
-    if (!await PinGate.require(
-      context,
-      reason: 'Diperlukan untuk void transaksi',
-    )) {
-      return;
-    }
-    if (!mounted) return;
+    final receipt = _receipt;
+    if (receipt == null) return;
 
-    final reason = await showDialog<String>(
-      context: context,
-      builder: (_) => const _VoidReasonDialog(),
+    final reason = await VoidSheet.show(
+      context,
+      transactionId: widget.transactionId,
+      total: receipt.total,
+      productCount: receipt.lines.length,
     );
     if (reason == null || !mounted) return;
 
@@ -272,57 +269,6 @@ class _TotalRow extends StatelessWidget {
           Text(formatRupiah(value), style: style),
         ],
       ),
-    );
-  }
-}
-
-/// Alasan void wajib terisi, jadi tombolnya mati selama kolomnya kosong —
-/// validasi di repository tetap ada sebagai jaring kedua.
-class _VoidReasonDialog extends StatefulWidget {
-  const _VoidReasonDialog();
-
-  @override
-  State<_VoidReasonDialog> createState() => _VoidReasonDialogState();
-}
-
-class _VoidReasonDialogState extends State<_VoidReasonDialog> {
-  final _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final filled = _controller.text.trim().isNotEmpty;
-
-    return AlertDialog(
-      title: const Text('Alasan void'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        maxLines: 2,
-        textCapitalization: TextCapitalization.sentences,
-        onChanged: (_) => setState(() {}),
-        decoration: InputDecoration(
-          hintText: 'Mis. salah input, barang dikembalikan',
-          border: OutlineInputBorder(borderRadius: AppRadius.mdAll),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Batal'),
-        ),
-        TextButton(
-          onPressed: filled
-              ? () => Navigator.of(context).pop(_controller.text)
-              : null,
-          child: const Text('Void'),
-        ),
-      ],
     );
   }
 }

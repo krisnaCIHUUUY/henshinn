@@ -7,6 +7,11 @@ import 'package:henshin/core/theme/app_spacing.dart';
 import 'package:henshin/core/theme/app_text_style.dart';
 import 'package:henshin/core/theme/app_theme.dart';
 import 'package:henshin/core/utils/currency_formatter.dart';
+import 'package:henshin/core/widgets/app_avatar.dart';
+import 'package:henshin/core/widgets/app_card.dart';
+import 'package:henshin/core/widgets/app_chip.dart';
+import 'package:henshin/core/widgets/search_row.dart';
+import 'package:henshin/core/widgets/section_header.dart';
 import 'package:henshin/features/product/domain/entities/product.dart';
 import 'package:henshin/features/product/domain/usecases/watch_frequent_products.dart';
 import 'package:henshin/features/product/presentation/bloc/product_bloc.dart';
@@ -127,7 +132,7 @@ class _CashierViewState extends State<_CashierView> {
         body: SafeArea(
           child: Column(
             children: [
-              _SearchRow(
+              SearchRow(
                 controller: _search,
                 onKeywordChanged: (value) => setState(() => _keyword = value),
                 onScanPressed: () => _openScanner(context),
@@ -161,71 +166,6 @@ class _CashierViewState extends State<_CashierView> {
         // PayBar melayang di atas bottom nav, dan hanya ada kalau keranjang
         // terisi — tombol Bayar mati tidak berguna di layar sekecil ini.
         bottomNavigationBar: cart.items.isEmpty ? null : _PayBar(cart: cart),
-      ),
-    );
-  }
-}
-
-/// Inisial untuk kotak avatar produk. Skema `products` tidak punya kolom
-/// gambar, jadi v2 memakai inisial — bukan placeholder gambar.
-String productInitial(String name) {
-  final trimmed = name.trim();
-  return trimmed.isEmpty ? '?' : trimmed.characters.first.toUpperCase();
-}
-
-// ================= CARI + SCAN =================
-
-class _SearchRow extends StatelessWidget {
-  const _SearchRow({
-    required this.controller,
-    required this.onKeywordChanged,
-    required this.onScanPressed,
-  });
-
-  final TextEditingController controller;
-  final ValueChanged<String> onKeywordChanged;
-  final VoidCallback onScanPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.s4,
-        AppSpacing.s2,
-        AppSpacing.s4,
-        0,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              onChanged: onKeywordChanged,
-              decoration: const InputDecoration(
-                hintText: 'Cari produk atau barcode',
-                prefixIcon: Icon(Icons.search),
-                isDense: true,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.s2),
-          SizedBox(
-            width: AppSpacing.tapMin,
-            height: AppSpacing.tapMin,
-            child: IconButton(
-              tooltip: 'Scan barcode',
-              onPressed: onScanPressed,
-              style: IconButton.styleFrom(
-                backgroundColor: AppColor.surfaceMuted,
-                foregroundColor: AppColor.ink,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: AppRadius.mdAll,
-                ),
-              ),
-              icon: const Icon(Icons.qr_code_scanner),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -272,162 +212,22 @@ class _CategoryChips extends StatelessWidget {
             ? selectedId
             : null;
 
-        return SizedBox(
-          height: 40 + AppSpacing.s3,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.s4,
-              AppSpacing.s3,
-              AppSpacing.s4,
-              0,
+        return ChipRow(
+          children: [
+            AppChip(
+              label: 'Semua',
+              selected: selected == null,
+              onTap: () => onSelected(null),
             ),
-            itemCount: categories.length + 1,
-            separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.s2),
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return _FilterChip(
-                  label: 'Semua',
-                  selected: selected == null,
-                  onTap: () => onSelected(null),
-                );
-              }
-              final category = categories[index - 1];
-              return _FilterChip(
+            for (final category in categories)
+              AppChip(
                 label: category.name,
                 selected: selected == category.id,
                 onTap: () => onSelected(category.id),
-              );
-            },
-          ),
+              ),
+          ],
         );
       },
-    );
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected ? AppColor.primarySoft : AppColor.surface,
-      borderRadius: AppRadius.fullAll,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AppRadius.fullAll,
-        child: Container(
-          height: 40,
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
-          decoration: BoxDecoration(
-            borderRadius: AppRadius.fullAll,
-            border: Border.all(
-              color: selected ? AppColor.primary : AppColor.lineStrong,
-            ),
-          ),
-          child: Text(
-            label,
-            style: AppTextStyle.label.copyWith(
-              color: selected ? AppColor.primary : AppColor.ink,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ================= KARTU =================
-
-/// Kartu putih berisi baris-baris, dipisah garis `line`. Satu-satunya bentuk
-/// daftar di desain v2.
-class _Card extends StatelessWidget {
-  const _Card({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
-      decoration: BoxDecoration(
-        color: AppColor.surface,
-        borderRadius: AppRadius.mdAll,
-        border: Border.all(color: AppColor.line),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const Divider(height: 1),
-            children[i],
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, this.action});
-
-  final String title;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.s4,
-        0,
-        AppSpacing.s4,
-        AppSpacing.s2,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: AppTextStyle.heading.copyWith(color: AppColor.ink),
-            ),
-          ),
-          ?action,
-        ],
-      ),
-    );
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.name});
-
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 40,
-      height: 40,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: AppColor.surfaceMuted,
-        borderRadius: AppRadius.smAll,
-      ),
-      child: Text(
-        productInitial(name),
-        style: AppTextStyle.bodyStrong.copyWith(color: AppColor.inkMuted),
-      ),
     );
   }
 }
@@ -444,15 +244,15 @@ class _CartSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(
+        SectionHeader(
           title: 'Keranjang · ${cart.items.length} produk',
-          action: TextButton(
+          trailing: TextButton(
             onPressed: () =>
                 context.read<CartBloc>().add(const CartEvent.cleared()),
             child: const Text('Kosongkan'),
           ),
         ),
-        _Card(children: [for (final item in cart.items) _CartRow(item: item)]),
+        AppCard(children: [for (final item in cart.items) _CartRow(item: item)]),
         const SizedBox(height: AppSpacing.s6),
       ],
     );
@@ -479,7 +279,7 @@ class _CartRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _Avatar(name: item.product.name),
+          AppAvatar(name: item.product.name),
           const SizedBox(width: AppSpacing.s3),
           Expanded(
             child: Column(
@@ -666,7 +466,7 @@ class _ProductList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(title: title),
+        SectionHeader(title: title),
         if (products.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
@@ -676,7 +476,7 @@ class _ProductList extends StatelessWidget {
             ),
           )
         else
-          _Card(
+          AppCard(
             children: [
               for (final product in products)
                 _ProductRow(product: product, onTap: () => onPicked(product)),
@@ -705,7 +505,7 @@ class _ProductRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            _Avatar(name: product.name),
+            AppAvatar(name: product.name),
             const SizedBox(width: AppSpacing.s3),
             Expanded(
               child: Column(

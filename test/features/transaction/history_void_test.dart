@@ -103,6 +103,40 @@ void main() {
       expect(semua, hasLength(1));
     });
 
+    test('filter until menyaring transaksi yang lebih baru', () async {
+      final kopi = await addProduct('Kopi');
+      final lama = await sell(kopi, 1);
+      await sell(kopi, 2); // tetap hari ini
+
+      // Geser yang pertama ke 3 hari lalu, lewat DB langsung karena createSale
+      // selalu memakai waktu sekarang.
+      final tigaHariLalu = DateTime.now().subtract(const Duration(days: 3));
+      await db
+          .customStatement('UPDATE transactions SET date = ? WHERE id = ?', [
+            tigaHariLalu.millisecondsSinceEpoch ~/ 1000,
+            lama,
+          ]);
+
+      // Satu hari kalender penuh: batas atas ikut terpakai, jadi transaksi
+      // hari ini tidak boleh muncul.
+      final hari = DateTime(
+        tigaHariLalu.year,
+        tigaHariLalu.month,
+        tigaHariLalu.day,
+      );
+      final sehariItu = await sales
+          .watchHistory(
+            since: hari,
+            until: hari
+                .add(const Duration(days: 1))
+                .subtract(const Duration(microseconds: 1)),
+          )
+          .first;
+
+      expect(sehariItu, hasLength(1));
+      expect(sehariItu.single.id, lama);
+    });
+
     test('transaksi void tetap muncul di riwayat', () async {
       final kopi = await addProduct('Kopi');
       final id = await sell(kopi, 1);
