@@ -101,7 +101,7 @@ abstract final class RestoreAction {
             child: const Text('Batal'),
           ),
           TextButton(
-            style: TextButton.styleFrom(foregroundColor: AppColor.error),
+            style: TextButton.styleFrom(foregroundColor: AppColor.danger),
             onPressed: () => Navigator.of(dialogContext).pop(true),
             child: const Text('Timpa data'),
           ),

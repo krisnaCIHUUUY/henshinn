@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:henshin/core/theme/app_color.dart';
-import 'package:henshin/core/theme/app_radius.dart';
+import 'package:henshin/core/theme/app_spacing.dart';
 import 'package:henshin/core/theme/app_text_style.dart';
 import 'package:henshin/core/utils/page_routes.dart';
+import 'package:henshin/core/widgets/app_badge.dart';
+import 'package:henshin/core/widgets/app_card.dart';
+import 'package:henshin/core/widgets/section_header.dart';
 import 'package:henshin/features/setting/domain/entities/store_info.dart';
 import 'package:henshin/features/setting/domain/repositories/pin_repository.dart';
 import 'package:henshin/features/setting/domain/repositories/settings_repository.dart';
 import 'package:henshin/features/setting/presentation/backup_action.dart';
+import 'package:henshin/features/setting/presentation/pin_gate.dart';
 import 'package:henshin/features/setting/presentation/restore_action.dart';
 import 'package:henshin/features/setting/presentation/screens/store_info_screen.dart';
-import 'package:henshin/features/setting/presentation/pin_gate.dart';
+import 'package:henshin/features/setting/presentation/widgets/backup_reminder.dart';
 import 'package:henshin/injection_container.dart';
+import 'package:intl/intl.dart';
 
 class SettingScreen extends StatefulWidget {
   const SettingScreen({super.key});
@@ -90,136 +94,87 @@ class _SettingScreenState extends State<SettingScreen> {
     }
   }
 
-  String get _backupSubtitle {
+  String get _lastBackupText {
     final last = _store.lastBackupAt;
-    if (last == null) return 'Belum pernah — data hanya ada di HP ini';
-    final days = _store.daysSinceBackup(DateTime.now()) ?? 0;
-    final when = DateFormat('dd/MM/yyyy HH:mm').format(last);
-    return switch (days) {
-      0 => 'Terakhir hari ini · $when',
-      1 => 'Terakhir kemarin · $when',
-      _ => 'Terakhir $days hari lalu · $when',
-    };
+    if (last == null) return 'Belum pernah';
+    return DateFormat('dd/MM/yyyy HH.mm').format(last);
   }
 
   @override
   Widget build(BuildContext context) {
+    final stale = _store.backupIsStale(DateTime.now());
+
     return Scaffold(
-      backgroundColor: AppColor.surface,
+      backgroundColor: AppColor.bg,
+      // App bar-nya wajib: sejak D2 layar ini di-push dari ikon gear di
+      // Laporan, bukan tab lagi, jadi tanpa ini tidak ada jalan kembali.
+      appBar: AppBar(
+        title: Text(
+          'Pengaturan',
+          style: AppTextStyle.title.copyWith(color: AppColor.ink),
+        ),
+      ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          padding: const EdgeInsets.only(
+            top: AppSpacing.s2,
+            bottom: AppSpacing.s6,
+          ),
           children: [
-            const Text(
-              'Pengaturan',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: AppColor.onSurface,
+            // Pengingat backup akhirnya punya rumah lagi: dulu di Dasbor yang
+            // dibuang di D2 (ADR-047). Hanya muncul kalau sudah lewat ambang.
+            if (stale)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.s4,
+                  0,
+                  AppSpacing.s4,
+                  AppSpacing.s6,
+                ),
+                child: BackupReminder(store: _store),
               ),
+            const SectionHeader(title: 'Backup & restore'),
+            _BackupCard(
+              lastBackupText: _lastBackupText,
+              stale: stale,
+              onBackup: _runBackup,
+              onRestore: () => RestoreAction.run(context),
             ),
-            const SizedBox(height: 28),
-            const _SectionLabel(label: 'Toko'),
-            const SizedBox(height: 10),
-            _SettingsGroup(
+            const SizedBox(height: AppSpacing.s6),
+            const SectionHeader(title: 'Toko'),
+            AppCard(
               children: [
-                _SettingsRow(
+                _SettingRow(
                   title: 'Info toko',
                   subtitle: _store.name.isEmpty
                       ? 'Belum diisi — tidak muncul di struk'
                       : _store.name,
-                  trailing: const Icon(
-                    Icons.chevron_right,
-                    color: AppColor.outline,
-                  ),
                   onTap: _openStoreInfo,
                 ),
-                _SettingsRow(
-                  title: 'Pajak (PPN)',
-                  subtitle: 'Ditambahkan ke struk',
-                  trailing: const Text(
-                    '11%',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: AppColor.onSurface,
-                    ),
-                  ),
-                  onTap: () {
-                    // navigasi ke pengaturan pajak
-                  },
-                ),
-                _SettingsRow(
-                  title: 'Printer thermal',
-                  subtitle: 'Bluetooth · terhubung',
-                  trailing: const _StatusBadge(label: 'BT-01'),
-                  onTap: () {
-                    // navigasi ke pengaturan printer
-                  },
-                  isLast: true,
-                ),
-              ],
-            ),
-            const SizedBox(height: 28),
-            const _SectionLabel(label: 'Keamanan'),
-            const SizedBox(height: 10),
-            _SettingsGroup(
-              children: [
-                _SettingsRow(
+                _SettingRow(
                   title: _hasPin ? 'Ganti PIN' : 'Buat PIN',
                   subtitle: _hasPin
                       ? 'Melindungi void, restore, ubah harga, dan laba'
                       : 'Belum diatur — void dan restore belum terlindungi',
                   trailing: _hasPin
-                      ? const _StatusBadge(label: 'Aktif')
-                      : const Icon(Icons.chevron_right,
-                          color: AppColor.outline),
+                      ? const AppBadge(
+                          label: 'Aktif',
+                          tone: BadgeTone.success,
+                        )
+                      : const AppBadge(
+                          label: 'Belum ada',
+                          tone: BadgeTone.warning,
+                        ),
                   onTap: _openPinScreen,
-                  isLast: true,
                 ),
-              ],
-            ),
-            const SizedBox(height: 28),
-            const _SectionLabel(label: 'Data lokal'),
-            const SizedBox(height: 10),
-            _SettingsGroup(
-              children: [
-                // Baris 'Backup otomatis' dan 'Export laporan CSV' yang dulu di
-                // sini dihapus: backup otomatis tidak ada, dan export CSV
-                // termasuk out-of-scope (AGENTS.md §6 / PRD §1.4).
-                _SettingsRow(
-                  title: 'Backup data',
-                  subtitle: _backupSubtitle,
-                  trailing: _store.backupIsStale(DateTime.now())
-                      ? const _WarningBadge(label: 'Perlu backup')
-                      : const Icon(Icons.chevron_right,
-                          color: AppColor.outline),
-                  onTap: _runBackup,
-                ),
-                _SettingsRow(
-                  title: 'Pulihkan data',
-                  subtitle: 'Timpa data HP ini dengan file backup · perlu PIN',
-                  trailing: const Icon(
-                    Icons.chevron_right,
-                    color: AppColor.outline,
-                  ),
-                  onTap: () => RestoreAction.run(context),
-                  isLast: true,
-                ),
-              ],
-            ),
-            const SizedBox(height: 28),
-            const _SectionLabel(label: 'Lainnya'),
-            const SizedBox(height: 10),
-            _SettingsGroup(
-              children: [
-                _SettingsRow(
+                // Baris "Pajak (PPN) 11%" dan "Printer thermal BT-01" dihapus
+                // di D8: keduanya dummy yang tidak pernah punya implementasi,
+                // dan pajak termasuk out-of-scope (AGENTS.md §6 / PRD §1.4).
+                // Baris "Isi: N produk · N transaksi" di mockup juga tidak
+                // dibangun — keputusan pemilik 5, tidak ada query hitung baru.
+                const _SettingRow(
                   title: 'Tentang Henshin',
                   subtitle: 'Versi 1.0.0 · offline-first',
-                  trailing: const SizedBox.shrink(),
-                  onTap: () {
-                    // navigasi ke halaman about
-                  },
                 ),
               ],
             ),
@@ -230,170 +185,140 @@ class _SettingScreenState extends State<SettingScreen> {
   }
 }
 
-// ================= SECTION LABEL =================
+class _BackupCard extends StatelessWidget {
+  const _BackupCard({
+    required this.lastBackupText,
+    required this.stale,
+    required this.onBackup,
+    required this.onRestore,
+  });
 
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: AppTextStyle.labelSm.copyWith(
-        color: AppColor.outline,
-        fontSize: 15,
-      ),
-    );
-  }
-}
-
-// ================= SETTINGS GROUP (card container) =================
-
-class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({required this.children});
-
-  final List<Widget> children;
+  final String lastBackupText;
+  final bool stale;
+  final VoidCallback onBackup;
+  final VoidCallback onRestore;
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
+      padding: const EdgeInsets.all(AppSpacing.s4),
       decoration: BoxDecoration(
-        color: AppColor.surfaceContainerLow,
-        borderRadius: AppRadius.lgAll,
+        color: AppColor.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColor.line),
       ),
-      child: Column(children: children),
-    );
-  }
-}
-
-// ================= SETTINGS ROW =================
-
-class _SettingsRow extends StatelessWidget {
-  const _SettingsRow({
-    required this.title,
-    this.subtitle,
-    this.trailing,
-    this.onTap,
-    this.isLast = false,
-  }) : titleColor = null;
-
-  final String title;
-  final String? subtitle;
-  final Widget? trailing;
-  final Color? titleColor;
-  final VoidCallback? onTap;
-  final bool isLast;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      // splashColor: AppColor.onSecondaryContainer,
-      borderRadius: isLast
-          ? const BorderRadius.vertical(bottom: Radius.circular(16))
-          : null,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: AppTextStyle.bodyMd.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: titleColor ?? AppColor.onSurface,
-                        ),
-                      ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle!,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            color: AppColor.outline,
-                          ),
-                        ),
-                      ],
-                    ],
+          Text(
+            'Backup terakhir',
+            style: AppTextStyle.label.copyWith(color: AppColor.inkMuted),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  lastBackupText,
+                  style: AppTextStyle.bodyStrong.copyWith(
+                    color: AppColor.ink,
                   ),
                 ),
-                if (trailing != null) ...[
-                  const SizedBox(width: 12),
-                  trailing!,
-                ],
-              ],
+              ),
+              if (stale)
+                const AppBadge(
+                  label: 'Perlu backup',
+                  tone: BadgeTone.warning,
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s3),
+          SizedBox(
+            width: double.infinity,
+            height: AppSpacing.tapPrimary,
+            child: ElevatedButton.icon(
+              onPressed: onBackup,
+              icon: const Icon(Icons.backup_outlined),
+              label: const Text('Buat backup'),
             ),
           ),
-          if (!isLast)
-            const Divider(
-              height: 1,
-              indent: 16,
-              endIndent: 16,
-              color: AppColor.outlineVariant,
+          const SizedBox(height: AppSpacing.s2),
+          SizedBox(
+            width: double.infinity,
+            height: AppSpacing.tapMin,
+            child: OutlinedButton.icon(
+              onPressed: onRestore,
+              icon: const Icon(Icons.restore),
+              label: const Text('Restore dari backup'),
             ),
+          ),
+          const SizedBox(height: AppSpacing.s2),
+          Text(
+            'Restore butuh PIN dan mengganti semua data di HP ini dengan isi '
+            'file backup.',
+            style: AppTextStyle.label.copyWith(color: AppColor.inkMuted),
+          ),
         ],
       ),
     );
   }
 }
 
-// ================= WARNING BADGE =================
+class _SettingRow extends StatelessWidget {
+  const _SettingRow({
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+  });
 
-/// Bentuknya sama dengan [_StatusBadge] tapi warna error: dipakai saat backup
-/// sudah lewat ambang, supaya terbaca sebagai peringatan, bukan status normal.
-class _WarningBadge extends StatelessWidget {
-  const _WarningBadge({required this.label});
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
 
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: const BoxDecoration(
-        color: AppColor.errorContainer,
-        borderRadius: AppRadius.fullAll,
-      ),
-      child: Text(
-        label,
-        style: AppTextStyle.labelSm.copyWith(
-          fontWeight: FontWeight.w600,
-          color: AppColor.onErrorContainer,
-        ),
-      ),
-    );
-  }
-}
-
-// ================= STATUS BADGE =================
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.label});
-
-  final String label;
+  /// null = baris keterangan, bukan tombol: tanpa chevron dan tanpa efek ketuk.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColor.tertiaryFixed,
-        borderRadius: AppRadius.fullAll,
+    final row = Container(
+      constraints: const BoxConstraints(minHeight: AppSpacing.rowMin),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s4,
+        vertical: AppSpacing.s2,
       ),
-      child: Text(
-        label,
-        style: AppTextStyle.labelSm.copyWith(
-          fontWeight: FontWeight.w600,
-          color: AppColor.onTertiaryFixed,
-        ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyle.body.copyWith(color: AppColor.ink),
+                ),
+                if (subtitle != null)
+                  Text(
+                    subtitle!,
+                    style: AppTextStyle.label.copyWith(
+                      color: AppColor.inkMuted,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (trailing != null) ...[
+            const SizedBox(width: AppSpacing.s2),
+            trailing!,
+          ],
+          if (onTap != null)
+            Icon(Icons.chevron_right, color: AppColor.inkMuted),
+        ],
       ),
     );
+
+    if (onTap == null) return row;
+    return InkWell(onTap: onTap, child: row);
   }
 }

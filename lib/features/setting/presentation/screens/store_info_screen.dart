@@ -94,9 +94,9 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColor.surface,
+      backgroundColor: AppColor.bg,
       appBar: AppBar(
-        backgroundColor: AppColor.surface,
+        backgroundColor: AppColor.bg,
         title: const Text('Info Toko'),
       ),
       body: SafeArea(
@@ -105,7 +105,7 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
             : _error != null
             ? _LoadError(message: _error!, onRetry: _load)
             : ListView(
-                padding: const EdgeInsets.all(AppSpacing.lg),
+                padding: const EdgeInsets.all(AppSpacing.s6),
                 children: [
                   _Field(
                     controller: _name,
@@ -127,13 +127,13 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
                     maxLines: 2,
                     capitalize: true,
                   ),
-                  const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: AppSpacing.s6),
                   SizedBox(
-                    height: AppSpacing.touchTargetMin,
+                    height: AppSpacing.tapMin,
                     child: ElevatedButton(
                       onPressed: _saving ? null : _save,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColor.onSurface,
+                        backgroundColor: AppColor.ink,
                         foregroundColor: AppColor.onPrimary,
                         shape: RoundedRectangleBorder(
                           borderRadius: AppRadius.mdAll,
@@ -167,7 +167,7 @@ class _Field extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.only(bottom: AppSpacing.s4),
       child: TextField(
         controller: controller,
         maxLines: maxLines,
@@ -194,16 +194,16 @@ class _LoadError extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.all(AppSpacing.s6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColor.error),
+              style: TextStyle(color: AppColor.danger),
             ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.s4),
             OutlinedButton(onPressed: onRetry, child: const Text('Coba lagi')),
           ],
         ),

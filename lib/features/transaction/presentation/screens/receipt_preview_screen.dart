@@ -4,6 +4,8 @@ import 'package:henshin/core/theme/app_color.dart';
 import 'package:henshin/core/theme/app_radius.dart';
 import 'package:henshin/core/theme/app_spacing.dart';
 import 'package:henshin/core/theme/app_text_style.dart';
+import 'package:henshin/core/theme/app_theme.dart';
+import 'package:henshin/core/utils/currency_formatter.dart';
 import 'package:henshin/features/transaction/domain/entities/receipt.dart';
 import 'package:henshin/features/transaction/domain/receipt_formatter.dart';
 import 'package:henshin/features/transaction/domain/repositories/transaction_repository.dart';
@@ -77,9 +79,9 @@ class _ReceiptPreviewScreenState extends State<ReceiptPreviewScreen> {
     setState(() => _isPrinting = false);
 
     result.fold(
-      (failure) => ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(failure.message))),
+      (failure) =>
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(failure.message))),
       // Selesai dibagikan/dicetak: struk tidak ada gunanya lagi di layar, jadi
       // kembali ke kasir / detail transaksi. Catatan: di Android share_plus
       // tidak bisa diandalkan membedakan "dibagikan" dari "share sheet
@@ -92,12 +94,9 @@ class _ReceiptPreviewScreenState extends State<ReceiptPreviewScreen> {
     final receipt = _receipt;
     if (receipt == null) return;
 
-    Clipboard.setData(
-      ClipboardData(text: _formatter.formatAsText(receipt)),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Teks struk disalin')),
-    );
+    Clipboard.setData(ClipboardData(text: _formatter.formatAsText(receipt)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Teks struk disalin')));
   }
 
   @override
@@ -105,9 +104,9 @@ class _ReceiptPreviewScreenState extends State<ReceiptPreviewScreen> {
     final receipt = _receipt;
 
     return Scaffold(
-      backgroundColor: AppColor.background,
+      backgroundColor: AppColor.bg,
       appBar: AppBar(
-        backgroundColor: AppColor.surface,
+        backgroundColor: AppColor.bg,
         title: Text(widget.isReprint ? 'Cetak Ulang Struk' : 'Struk'),
         actions: [
           if (receipt != null)
@@ -123,33 +122,59 @@ class _ReceiptPreviewScreenState extends State<ReceiptPreviewScreen> {
           (_, final String error) => _ErrorView(message: error, onRetry: _load),
           (null, _) => const Center(child: CircularProgressIndicator()),
           (final Receipt r, _) => _ReceiptBody(
+            receipt: r,
             lines: _formatter.format(r),
-            isVoided: r.isVoided,
           ),
         },
       ),
       bottomNavigationBar: receipt == null
           ? null
-          : SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: SizedBox(
-                  height: AppSpacing.touchTargetMin,
-                  child: ElevatedButton.icon(
-                    onPressed: _isPrinting ? null : _print,
-                    icon: const Icon(Icons.ios_share),
-                    label: Text(
-                      _isPrinting
-                          ? 'Menyiapkan...'
-                          : sl<PrinterService>().label,
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColor.onSurface,
-                      foregroundColor: AppColor.onPrimary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppRadius.mdAll,
+          : Container(
+              decoration: const BoxDecoration(
+                color: AppColor.surface,
+                boxShadow: AppTheme.sheet,
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.s4,
+                    AppSpacing.s3,
+                    AppSpacing.s4,
+                    AppSpacing.s4,
+                  ),
+                  child: Column(
+                    // Lihat ADR-051: Column di bottomNavigationBar harus min,
+                    // kalau tidak barisnya memenuhi layar.
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        height: AppSpacing.tapMin,
+                        child: OutlinedButton.icon(
+                          onPressed: _isPrinting ? null : _print,
+                          icon: const Icon(Icons.ios_share),
+                          label: Text(
+                            _isPrinting
+                                ? 'Menyiapkan...'
+                                : sl<PrinterService>().label,
+                          ),
+                        ),
                       ),
-                    ),
+                      // Hanya di struk transaksi baru: dari cetak ulang di
+                      // riwayat, "Transaksi baru" tidak ada artinya.
+                      if (!widget.isReprint) ...[
+                        const SizedBox(height: AppSpacing.s2),
+                        SizedBox(
+                          width: double.infinity,
+                          height: AppSpacing.tapPrimary,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Transaksi baru'),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),
@@ -161,35 +186,84 @@ class _ReceiptPreviewScreenState extends State<ReceiptPreviewScreen> {
 /// Kertas struk ditampilkan apa adanya dengan font monospace supaya kolomnya
 /// lurus persis seperti hasil cetak.
 class _ReceiptBody extends StatelessWidget {
-  const _ReceiptBody({required this.lines, required this.isVoided});
+  const _ReceiptBody({required this.receipt, required this.lines});
 
+  final Receipt receipt;
   final List<String> lines;
-  final bool isVoided;
 
   @override
   Widget build(BuildContext context) {
+    final isVoided = receipt.isVoided;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: AppRadius.mdAll,
-            border: Border.all(
-              color: isVoided ? AppColor.error : AppColor.outlineVariant,
+      padding: const EdgeInsets.all(AppSpacing.s4),
+      child: Column(
+        children: [
+          // Notice hijau: satu-satunya tempat kasir diberi tahu bahwa
+          // transaksinya benar-benar tersimpan dan stok sudah dikurangi.
+          if (!isVoided && !receipt.isReprint) ...[
+            _SuccessNotice(change: receipt.change),
+            const SizedBox(height: AppSpacing.s4),
+          ],
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.s4),
+            decoration: BoxDecoration(
+              color: AppColor.surface,
+              borderRadius: AppRadius.mdAll,
+              border: Border.all(
+                color: isVoided ? AppColor.danger : AppColor.line,
+              ),
+            ),
+            child: Text(
+              lines.join('\n'),
+              style: AppTextStyle.receipt.copyWith(color: AppColor.ink),
             ),
           ),
-          child: Text(
-            lines.join('\n'),
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 13,
-              height: 1.35,
-              color: Colors.black87,
+        ],
+      ),
+    );
+  }
+}
+
+class _SuccessNotice extends StatelessWidget {
+  const _SuccessNotice({required this.change});
+
+  final int change;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s4,
+        vertical: AppSpacing.s3,
+      ),
+      decoration: BoxDecoration(
+        color: AppColor.successSoft,
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle_outline, color: AppColor.success),
+          const SizedBox(width: AppSpacing.s3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Transaksi selesai',
+                  style: AppTextStyle.bodyStrong.copyWith(
+                    color: AppColor.success,
+                  ),
+                ),
+                Text(
+                  'Kembalian ${formatRupiah(change)} · stok sudah dikurangi',
+                  style: AppTextStyle.label.copyWith(color: AppColor.success),
+                ),
+              ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -205,16 +279,16 @@ class _ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.all(AppSpacing.s6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               message,
               textAlign: TextAlign.center,
-              style: AppTextStyle.bodyMd.copyWith(color: AppColor.error),
+              style: AppTextStyle.body.copyWith(color: AppColor.danger),
             ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.s4),
             OutlinedButton(onPressed: onRetry, child: const Text('Coba lagi')),
           ],
         ),

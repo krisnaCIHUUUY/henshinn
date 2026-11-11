@@ -45,9 +45,17 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
   /// Riwayat + jumlah item per transaksi dalam satu query (join + group by),
   /// supaya list tidak melakukan N query hitung item.
   ///
-  /// `since` null berarti semua transaksi. Yang void **ikut** ditampilkan:
-  /// riwayat adalah jejak audit, bukan daftar penjualan sah (PRD §2.4).
-  Stream<List<(Transaction, int)>> watchHistory({DateTime? since}) {
+  /// `since`/`until` null berarti tanpa batas di sisi itu. Yang void **ikut**
+  /// ditampilkan: riwayat adalah jejak audit, bukan daftar penjualan sah
+  /// (PRD §2.4).
+  ///
+  /// `until` dipakai chip "Kemarin" dan "Pilih tanggal" di Riwayat: satu hari
+  /// kalender butuh batas atas, dan menyaringnya di memori berarti menarik
+  /// seluruh riwayat lebih dulu.
+  Stream<List<(Transaction, int)>> watchHistory({
+    DateTime? since,
+    DateTime? until,
+  }) {
     final itemCount = transactionItems.qty.sum();
     final query = select(transactions).join([
       leftOuterJoin(
@@ -58,6 +66,9 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
     ]);
     if (since != null) {
       query.where(transactions.date.isBiggerOrEqualValue(since));
+    }
+    if (until != null) {
+      query.where(transactions.date.isSmallerOrEqualValue(until));
     }
     query
       ..addColumns([itemCount])

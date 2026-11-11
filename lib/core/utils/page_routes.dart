@@ -1,21 +1,19 @@
 class PageRoutes {
-  static const String dashboard = "/dashboard";
+  // Empat tab desain v2. Kasir tab pertama dan layar pembuka — Dasbor dibuang
+  // seluruhnya (ADR-047).
+  static const String kasir = "/kasir";
   static const String produk = "/produk";
   static const String riwayat = "/riwayat";
-  static const String setting = "/setting";
-  static const String mulaiTransaksi = "/mulai-transaksi";
-  static const String perluRestok = "/perlu-restok";
   static const String laporan = "/laporan";
-  static const String aturPin = "/atur-pin";
-  static const String verifikasiPin = "/verifikasi-pin";
 
-  static const String dashboardName = "dashboard";
+  // Di luar tab: dibuka dari dalam layar, bukan dari bottom nav.
+  static const String setting = "/setting";
+  static const String aturPin = "/atur-pin";
+
+  static const String kasirName = "kasir";
   static const String produkName = "produk";
   static const String riwayatName = "riwayat";
-  static const String settingName = "setting";
-  static const String mulaiTransaksiName = "mulai-transaksi";
-  static const String perluRestokName = "perlu-restok";
   static const String laporanName = "laporan";
+  static const String settingName = "setting";
   static const String aturPinName = "atur-pin";
-  static const String verifikasiPinName = "verifikasi-pin";
 }

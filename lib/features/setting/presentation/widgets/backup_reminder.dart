@@ -4,18 +4,18 @@ import 'package:henshin/core/theme/app_radius.dart';
 import 'package:henshin/core/theme/app_spacing.dart';
 import 'package:henshin/core/theme/app_text_style.dart';
 import 'package:henshin/features/setting/domain/entities/store_info.dart';
-import 'package:henshin/features/setting/presentation/backup_action.dart';
 
 /// Pengingat backup >7 hari (langkah 13). Sengaja tidak bisa ditutup: satu-satunya
 /// cara menghilangkannya adalah benar-benar backup.
+///
+/// Tidak punya tombol sendiri sejak D8. Rumahnya sekarang Pengaturan (dulu
+/// Dasbor, ADR-047), dan di sana tombol "Buat backup" ada tepat di kartu
+/// bawahnya — dua tombol dengan aksi identik berjarak 24 px hanya membuat
+/// pemilik ragu mana yang benar.
 class BackupReminder extends StatelessWidget {
-  const BackupReminder({super.key, required this.store, required this.onDone});
+  const BackupReminder({super.key, required this.store});
 
   final StoreInfo store;
-
-  /// Dipanggil setelah backup berhasil, supaya pemanggil memuat ulang
-  /// `lastBackupAt` dan banner ini hilang.
-  final VoidCallback onDone;
 
   @override
   Widget build(BuildContext context) {
@@ -23,50 +23,37 @@ class BackupReminder extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColor.errorContainer,
-        borderRadius: AppRadius.lgAll,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s4,
+        vertical: AppSpacing.s3,
       ),
-      child: Column(
+      decoration: BoxDecoration(
+        color: AppColor.warningSoft,
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.backup_outlined,
-                size: 20,
-                color: AppColor.onErrorContainer,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
+          Icon(Icons.error_outline, color: AppColor.warning),
+          const SizedBox(width: AppSpacing.s3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
                   days == null
                       ? 'Data belum pernah di-backup'
                       : 'Backup terakhir $days hari lalu',
-                  style: AppTextStyle.bodyMd.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColor.onErrorContainer,
+                  style: AppTextStyle.bodyStrong.copyWith(
+                    color: AppColor.warning,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Kalau HP ini hilang atau rusak, data penjualan ikut hilang.',
-            style: AppTextStyle.labelSm.copyWith(
-              color: AppColor.onErrorContainer,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FilledButton(
-              onPressed: () async {
-                if (await BackupAction.run(context)) onDone();
-              },
-              child: const Text('Backup sekarang'),
+                Text(
+                  'Buat backup sekarang supaya data toko aman kalau HP rusak '
+                  'atau hilang.',
+                  style: AppTextStyle.label.copyWith(color: AppColor.warning),
+                ),
+              ],
             ),
           ),
         ],

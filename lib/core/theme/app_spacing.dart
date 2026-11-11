@@ -1,17 +1,32 @@
+/// Jarak desain v2: lima langkah, bukan tujuh.
+///
+/// Namanya mengikuti `tokens.json` (`space-1` … `space-6`) supaya nilai di
+/// desain dan di kode bisa dicocokkan tanpa tabel penerjemah. Tidak ada `s5`:
+/// 20px tidak dipakai desain v2.
 class AppSpacing {
   AppSpacing._();
 
-  static const double unit = 8;
-  static const double containerPadding = 24;
-  static const double gutter = 16;
-  static const double touchTargetMin = 48;
+  /// Jarak ikon ke teks, nama produk ke info di bawahnya.
+  static const double s1 = 4;
 
-  // ── Multiples of 8px unit ────────────────────────────────
-  static const double xs = 4;
-  static const double sm = 8;
-  static const double md = 16;
-  static const double lg = 24;
-  static const double xl = 32;
-  static const double xxl = 40;
-  static const double xxxl = 48;
+  /// Gap antar chip, antar tombol PIN pad, padding badge horizontal.
+  static const double s2 = 8;
+
+  /// Padding vertikal baris daftar, gap antar StatTile.
+  static const double s3 = 12;
+
+  /// Margin tepi layar, padding kartu dan sheet. Default hampir semua padding.
+  static const double s4 = 16;
+
+  /// Jarak antar bagian di satu layar.
+  static const double s6 = 24;
+
+  /// Tinggi minimum semua yang bisa disentuh.
+  static const double tapMin = 48;
+
+  /// Tinggi tombol primary dan PayBar — aksi yang diulang ratusan kali sehari.
+  static const double tapPrimary = 56;
+
+  /// Tinggi minimum baris produk dan baris keranjang.
+  static const double rowMin = 64;
 }

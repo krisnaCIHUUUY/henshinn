@@ -24,8 +24,10 @@ class _FakeTransactionRepository implements TransactionRepository {
   }) async => throw UnimplementedError();
 
   @override
-  Stream<List<TransactionSummary>> watchHistory({DateTime? since}) =>
-      throw UnimplementedError();
+  Stream<List<TransactionSummary>> watchHistory({
+    DateTime? since,
+    DateTime? until,
+  }) => throw UnimplementedError();
 
   @override
   Future<Either<Failure, Unit>> voidTransaction(

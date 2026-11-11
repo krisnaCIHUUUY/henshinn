@@ -33,7 +33,7 @@ class ReportRepositoryImpl implements ReportRepository {
             for (final (name, qty) in bestSellers)
               BestSeller(name: name, qtySold: qty),
           ],
-          daily: _daily(headers.map((t) => (t.date, t.total)), start, period),
+          daily: _daily(headers.map((t) => (t.date, t.total)), start, end),
         ),
       );
     } catch (e) {
@@ -43,15 +43,27 @@ class ReportRepositoryImpl implements ReportRepository {
 
   /// Omzet per hari kalender lokal, satu entri untuk **tiap** hari dalam
   /// periode termasuk yang kosong.
+  ///
+  /// Jumlah harinya dihitung dari rentang, bukan dari angka tetap di
+  /// `ReportPeriod`: "Bulan ini" panjangnya berubah tiap tanggal (ADR-056).
+  /// `DateTime(y, m, d + i)` sengaja dipakai, bukan `add(Duration(days: i))` —
+  /// penambahan hari kalender tidak tergeser jam musim.
   List<DailyRevenue> _daily(
     Iterable<(DateTime date, int total)> sales,
     DateTime start,
-    ReportPeriod period,
+    DateTime end,
   ) {
-    final buckets = <DateTime, int>{
-      for (var i = 0; i < period.days; i++)
-        DateTime(start.year, start.month, start.day + i): 0,
-    };
+    final first = DateTime(start.year, start.month, start.day);
+    final last = DateTime(end.year, end.month, end.day);
+
+    final buckets = <DateTime, int>{};
+    for (
+      var day = first;
+      !day.isAfter(last);
+      day = DateTime(day.year, day.month, day.day + 1)
+    ) {
+      buckets[day] = 0;
+    }
 
     for (final (date, total) in sales) {
       final day = DateTime(date.year, date.month, date.day);

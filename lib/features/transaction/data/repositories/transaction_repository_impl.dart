@@ -64,8 +64,11 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   @override
-  Stream<List<TransactionSummary>> watchHistory({DateTime? since}) {
-    return _transactionDao.watchHistory(since: since).map(
+  Stream<List<TransactionSummary>> watchHistory({
+    DateTime? since,
+    DateTime? until,
+  }) {
+    return _transactionDao.watchHistory(since: since, until: until).map(
       (rows) => rows
           .map(
             (row) => TransactionSummary(

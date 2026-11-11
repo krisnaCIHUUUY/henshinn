@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:henshin/core/theme/app_color.dart';
-import 'package:henshin/core/theme/app_spacing.dart';
 import 'package:go_router/go_router.dart';
+import 'package:henshin/core/theme/app_color.dart';
+import 'package:henshin/core/theme/app_radius.dart';
+import 'package:henshin/core/theme/app_spacing.dart';
+import 'package:henshin/core/theme/app_text_style.dart';
 
 class AppScreen extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -32,41 +34,44 @@ class _BottomNavBar extends StatelessWidget {
 
   const _BottomNavBar({required this.currentIndex, required this.onTap});
 
+  /// Urutannya harus sama dengan urutan branch di `app_router.dart`.
   static const _items = [
-    _NavItemData(icon: Icons.home, label: 'Dasbor'),
-    _NavItemData(icon: Icons.production_quantity_limits, label: 'Produk'),
-    _NavItemData(icon: Icons.access_time, label: 'Riwayat'),
-    _NavItemData(icon: Icons.settings_outlined, label: 'Pengaturan'),
+    // Keempatnya outlined. Ini satu-satunya tempat empat ikon berdiri
+    // bersebelahan, jadi satu ikon solid di antaranya langsung terlihat lebih
+    // berat dari tetangganya (D9).
+    _NavItemData(icon: Icons.point_of_sale_outlined, label: 'Kasir'),
+    _NavItemData(icon: Icons.inventory_2_outlined, label: 'Produk'),
+    _NavItemData(icon: Icons.receipt_long_outlined, label: 'Riwayat'),
+    _NavItemData(icon: Icons.bar_chart_outlined, label: 'Laporan'),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.only(
-        top: 10,
-        bottom: 20 + MediaQuery.of(context).padding.bottom > 20
-            ? MediaQuery.of(context).padding.bottom
-            : 20,
-      ),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColor.surface,
-        border: Border(top: BorderSide(color: AppColor.divider)),
+        border: Border(top: BorderSide(color: AppColor.line)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: List.generate(_items.length, (index) {
-          final item = _items[index];
-          final selected = index == currentIndex;
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => onTap(index),
-            child: _NavItem(
-              icon: item.icon,
-              label: item.label,
-              selected: selected,
-            ),
-          );
-        }),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 72,
+          child: Row(
+            children: List.generate(_items.length, (index) {
+              final item = _items[index];
+              return Expanded(
+                child: InkWell(
+                  onTap: () => onTap(index),
+                  child: _NavItem(
+                    icon: item.icon,
+                    label: item.label,
+                    selected: index == currentIndex,
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
       ),
     );
   }
@@ -91,24 +96,31 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColor.primary : AppColor.onSurface;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: color,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-            ),
+    final color = selected ? AppColor.primary : AppColor.inkMuted;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Tab aktif ditandai pil primarySoft, bukan hanya warna ikon — warna
+        // saja tidak cukup untuk yang sulit membedakan warna.
+        Container(
+          width: 56,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? AppColor.primarySoft : Colors.transparent,
+            borderRadius: AppRadius.fullAll,
           ),
-        ],
-      ),
+          child: Icon(icon, color: color, size: 24),
+        ),
+        const SizedBox(height: AppSpacing.s1),
+        Text(
+          label,
+          style: AppTextStyle.caption.copyWith(
+            color: color,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }

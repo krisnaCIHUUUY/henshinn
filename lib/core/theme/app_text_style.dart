@@ -1,65 +1,95 @@
 import 'package:flutter/material.dart';
 
+/// Sembilan gaya teks desain v2, satu keluarga font.
+///
+/// `fontFamily` sengaja tidak diisi. v1 menulis `'Inter'` padahal Inter tidak
+/// pernah didaftarkan di `pubspec.yaml`, jadi yang tampil di HP selama ini
+/// Roboto bawaan Android — dan desain v2 memilih Roboto secara sadar. Mengisi
+/// `fontFamily` lagi berarti menambah aset untuk hasil yang sama.
+///
+/// Gaya angka ([amount], [stat], [bodyStrong]) memakai angka tabular supaya
+/// digit tidak bergeser saat nilainya berubah — total di kasir dan omzet di
+/// laporan berubah terus di tempat yang sama.
 class AppTextStyle {
   AppTextStyle._();
 
-  static const String _fontFamily = 'Inter';
+  /// `tnum`: tiap digit selebar digit lain, jadi angka yang bertumpuk di satu
+  /// kolom tetap sejajar. Dipasang di **semua** gaya yang pernah memuat angka
+  /// di dalam daftar — bukan hanya gaya uang yang besar: harga per baris
+  /// produk memakai `label`, dan `#id · jam` di Riwayat memakai `body` (D9).
+  /// Tidak berefek pada teks tanpa digit, jadi tidak perlu gaya kembar.
+  static const List<FontFeature> _tabular = [FontFeature.tabularFigures()];
 
-  // ── Display Price ────────────────────────────────────────
-  static const TextStyle displayPrice = TextStyle(
-    fontFamily: _fontFamily,
-    fontSize: 48,
+  /// Satu angka terpenting di layar: total bayar, omzet hari ini.
+  static const TextStyle amount = TextStyle(
+    fontSize: 36,
     fontWeight: FontWeight.w700,
-    height: 56 / 48,
-    letterSpacing: -0.02,
+    height: 44 / 36,
+    letterSpacing: -0.5,
+    fontFeatures: _tabular,
   );
 
-  // ── Headline Large ───────────────────────────────────────
-  static const TextStyle headlineLg = TextStyle(
-    fontFamily: _fontFamily,
-    fontSize: 32,
+  /// Nilai di StatTile (laba kotor, jumlah transaksi) dan kembalian.
+  static const TextStyle stat = TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.w700,
+    height: 28 / 22,
+    fontFeatures: _tabular,
+  );
+
+  /// Judul layar di app bar. Satu per layar.
+  static const TextStyle title = TextStyle(
+    fontSize: 22,
     fontWeight: FontWeight.w600,
-    height: 40 / 32,
+    height: 28 / 22,
   );
 
-  // ── Headline Medium ──────────────────────────────────────
-  static const TextStyle headlineMd = TextStyle(
-    fontFamily: _fontFamily,
-    fontSize: 24,
+  /// Judul bagian di dalam layar dan judul sheet.
+  static const TextStyle heading = TextStyle(
+    fontSize: 17,
     fontWeight: FontWeight.w600,
-    height: 32 / 24,
+    height: 24 / 17,
   );
 
-  // ── Headline Large Mobile ────────────────────────────────
-  static const TextStyle headlineLgMobile = TextStyle(
-    fontFamily: _fontFamily,
-    fontSize: 24,
-    fontWeight: FontWeight.w600,
-    height: 32 / 24,
-  );
-
-  // ── Body Large ───────────────────────────────────────────
-  static const TextStyle bodyLg = TextStyle(
-    fontFamily: _fontFamily,
-    fontSize: 18,
-    fontWeight: FontWeight.w400,
-    height: 28 / 18,
-  );
-
-  // ── Body Medium ──────────────────────────────────────────
-  static const TextStyle bodyMd = TextStyle(
-    fontFamily: _fontFamily,
+  /// Nama produk, isi field, teks umum. Ukuran minimum untuk yang harus
+  /// dibaca kasir dengan cepat.
+  static const TextStyle body = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w400,
     height: 24 / 16,
+    fontFeatures: _tabular,
   );
 
-  // ── Label Small ──────────────────────────────────────────
-  static const TextStyle labelSm = TextStyle(
-    fontFamily: _fontFamily,
-    fontSize: 13,
+  /// Harga di baris produk dan keranjang, label tombol.
+  static const TextStyle bodyStrong = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    height: 24 / 16,
+    fontFeatures: _tabular,
+  );
+
+  /// Info sekunder di bawah nama produk, label field, label chip dan stat.
+  static const TextStyle label = TextStyle(
+    fontSize: 14,
     fontWeight: FontWeight.w500,
-    height: 16 / 13,
-    letterSpacing: 0.01,
+    height: 20 / 14,
+    fontFeatures: _tabular,
+  );
+
+  /// Badge dan label bottom nav **saja**. Jangan untuk informasi yang harus
+  /// dibaca.
+  static const TextStyle caption = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+    height: 16 / 12,
+    fontFeatures: _tabular,
+  );
+
+  /// Preview struk 58mm (32 karakter per baris). Hanya di komponen Receipt.
+  static const TextStyle receipt = TextStyle(
+    fontFamily: 'monospace',
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 18 / 13,
   );
 }

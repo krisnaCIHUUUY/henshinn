@@ -429,4 +429,77 @@ void main() {
       expect(products.single.categoryId, categoryId);
     });
   });
+
+  group('produk sering dibeli (terlaris 30 hari)', () {
+    /// Penjualan dengan kendali penuh: qty, umur transaksi, dan statusnya.
+    Future<void> sellAt(
+      int productId, {
+      int qty = 1,
+      int daysAgo = 0,
+      String status = 'completed',
+    }) async {
+      final transactionId = await db.into(db.transactions).insert(
+        TransactionsCompanion.insert(
+          total: 25000,
+          paymentAmount: 25000,
+          change: 0,
+          date: Value(DateTime.now().subtract(Duration(days: daysAgo))),
+          status: Value(status),
+        ),
+      );
+      await db.into(db.transactionItems).insert(
+        TransactionItemsCompanion.insert(
+          transactionId: transactionId,
+          productId: productId,
+          qty: qty,
+          priceAtSale: 25000,
+        ),
+      );
+    }
+
+    Future<int> add(String name, {int stock = 10, bool isActive = true}) async {
+      final result = await repository.addProduct(
+        draft(name: name, stock: stock, isActive: isActive),
+      );
+      return result.getOrElse(() => -1);
+    }
+
+    test('urut dari yang paling banyak terjual', () async {
+      final kopi = await add('Kopi');
+      final teh = await add('Teh');
+      await sellAt(kopi, qty: 2);
+      await sellAt(teh, qty: 9);
+
+      final result = await repository.watchFrequentProducts().first;
+      expect(result.map((p) => p.name), ['Teh', 'Kopi']);
+    });
+
+    test('penjualan lebih dari 30 hari lalu tidak dihitung', () async {
+      final kopi = await add('Kopi');
+      await sellAt(kopi, qty: 5, daysAgo: 40);
+
+      expect(await repository.watchFrequentProducts().first, isEmpty);
+    });
+
+    test('transaksi void tidak dihitung', () async {
+      final kopi = await add('Kopi');
+      await sellAt(kopi, qty: 5, status: 'voided');
+
+      expect(await repository.watchFrequentProducts().first, isEmpty);
+    });
+
+    test('produk nonaktif tidak muncul walau terlaris', () async {
+      final kopi = await add('Kopi', isActive: false);
+      await sellAt(kopi, qty: 9);
+
+      expect(await repository.watchFrequentProducts().first, isEmpty);
+    });
+
+    test('produk yang stoknya habis tidak muncul', () async {
+      final kopi = await add('Kopi', stock: 0);
+      await sellAt(kopi, qty: 9);
+
+      expect(await repository.watchFrequentProducts().first, isEmpty);
+    });
+  });
 }

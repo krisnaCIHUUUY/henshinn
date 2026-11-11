@@ -19,6 +19,11 @@ abstract class ProductRepository {
   /// hanya beda kapitalisasi (ADR-038).
   Future<Either<Failure, int>> findOrCreateCategory(String name);
 
+  /// Stream produk yang paling sering terjual 30 hari terakhir, untuk daftar
+  /// "Sering dibeli" di kasir. Hanya produk yang bisa dijual sekarang
+  /// (aktif, stok ada) dan hanya dari transaksi lunas (ADR-050).
+  Stream<List<ProductEntity>> watchFrequentProducts();
+
   /// Stream produk aktif yang stoknya <= batas per produk sendiri.
   Stream<List<ProductEntity>> watchLowStockProducts();
 

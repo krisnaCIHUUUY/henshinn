@@ -1,14 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:henshin/core/theme/app_color.dart';
-import 'package:henshin/core/theme/app_radius.dart';
 import 'package:henshin/core/theme/app_spacing.dart';
 import 'package:henshin/core/theme/app_text_style.dart';
 import 'package:henshin/core/utils/currency_formatter.dart';
+import 'package:henshin/core/widgets/app_badge.dart';
+import 'package:henshin/core/widgets/app_card.dart';
+import 'package:henshin/core/widgets/app_chip.dart';
+import 'package:henshin/core/widgets/section_header.dart';
 import 'package:henshin/features/transaction/domain/entities/transaction_summary.dart';
 import 'package:henshin/features/transaction/domain/repositories/transaction_repository.dart';
 import 'package:henshin/features/transaction/presentation/screens/transaction_detail_screen.dart';
 import 'package:henshin/injection_container.dart';
 import 'package:intl/intl.dart';
+
+/// Rentang yang bisa dipilih di Riwayat. `pickedDate` bukan "rentang bebas"
+/// (PRD §3.2 masih di luar lingkup) — hanya satu hari kalender.
+enum HistoryRange { today, yesterday, week, pickedDate }
+
+/// Batas bawah dan atas untuk satu chip rentang, **inklusif** keduanya.
+///
+/// Hari kalender penuh, bukan 24 jam ke belakang: pemilik menghitung harinya
+/// dari tengah malam, dan "Kemarin" tanpa batas atas akan ikut memuat hari ini.
+/// Aturan yang sama dengan `ReportPeriod.rangeFrom`.
+///
+/// Fungsi lepas supaya bisa diuji `test()` biasa (ADR-012).
+(DateTime, DateTime) historyRange(
+  HistoryRange range,
+  DateTime now, {
+  DateTime? picked,
+}) {
+  DateTime endOf(DateTime day) => day
+      .add(const Duration(days: 1))
+      .subtract(const Duration(microseconds: 1));
+
+  final today = DateTime(now.year, now.month, now.day);
+
+  return switch (range) {
+    HistoryRange.today => (today, endOf(today)),
+    HistoryRange.yesterday => (
+      today.subtract(const Duration(days: 1)),
+      endOf(today.subtract(const Duration(days: 1))),
+    ),
+    HistoryRange.week => (today.subtract(const Duration(days: 6)), endOf(today)),
+    // Tanpa tanggal terpilih chip ini belum bisa menyaring apa pun, jadi
+    // jatuh kembali ke hari ini daripada memunculkan rentang kosong.
+    HistoryRange.pickedDate when picked == null => (today, endOf(today)),
+    HistoryRange.pickedDate => (
+      DateTime(picked!.year, picked.month, picked.day),
+      endOf(DateTime(picked.year, picked.month, picked.day)),
+    ),
+  };
+}
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -19,58 +61,102 @@ class TransactionHistoryScreen extends StatefulWidget {
 }
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
-  int _selectedFilterIndex = 0; // 0: Hari ini, 1: 7 hari, 2: 30 hari
-
-  final List<String> _filters = ['Hari ini', '7 hari', '30 hari'];
-
-  /// Batas awal per filter. "Hari ini" = tengah malam lokal, bukan 24 jam ke
-  /// belakang, supaya cocok dengan cara pemilik menghitung harinya.
-  DateTime get _since {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    return switch (_selectedFilterIndex) {
-      0 => today,
-      1 => today.subtract(const Duration(days: 6)),
-      _ => today.subtract(const Duration(days: 29)),
-    };
-  }
+  HistoryRange _range = HistoryRange.today;
+  DateTime? _picked;
 
   // Stream disimpan, bukan dibuat di build(): tiap build baru akan
   // berlangganan ulang dan membuat list berkedip ke spinner.
   late Stream<List<TransactionSummary>> _stream = _watch();
 
-  Stream<List<TransactionSummary>> _watch() =>
-      sl<TransactionRepository>().watchHistory(since: _since);
+  Stream<List<TransactionSummary>> _watch() {
+    final (since, until) = historyRange(
+      _range,
+      DateTime.now(),
+      picked: _picked,
+    );
+    return sl<TransactionRepository>().watchHistory(
+      since: since,
+      until: until,
+    );
+  }
+
+  void _select(HistoryRange range, {DateTime? picked}) {
+    setState(() {
+      _range = range;
+      if (picked != null) _picked = picked;
+      _stream = _watch();
+    });
+  }
+
+  /// `firstDate` 2020: tidak ada transaksi yang lebih tua dari aplikasinya,
+  /// dan membiarkannya terbuka membuat kalender bisa digulir tanpa ujung.
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final chosen = await showDatePicker(
+      context: context,
+      initialDate: _picked ?? now,
+      firstDate: DateTime(2020),
+      lastDate: now,
+      helpText: 'Pilih tanggal transaksi',
+    );
+    if (chosen == null || !mounted) return;
+    _select(HistoryRange.pickedDate, picked: chosen);
+  }
+
+  /// Judul bagian. Tanggal terpilih ditulis lengkap supaya pemilik tahu
+  /// rentang mana yang sedang dilihat setelah kalender tertutup.
+  String get _rangeLabel => switch (_range) {
+    HistoryRange.today => 'Hari ini',
+    HistoryRange.yesterday => 'Kemarin',
+    HistoryRange.week => '7 hari',
+    HistoryRange.pickedDate => _picked == null
+        ? 'Hari ini'
+        : DateFormat('dd/MM/yyyy').format(_picked!),
+  };
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColor.background,
+      backgroundColor: AppColor.bg,
+      // Tanpa aksi: ikon "Cari transaksi" di mockup tidak dibangun (pencarian
+      // transaksi bukan lingkup PRD) dan ikon ekspor yang mati sudah dihapus
+      // (keputusan pemilik 6).
+      appBar: AppBar(
+        title: Text(
+          'Riwayat',
+          style: AppTextStyle.title.copyWith(color: AppColor.ink),
+        ),
+      ),
       body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _HeaderRow(),
-                  const SizedBox(height: AppSpacing.lg - 4),
-                  _FilterTabs(
-                    filters: _filters,
-                    selectedIndex: _selectedFilterIndex,
-                    onSelected: (index) {
-                      setState(() {
-                        _selectedFilterIndex = index;
-                        _stream = _watch();
-                      });
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                ],
-              ),
+            ChipRow(
+              children: [
+                AppChip(
+                  label: 'Hari ini',
+                  selected: _range == HistoryRange.today,
+                  onTap: () => _select(HistoryRange.today),
+                ),
+                AppChip(
+                  label: 'Kemarin',
+                  selected: _range == HistoryRange.yesterday,
+                  onTap: () => _select(HistoryRange.yesterday),
+                ),
+                AppChip(
+                  label: '7 hari',
+                  selected: _range == HistoryRange.week,
+                  onTap: () => _select(HistoryRange.week),
+                ),
+                AppChip(
+                  label: _range == HistoryRange.pickedDate && _picked != null
+                      ? DateFormat('dd/MM').format(_picked!)
+                      : 'Pilih tanggal',
+                  selected: _range == HistoryRange.pickedDate,
+                  onTap: _pickDate,
+                ),
+              ],
             ),
+            const SizedBox(height: AppSpacing.s4),
             Expanded(
               child: StreamBuilder<List<TransactionSummary>>(
                 // Stream Drift: setelah void, list menyegarkan dirinya sendiri.
@@ -91,33 +177,38 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     );
                   }
 
-                  return ListView.separated(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg,
-                    ),
-                    itemCount: items.length,
-                    separatorBuilder: (_, _) =>
-                        const Divider(height: 1, color: AppColor.divider),
-                    itemBuilder: (context, index) {
-                      final item = items[index];
-                      return _TransactionTile(
-                        invoiceId: '#${item.id}',
-                        time: DateFormat(
-                          'dd/MM HH:mm',
-                        ).format(item.dateTime),
-                        itemCount: item.itemCount,
-                        amount: formatRupiah(item.total),
-                        status: item.isVoided
-                            ? _TransactionStatus.void_
-                            : _TransactionStatus.lunas,
-                        onTap: () => Navigator.of(context).push<void>(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                TransactionDetailScreen(transactionId: item.id),
-                          ),
-                        ),
-                      );
-                    },
+                  final voided = items.where((i) => i.isVoided).length;
+
+                  return ListView(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.s6),
+                    children: [
+                      SectionHeader(
+                        title: '$_rangeLabel · ${items.length} transaksi',
+                        trailing: voided == 0
+                            ? null
+                            : Text(
+                                '$voided void',
+                                style: AppTextStyle.label.copyWith(
+                                  color: AppColor.inkMuted,
+                                ),
+                              ),
+                      ),
+                      AppCard(
+                        children: [
+                          for (final item in items)
+                            _TransactionRow(
+                              item: item,
+                              onTap: () => Navigator.of(context).push<void>(
+                                MaterialPageRoute(
+                                  builder: (_) => TransactionDetailScreen(
+                                    transactionId: item.id,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   );
                 },
               ),
@@ -129,88 +220,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   }
 }
 
-// HEADER ROW 
-
-class _HeaderRow extends StatelessWidget {
-  const _HeaderRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Riwayat',
-          style: AppTextStyle.headlineLg.copyWith(color: AppColor.onSurface),
-        ),
-        Container(
-          width: AppSpacing.touchTargetMin,
-          height: AppSpacing.touchTargetMin,
-          decoration: BoxDecoration(
-            color: AppColor.surfaceContainerLowest,
-            borderRadius: AppRadius.mdAll,
-            border: Border.all(color: AppColor.outlineVariant),
-          ),
-          child: Icon(
-            Icons.file_download_outlined,
-            color: AppColor.onSurface,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-//  FILTER TABS 
-
-class _FilterTabs extends StatelessWidget {
-  final List<String> filters;
-  final int selectedIndex;
-  final ValueChanged<int> onSelected;
-
-  const _FilterTabs({
-    required this.filters,
-    required this.selectedIndex,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: List.generate(filters.length, (index) {
-        final selected = index == selectedIndex;
-        return Padding(
-          padding: EdgeInsets.only(right: index != filters.length - 1 ? AppSpacing.sm + 2 : 0),
-          child: GestureDetector(
-            onTap: () => onSelected(index),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md - 4),
-              decoration: BoxDecoration(
-                color: selected ? AppColor.onSurface : AppColor.surfaceContainerLowest,
-                borderRadius: AppRadius.mdAll,
-                border: Border.all(
-                  color: selected ? AppColor.onSurface : AppColor.outlineVariant,
-                ),
-              ),
-              child: Text(
-                filters[index],
-                style: AppTextStyle.labelSm.copyWith(
-                  color: selected ? AppColor.onPrimary : AppColor.onSurface,
-                ),
-              ),
-            ),
-          ),
-        );
-      }),
-    );
-  }
-}
-
-//TRANSACTION TILE
-
-enum _TransactionStatus { lunas, void_ }
-
 class _EmptyOrError extends StatelessWidget {
   const _EmptyOrError({required this.message});
 
@@ -220,108 +229,84 @@ class _EmptyOrError extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.all(AppSpacing.s6),
         child: Text(
           message,
           textAlign: TextAlign.center,
-          style: AppTextStyle.bodyMd.copyWith(
-            color: AppColor.onSurfaceVariant,
-          ),
+          style: AppTextStyle.body.copyWith(color: AppColor.inkMuted),
         ),
       ),
     );
   }
 }
 
-class _TransactionTile extends StatelessWidget {
-  final String invoiceId;
-  final String time;
-  final int itemCount;
-  final String amount;
-  final _TransactionStatus status;
+class _TransactionRow extends StatelessWidget {
+  const _TransactionRow({required this.item, required this.onTap});
+
+  final TransactionSummary item;
   final VoidCallback onTap;
 
-  const _TransactionTile({
-    required this.invoiceId,
-    required this.time,
-    required this.itemCount,
-    required this.amount,
-    required this.status,
-    required this.onTap,
-  });
-
   @override
   Widget build(BuildContext context) {
+    final total = formatRupiah(item.total);
+
     return InkWell(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: AppSpacing.rowMin),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.s4,
+          AppSpacing.s2,
+          AppSpacing.s2,
+          AppSpacing.s2,
+        ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  invoiceId,
-                  style: AppTextStyle.bodyLg.copyWith(
-                    color: AppColor.onSurface,
-                    fontWeight: FontWeight.w700,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    // Format angka, bukan nama bulan: nama bulan lokal butuh
+                    // data locale intl yang belum diinisialisasi di app ini.
+                    '#${item.id} · ${DateFormat('dd/MM HH.mm').format(item.dateTime)}',
+                    style: AppTextStyle.body.copyWith(color: AppColor.ink),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  '$time · $itemCount item',
-                  style: AppTextStyle.labelSm.copyWith(
-                    color: AppColor.onSurfaceVariant,
+                  Text(
+                    '${item.itemCount} item',
+                    style: AppTextStyle.label.copyWith(
+                      color: AppColor.inkMuted,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
+            const SizedBox(width: AppSpacing.s2),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  amount,
-                  style: AppTextStyle.headlineMd.copyWith(
-                    color: AppColor.onSurface,
-                    fontWeight: FontWeight.w700,
+                  total,
+                  style: AppTextStyle.bodyStrong.copyWith(
+                    color: item.isVoided ? AppColor.inkMuted : AppColor.ink,
+                    // Dicoret, bukan hanya diredam: angka yang di-void tidak
+                    // boleh ikut dijumlahkan pemilik saat membaca daftar ini.
+                    decoration: item.isVoided
+                        ? TextDecoration.lineThrough
+                        : null,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xs + 2),
-                _StatusBadge(status: status),
+                const SizedBox(height: AppSpacing.s1),
+                AppBadge(
+                  label: item.isVoided ? 'Void' : 'Selesai',
+                  tone: item.isVoided ? BadgeTone.danger : BadgeTone.success,
+                ),
               ],
             ),
+            Icon(Icons.chevron_right, color: AppColor.inkMuted),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final _TransactionStatus status;
-  const _StatusBadge({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final isLunas = status == _TransactionStatus.lunas;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md - 2,
-        vertical: AppSpacing.xs + 1,
-      ),
-      decoration: BoxDecoration(
-        color: isLunas ? AppColor.primaryFixed.withValues(alpha: 0.2) : AppColor.errorContainer,
-        borderRadius: AppRadius.fullAll,
-      ),
-      child: Text(
-        isLunas ? 'Lunas' : 'Void',
-        style: AppTextStyle.labelSm.copyWith(
-          color: isLunas ? AppColor.primaryFixedDim : AppColor.onErrorContainer,
-          fontWeight: FontWeight.w600,
         ),
       ),
     );

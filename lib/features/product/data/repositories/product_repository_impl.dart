@@ -36,6 +36,13 @@ class ProductRepositoryImpl implements ProductRepository {
   }
 
   @override
+  Stream<List<ProductEntity>> watchFrequentProducts() {
+    return _productDao.watchFrequentProducts().map(
+      (rows) => rows.map(ProductModel.toEntity).toList(),
+    );
+  }
+
+  @override
   Stream<List<ProductEntity>> watchLowStockProducts() {
     return _productDao.watchLowStockProducts().map(
       (rows) => rows.map(ProductModel.toEntity).toList(),

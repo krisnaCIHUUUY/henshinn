@@ -7,6 +7,9 @@ mixin _$ProductDaoMixin on DatabaseAccessor<AppDatabase> {
   $CategoriesTable get categories => attachedDatabase.categories;
   $ProductsTable get products => attachedDatabase.products;
   $StockMovementsTable get stockMovements => attachedDatabase.stockMovements;
+  $TransactionsTable get transactions => attachedDatabase.transactions;
+  $TransactionItemsTable get transactionItems =>
+      attachedDatabase.transactionItems;
   ProductDaoManager get managers => ProductDaoManager(this);
 }
 
@@ -21,5 +24,12 @@ class ProductDaoManager {
       $$StockMovementsTableTableManager(
         _db.attachedDatabase,
         _db.stockMovements,
+      );
+  $$TransactionsTableTableManager get transactions =>
+      $$TransactionsTableTableManager(_db.attachedDatabase, _db.transactions);
+  $$TransactionItemsTableTableManager get transactionItems =>
+      $$TransactionItemsTableTableManager(
+        _db.attachedDatabase,
+        _db.transactionItems,
       );
 }

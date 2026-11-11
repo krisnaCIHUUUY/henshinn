@@ -34,18 +34,18 @@ class PinPad extends StatelessWidget {
       children: [
         Text(
           title,
-          style: AppTextStyle.headlineLg.copyWith(color: AppColor.onSurface),
+          style: AppTextStyle.heading.copyWith(color: AppColor.ink),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.s2),
         Text(
           subtitle,
-          style: AppTextStyle.bodyMd.copyWith(color: AppColor.outline),
+          style: AppTextStyle.body.copyWith(color: AppColor.inkMuted),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: AppSpacing.xl),
+        const SizedBox(height: AppSpacing.s6),
         _Dots(filled: filled, isError: errorText != null),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.s4),
         // Ruang teks error selalu disisakan supaya keypad tidak melompat.
         SizedBox(
           height: 40,
@@ -53,11 +53,11 @@ class PinPad extends StatelessWidget {
               ? null
               : Text(
                   errorText!,
-                  style: AppTextStyle.bodyMd.copyWith(color: AppColor.error),
+                  style: AppTextStyle.body.copyWith(color: AppColor.danger),
                   textAlign: TextAlign.center,
                 ),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.s6),
         _Keypad(
           enabled: enabled,
           onDigit: onDigit,
@@ -81,16 +81,16 @@ class _Dots extends StatelessWidget {
       children: List.generate(PinRepository.pinLength, (index) {
         final isFilled = index < filled;
         return Container(
-          margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s2),
           width: 16,
           height: 16,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: isFilled
-                ? (isError ? AppColor.error : AppColor.onSurface)
+                ? (isError ? AppColor.danger : AppColor.ink)
                 : Colors.transparent,
             border: Border.all(
-              color: isError ? AppColor.error : AppColor.outlineVariant,
+              color: isError ? AppColor.danger : AppColor.lineStrong,
               width: 1.5,
             ),
           ),
@@ -126,7 +126,7 @@ class _Keypad extends StatelessWidget {
             children: [
               for (final key in row)
                 Padding(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  padding: const EdgeInsets.all(AppSpacing.s2),
                   child: _Key(
                     label: key,
                     enabled: enabled && key.isNotEmpty,
@@ -161,7 +161,7 @@ class _Key extends StatelessWidget {
       width: 72,
       height: 64,
       child: Material(
-        color: AppColor.surfaceContainerLow,
+        color: AppColor.surfaceMuted,
         borderRadius: AppRadius.mdAll,
         child: InkWell(
           onTap: enabled ? onTap : null,
@@ -170,12 +170,12 @@ class _Key extends StatelessWidget {
             child: label == '<'
                 ? Icon(
                     Icons.backspace_outlined,
-                    color: enabled ? AppColor.onSurface : AppColor.outline,
+                    color: enabled ? AppColor.ink : AppColor.inkMuted,
                   )
                 : Text(
                     label,
-                    style: AppTextStyle.headlineLg.copyWith(
-                      color: enabled ? AppColor.onSurface : AppColor.outline,
+                    style: AppTextStyle.title.copyWith(
+                      color: enabled ? AppColor.ink : AppColor.inkMuted,
                     ),
                   ),
           ),

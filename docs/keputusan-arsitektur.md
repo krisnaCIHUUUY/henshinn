@@ -934,3 +934,620 @@ Menghapus produknya akan mengosongkan FK yang masih dipakai laporan.
   transaksi. Tiga tes yang ada mengunci aturan utamanya, termasuk bahwa void
   tidak membebaskan produk.
 
+---
+
+## ADR-046 — Lapisan token desain v2 diganti sekaligus, dan layar kamera dikecualikan
+
+**Keputusan.** Langkah D1 `docs/implementasi_design.md`: `AppColor` turun dari
+52 `static const` Material 3 ke **17 token semantik**, `AppSpacing` jadi
+`s1/s2/s3/s4/s6` + `tapMin/tapPrimary/rowMin`, `AppRadius` jadi
+`sm/md/lg/full`, `AppTextStyle` jadi 9 gaya. Semuanya dalam **satu commit**,
+menyentuh 26 file. Empat aturan yang menyertainya:
+
+1. **`fontFamily` dihapus, bukan diganti.** v1 menulis `'Inter'` padahal Inter
+   tidak pernah didaftarkan di `pubspec.yaml`, jadi yang tampil di HP selama
+   ini Roboto bawaan Android — dan desain v2 memilih Roboto secara sadar.
+   Mengisinya lagi berarti menambah aset untuk hasil yang sama.
+2. **`line` dan `lineStrong` adalah dua hal berbeda.** `line` hiasan (pemisah
+   baris, tepi kartu); `lineStrong` satu-satunya garis yang menandai kontrol
+   dan satu-satunya yang lolos 3:1 di atas `surface`. v1 hanya punya
+   `outlineVariant` untuk keduanya, jadi pemisahan ini harus dijaga manual:
+   batas chip filter, kotak ikon, dan titik PIN memakai `lineStrong`.
+3. **Layar scanner sengaja tidak memakai token.** `barcode_scanner_screen.dart`
+   menahan 16 hardcode `Colors.black*/white*` karena isinya gambar kamera,
+   bukan permukaan aplikasi: scrim harus hitam transparan sungguhan dan garis
+   bidik harus putih supaya terlihat di atas apa pun yang disorot. `ink` dan
+   `surface` adalah warna kertas aplikasi dan akan membuat overlay lebih terang
+   dari gambar di belakangnya. Design system v2 tidak mencakup overlay kamera.
+   Alasannya ditulis sebagai komentar di `build` supaya tidak "dirapikan".
+4. **Tidak ada tes untuk perubahan visual.** Tes yang mengunci nilai warna
+   hanya menguji ulang isi file token: ia akan gagal setiap kali desain berubah
+   dan tidak pernah menangkap bug. Gerbang D1 adalah `flutter analyze` + 173
+   tes lama tetap hijau + verifikasi pemilik di HP.
+
+**Alasan satu commit.** Menghapus satu token memaksa setiap pemanggilnya
+berubah bersamaan, kalau tidak aplikasinya tidak kompilasi. Lapisan token
+adalah satu-satunya bagian desain v2 yang **tidak bisa** dibuat bertahap;
+sisanya (D2–D9) per layar.
+
+**Temuan yang hanya muncul setelah token punya arti.** Pengingat backup dan
+banner "perlu restok" keduanya merah, karena v1 memakai `errorContainer` untuk
+keduanya. `tokens.json` v2 menulis eksplisit bahwa `warning` berarti *"Badge
+Stok menipis, notice pengingat backup"* dan merah hanya untuk Void / Habis /
+error. Pemetaan mekanis mewarisi arti yang salah; keduanya dipindah ke pasangan
+kuning. **Pelajarannya untuk langkah berikutnya: rename token tidak pernah
+murni mekanis** — pemetaan nama bisa benar sementara artinya salah, dan hanya
+`tokens.json` yang bisa memutuskan.
+
+**Konsekuensi yang diterima.**
+
+- **Jarak menyusut di 10 tempat.** v2 tidak punya langkah 32px, jadi `xl` → 24.
+- **Sudut membulat lebih besar**: `radius.sm` 4 → 8, `lg` 16 → 20. Ini bukan
+  rename, nilainya memang berubah.
+- **Bottom nav dan bottom sheet jadi putih**, bukan warna halaman seperti v1.
+  `tokens.json` menyebut keduanya eksplisit di bawah `surface`; pemetaan
+  mekanis menaruhnya di `bg` dan itu diperbaiki manual.
+- **`ColorScheme` Material tetap diisi lengkap** walau v2 tidak punya
+  `secondary`/`tertiary`: widget bawaan yang tidak kita beri style sendiri
+  masih membacanya. Slot tanpa padanan diisi token yang paling tidak
+  mengejutkan (`secondary` → `primary`, `tertiary` → `warning`), bukan warna
+  baru. Jangan menambah warna di sana — tambah di `tokens.json` dulu.
+- `dashboard_screen.dart`, `low_stock_screen.dart`, dan `pin_pad.dart` ikut
+  ditokenisasi walau D2/D3 akan membongkar atau menghapusnya. Melewatkannya
+  berarti aplikasinya tidak kompilasi hari itu.
+
+Cross-link: ADR-043 (orientasi scanner) menyentuh file yang sama; aturan nomor
+3 di atas menjelaskan kenapa file itu tidak ikut tokenisasi.
+
+---
+
+## ADR-047 — Dasbor dibuang; Pengaturan turun dari tab jadi ikon gear
+
+**Keputusan.** Desain v2 tidak punya Dasbor, dan ini bukan "belum digambar":
+`lib/features/dashboard/` dihapus seluruhnya di D2, beserta rute `dashboard`.
+Kasir jadi tab pertama dan layar pembuka. Tab keempat yang dulu Pengaturan
+diisi Laporan; Pengaturan dibuka dari ikon gear di app bar Laporan.
+
+**Alasan.** Dasbor adalah layar yang tidak dipakai saat bekerja: pemilik warung
+membuka aplikasi untuk melayani pembeli, bukan untuk melihat angka. Menaruh
+Kasir di balik satu ketukan tombol di Dasbor membuat pekerjaan yang dilakukan
+ratusan kali sehari selalu satu langkah lebih jauh (PRD §1.5 menuntut
+transaksi 3 item ≤ 30 detik). Pengaturan sebaliknya: dibuka beberapa kali
+sebulan, jadi tidak layak memegang satu dari empat slot tab.
+
+**Ke mana isi Dasbor pindah.**
+
+| Bagian Dasbor | Rumah barunya |
+|---|---|
+| Omzet hari ini (`_RevenueCard`, `_StatsRow`) | Laporan, chip "Hari ini" — sudah ada di sana |
+| Grafik 7 hari (`_RevenueChart`) | **dibuang**; v2 mengganti grafik dengan laba kotor (D8) |
+| `BackupReminder` | Pengaturan, sebagai `Notice` (D8) |
+| Tombol "Mulai transaksi" | **dibuang**; Kasir sudah jadi tab pertama |
+| `_RestockList` (sudah di-comment) | **dihapus**; chip "Perlu restok" di Produk (D6) |
+
+**Konsekuensi yang diterima.**
+
+- **`SettingScreen` sekarang wajib punya app bar.** Sebagai tab ia tidak
+  pernah butuh tombol kembali; sebagai layar yang di-*push*, tanpa app bar
+  tidak ada jalan keluar. Jangan hapus app bar itu selama Pengaturan bukan tab.
+- **Pengingat backup hilang dari mata pemilik sampai D8.** Yang tersisa badge
+  "Perlu backup" di baris Backup di dalam Pengaturan — artinya pengingat itu
+  hanya terlihat kalau pemilik sudah membuka Pengaturan, padahal gunanya justru
+  mengingatkan orang yang tidak membukanya. Ini utang dengan batas waktu: D8.
+- **`LowStockScreen` dihapus bersamaan**, jadi banner "N produk perlu restok"
+  di layar Produk tidak bisa diketuk lagi sampai chip penggantinya lahir di D6.
+  Bannernya dibiarkan tampil (informasinya masih benar), hanya `onTap`-nya
+  dicabut — rute yang menuju layar yang sudah tidak ada akan melempar.
+- `PageRoutes.mulaiTransaksi` berganti nama jadi `kasir`: rutenya berubah arti
+  dari aksi ("mulai transaksi") jadi tempat (tab Kasir).
+
+Cross-link: ADR-048 (umur `CartBloc`, konsekuensi langsung dari Kasir jadi
+tab), ADR-012 (kenapa tidak ada tes widget untuk navigasinya).
+
+---
+
+## ADR-048 — `CartBloc` hidup di atas shell navigasi, bukan di dalam layar Kasir
+
+**Keputusan.** `BlocProvider<CartBloc>` ada di `main.dart`, di atas
+`MaterialApp.router`. `CashierScreen` **tidak** membuatnya.
+
+**Alasan.** Selama Kasir masih rute penuh, keranjang lahir dan mati bersama
+layarnya dan itu benar: keluar dari kasir memang berarti membatalkan
+transaksi. Begitu Kasir jadi `StatefulShellBranch` (ADR-047), pindah ke tab
+Produk bukan lagi "keluar dari kasir" — pemilik justru pindah ke sana untuk
+mengecek stok atau menambah produk di tengah transaksi, lalu kembali. Kalau
+blocnya tetap dibuat di dalam layar, `StatefulShellRoute` membangun ulang
+branch-nya dan **keranjang yang sudah berisi 8 item hasil scan jadi kosong**,
+tanpa pesan apa pun.
+
+**Konsekuensi yang diterima.**
+
+- **Keranjang seumur aplikasi.** Isinya baru hilang kalau dikosongkan,
+  dibayar, atau aplikasinya ditutup. Itu memang yang diinginkan — tapi berarti
+  keranjang yang ditinggalkan semalam masih ada besok pagi dengan harga yang
+  mungkin sudah berubah. `priceAtSale` disnapshot saat bayar, bukan saat masuk
+  keranjang, jadi angka yang tersimpan tetap harga saat transaksi.
+- **Tombol back di tab Kasir menutup aplikasi**, karena tidak ada rute di
+  bawahnya untuk di-pop. Konfirmasi "Tutup aplikasi? Keranjang yang belum
+  dibayar akan hilang." tetap ada dan keluarnya lewat `SystemNavigator.pop()`.
+  Jangan ganti dengan `Navigator.pop()`: di rute paling bawah itu tidak
+  melakukan apa pun, jadi tombol Keluar akan terasa rusak.
+- **Tidak ada tes otomatis yang menjaga ini.** `CartBloc` tidak punya konsep
+  tab; yang menentukan keranjang bertahan adalah **posisi providernya di widget
+  tree**, bukan isi blocnya, jadi tes bloc untuk ini hanya akan menguji ulang
+  `flutter_bloc`. Penggantinya tiga komentar peringatan (`main.dart`,
+  `injection_container.dart`, dartdoc `CashierScreen`) dan satu langkah uji
+  manual: isi keranjang → pindah tab → kembali.
+- Registrasinya di get_it tetap `registerFactory`, tapi dipanggil sekali saja
+  dari `main.dart`. Komentar "tiap kunjungan ke kasir mulai dengan keranjang
+  kosong" di `injection_container.dart` sudah **tidak benar** dan diperbarui.
+
+Cross-link: ADR-047 (yang memicunya), ADR-051 (bug layout di layar yang sama).
+
+---
+
+## ADR-049 — PIN jadi bottom sheet; wadahnya berubah, aturannya tidak
+
+**Keputusan.** `PinGate.require` membuka `PinVerifySheet` lewat
+`showModalBottomSheet`, bukan `context.push` ke `PinVerifyScreen`. Rute
+`verifikasi-pin` dan layarnya dihapus.
+
+**Alasan.** Layar penuh membuang konteks: pemilik yang sedang mem-void
+transaksi kehilangan tampilan transaksi itu persis saat ia harus memastikan
+sedang mem-void yang benar. Sheet menyisakannya terlihat di belakang.
+
+**Batas yang tidak boleh ikut berubah.** Sheet **hanya** mengganti wadah:
+
+- Jeda bertingkat setelah salah berulang (5s → 30s → 5 menit) dan seluruh
+  aturan `PinRepository` tetap apa adanya. Gerbangnya eksplisit: 9 tes
+  `pin_repository_impl_test.dart` harus hijau **tanpa diubah**. Kalau suatu
+  saat salah satunya perlu diubah demi wadah barunya, itu tanda wadahnya ikut
+  mengubah aturan — hentikan, jangan sesuaikan tesnya.
+- `PopScope(canPop: false)` selama status `loading`, supaya tombol kembali
+  tidak membatalkan di tengah verifikasi: hitungan gagal sudah tercatat di
+  titik itu, jadi membatalkannya diam-diam akan membuat jeda muncul tanpa
+  sebab yang terlihat.
+- Empat pemanggil (void, restore, ubah harga/modal, ganti PIN) tidak disentuh
+  satu baris pun. Itu alasan `PinGate` dibuat sebagai pintu tunggal (ADR-028).
+
+**Konsekuensi yang diterima.**
+
+- Sheet bisa ditutup dengan menggeser ke bawah atau mengetuk latar — sama
+  artinya dengan membatalkan (`false`), persis seperti tombol kembali di layar
+  lama. Tidak ada aksi sensitif yang lolos karena ini: `require` hanya
+  mengembalikan `true` kalau blocnya melaporkan sukses.
+- Tes widget alur PIN sekarang masuk lewat `PinGate.require`, bukan dengan
+  mendorong layar verifikasi langsung — kebetulan jadi lebih jujur: yang diuji
+  jalur yang sungguhan dipakai, termasuk cabang "PIN belum dibuat".
+- Penantian PBKDF2 di tes itu diganti dari satu `Future.delayed(3s)` tetap
+  menjadi menunggu sampai UI-nya benar-benar berubah (maksimal 12 detik).
+  Alasannya bukan selera: delay tetap itu **gagal sekali** saat suite penuh
+  jalan paralel di mesin sibuk. Jangan kembalikan ke delay tetap; kalau butuh
+  pola yang sama di tes lain, pakai `waitUntil` di file itu sebagai contoh.
+
+Cross-link: ADR-028 (`PinGate` sebagai helper statis), ADR-012 (fake-async),
+ADR-047 (D2 yang mendahuluinya).
+
+---
+
+## ADR-050 — Query terlaris kedua untuk kasir, dan apa yang mengisi "Sering dibeli"
+
+**Keputusan.** `ProductDao.watchFrequentProducts()` ditambahkan **di samping**
+`ReportDao.getBestSellers`, bukan menggantinya. Query baru mengelompokkan
+`transaction_items.productId` lalu join ke `products` dan mengembalikan baris
+produk utuh: 30 hari terakhir, hanya transaksi `completed`, hanya produk aktif
+dan berstok, urut jumlah terjual, limit 5.
+
+**Alasan.** `getBestSellers` mengelompokkan `transaction_items.productName` —
+**snapshot nama**, tanpa id dan tanpa harga. Itu tepat untuk laporan (nama
+historis harus ikut nama saat terjual, bukan nama produk sekarang), tapi
+hasilnya tidak bisa dimasukkan ke keranjang: `CartItem` butuh `ProductEntity`
+utuh. Memaksa yang lama dipakai berarti mencari produk berdasarkan nama, dan
+nama bukan kunci — produk yang sudah di-rename atau dihapus akan cocok ke
+produk yang salah atau tidak cocok sama sama sekali.
+
+Jadi dua query ini memang menjawab dua pertanyaan berbeda: "apa yang terjual"
+(sejarah, nama snapshot) dan "apa yang bisa saya jual sekarang" (produk hidup).
+Jangan digabung.
+
+**Yang disaring di SQL, dan kenapa.** Produk nonaktif dan stok habis tidak
+muncul karena tidak bisa masuk keranjang — kalau disaring di UI, `limit 5`
+sudah terpakai oleh baris yang kemudian dibuang, dan daftarnya bisa tampil
+berisi dua produk padahal ada lima yang layak. Transaksi `voided` tidak
+dihitung: void berarti penjualan itu dianggap tidak pernah terjadi.
+
+**Isi daftarnya saat belum ada riwayat.** Toko baru tidak punya penjualan, jadi
+query ini mengembalikan kosong. Kalau dibiarkan, kasir tidak punya apa pun
+untuk diketuk sampai transaksi pertama selesai — padahal transaksi pertama itu
+yang sedang coba dilakukan. Jadi ada fallback: judulnya berganti jadi "Produk
+siap jual" dan isinya produk aktif berstok dari `ProductBloc`, tanpa query
+tambahan.
+
+**Chip kategori di Kasir mengganti daftarnya** (keputusan pemilik 2026-11-10;
+mockup tidak menjelaskan chip itu memfilter apa). "Semua" + kotak cari kosong
+→ terlaris 30 hari. Pilih kategori atau ketik di kotak cari → daftar berganti
+jadi produk kategori itu / hasil cari, difilter dari state `ProductBloc` tanpa
+query baru. Chip hanya muncul untuk kategori yang punya produk **siap jual**:
+aturan yang sama dengan layar Produk (ADR-038), bedanya di sini stok ikut
+dihitung karena yang habis tidak bisa dijual.
+
+**Konsekuensi yang diterima.**
+
+- `since` dihitung sekali saat stream dibuat (`initState`), jadi aplikasi yang
+  dibiarkan terbuka berhari-hari memakai jendela 30 hari yang ikut menua.
+  Ditandai `shortcut:` di DAO. Naikkan ke tanggal SQL kalau jadi masalah nyata.
+- `ProductDao` sekarang ikut membaca `TransactionItems` dan `Transactions`.
+  Itu melebar dari "DAO satu tabel", tapi query ini **harus** join, dan
+  rumahnya di DAO produk karena yang dikembalikan baris produk.
+- Kalau nanti biayanya terasa tidak sepadan, pilihan "daftar produk aktif
+  biasa" tinggal menghapus satu `StreamBuilder` — tapi itu keputusan pemilik,
+  bukan keputusan saat menulis kode.
+
+Cross-link: ADR-032 (agregat laporan dihitung di memori), ADR-038 (chip
+kategori hanya untuk kategori berisi).
+
+---
+
+## ADR-051 — `Column` di dalam `bottomNavigationBar` wajib `mainAxisSize.min`
+
+**Keputusan.** Setiap `Column` yang jadi isi `Scaffold.bottomNavigationBar`
+harus `mainAxisSize: MainAxisSize.min`, atau tingginya dibatasi `SizedBox`.
+Berlaku untuk PayBar Kasir, batang "Selesaikan transaksi", dan batang tombol
+di layar Struk.
+
+**Bug yang melahirkannya** (ditemukan pemilik saat verifikasi D2–D5): begitu
+satu produk masuk keranjang, **keranjang dan daftar produk hilang sama sekali**
+dan tombol Bayar mengambang di tengah layar.
+
+**Penyebabnya.** `Scaffold` melayout `bottomNavigationBar` dengan batas
+**longgar setinggi layar penuh**, bukan setinggi isinya. `Column` default
+`mainAxisSize.max`, jadi ia mengambil seluruh 844 px yang ditawarkan. PayBar
+jadi setinggi layar, `body` Scaffold kebagian **0 px**, dan `ListView` yang
+tingginya nol **tidak membangun satu pun anaknya** — itu sebabnya dua bagian
+hilang bersamaan padahal keduanya ada di tree. Gejalanya menyesatkan: yang
+terlihat "memenuhi layar" bukan yang rusak, tapi batang di bawahnya.
+
+**Pelajarannya, dan ini yang penting untuk D6–D9.** Batas longgar bukan batas
+ketat: `maxHeight` yang besar tetap "boleh dipakai seluruhnya", dan setiap
+widget yang rakus (`Column` max, `Expanded`, `Spacer`) akan memakainya. Setiap
+batang bawah yang ditambahkan nanti harus dibaca dengan asumsi itu.
+
+**Batas ADR-012 yang jadi jelas.** Kelas bug ini **bisa** dijaga
+`testWidgets`, karena yang diuji **geometri, bukan data**: tidak ada stream
+Drift yang perlu maju. `test/features/transaction/cashier_layout_test.dart`
+memalsukan semua repository dengan stream kosong (`Fake` + `Stream.value`),
+dan hanya satu `WatchFrequentProducts` didaftarkan ke get_it — tanpa
+`initDependencies`, jadi tanpa DB, tanpa timer, tanpa isolate. Tesnya
+dibuktikan dua arah: merah sebelum perbaikan (`Found 0 widgets with text
+"Keranjang · 1 produk"`), hijau sesudah.
+
+Jadi aturan ADR-012 dipertajam, bukan dibatalkan: yang tidak bisa diuji
+`testWidgets` adalah alur yang **menunggu data dari Drift**. Layout, validator,
+dan teks tetap bisa — dan untuk layar yang punya batang bawah, memang harus.
+
+**Konsekuensi yang diterima.** Perbaikan ini juga dipasang di batang bawah
+layar Struk walau pemilik belum pernah melihat layar itu rusak: bentuknya
+identik, jadi menunggu bug yang sama muncul lagi hanya membuang satu putaran
+verifikasi.
+
+Cross-link: ADR-012 (batas tes widget, dipertajam di sini), ADR-048 (layar yang
+sama), ADR-013 (bug yang lolos karena layarnya tidak punya tes).
+
+---
+
+## ADR-052 — Chip "Perlu restok" memakai query lama, dan isinya beda dari `isLowStock`
+
+**Keputusan.** Chip `Perlu restok · N` di layar Produk disaring dengan
+`ProductState.lowStockProducts` — hasil `watchLowStockProducts()` yang sudah
+ada sejak awal — bukan dengan getter `ProductEntity.isLowStock`, dan bukan
+dengan query baru.
+
+**Kenapa bukan query baru.** Daftarnya sudah di state: `LowStockScreen` dulu
+memakainya, dan ketika layar itu dihapus di D2 querynya tetap berlangganan
+untuk banner. Chip ini hanya mengganti cara menampilkannya.
+
+**Yang harus tidak diubah karena terlihat seperti kesalahan.** Dua definisi
+"stok menipis" di aplikasi ini **sengaja berbeda**:
+
+| Sumber | Aturan | Stok 0 |
+|---|---|---|
+| `ProductDao.watchLowStockProducts` | `stock <= lowStockThreshold` | **ikut** |
+| `ProductEntity.isLowStock` | `stock > 0 && stock <= threshold` | tidak |
+
+Chip memakai yang pertama: produk habis adalah yang **paling** perlu restok,
+jadi mengeluarkannya dari daftar restok akan menyembunyikan justru yang
+mendesak. Badge di baris memakai yang kedua, karena badge `Habis` merah sudah
+mengambil kasus stok 0 dan dua badge di satu baris tidak berguna.
+
+Konsekuensinya angka N di chip **lebih besar** dari jumlah badge `Sisa N` yang
+terlihat, sebanyak produk yang habis. Itu benar, bukan selisih yang perlu
+"diperbaiki" dengan menyeragamkan kedua definisi. `visibleProducts` menerima
+daftar low-stock sebagai parameter justru supaya aturan ini tidak bisa
+diam-diam dihitung ulang di presentation, dan tesnya mengunci bahwa produk
+stok 0 ikut muncul.
+
+**Badge "Stok aman" dibuang.** Dulu setiap produk dapat badge, termasuk hijau
+"Stok aman". Di daftar 86 produk hasilnya 86 badge hijau yang menenggelamkan
+4 yang benar-benar butuh tindakan. Sekarang hanya keadaan yang perlu
+tindakan yang diberi badge: `Nonaktif`, `Habis`, `Sisa N`.
+
+Cross-link: ADR-038 (kategori kosong tidak jadi chip, aturan yang sama dipakai
+chip kategori di sini), ADR-047 (`LowStockScreen` dihapus, chip ini
+penggantinya), ADR-012 (`visibleProducts` dipisah jadi fungsi murni supaya
+bisa diuji `test()`).
+
+---
+
+## ADR-053 — Aksi baris produk pindah ke satu sheet, bukan ikon di baris
+
+**Keputusan.** Mengetuk baris produk membuka `ProductActionSheet` berisi empat
+pilihan: Ubah produk, Restok, Koreksi stok, Hapus. Ikon pensil dan menu tiga
+titik di baris dihapus.
+
+**Kenapa.** Baris produk di mockup v2 adalah satu tombol tanpa ikon, dan di
+390 px baris yang memuat avatar, nama, kategori, stok, badge, harga, **plus**
+dua sasaran ketuk 48 px tidak punya ruang tanpa memotong nama produk. Pemilik
+memilih opsi ini dari tiga yang ditawarkan; dua lainnya (geser baris dengan
+`flutter_slidable`, dan mempertahankan ikon) ditolak karena yang pertama
+menambah paket untuk aksi yang tidak punya petunjuk di layar, dan yang kedua
+tidak pernah bisa sama dengan mockup.
+
+**Keuntungan yang tidak direncanakan tapi nyata.** "Hapus" tidak lagi bisa
+tersenggol: dulu ia satu ketukan di dalam menu yang dibuka ikon kecil di
+sebelah ikon Ubah, sekarang ia selalu butuh satu ketukan niat di sheet yang
+menyebut nama produknya. Produk yang pernah terjual tetap tidak bisa dihapus
+(ADR-045), tapi yang belum pernah terjual **bisa**, dan itu kerugian data yang
+tidak bisa dibatalkan.
+
+**Sheet-nya hanya memilih, tidak mengerjakan.** `ProductActionSheet.show`
+mengembalikan `ProductAction?` dan pemanggil yang menjalankan aksinya. Itu
+bukan selera: Restok dan Koreksi membuka `StockSheet`, dan membuka sheet dari
+dalam sheet yang belum tertutup meninggalkan sheet pertama menggantung di
+bawah yang kedua. Jangan dipindah ke dalam sheet ini.
+
+Cross-link: ADR-045 (produk yang pernah terjual tidak boleh dihapus),
+ADR-011 (perubahan stok wajib lewat Restok/Koreksi supaya ledger tidak bolong —
+sebabnya kedua aksi itu harus tetap ada di sini).
+
+---
+
+## ADR-054 — Void jadi satu sheet: dampak, alasan, dan PIN dalam satu tampilan
+
+**Keputusan.** Void transaksi sekarang **satu** `VoidSheet`: ringkasan dampak,
+chip alasan, PIN pad, tombol "Void transaksi". Alur dua langkah (sheet PIN
+dulu, lalu `AlertDialog` alasan) dihapus beserta `_VoidReasonDialog`.
+
+**Kenapa.** Di alur lama pemilik memasukkan PIN **sebelum** tahu alasan apa
+yang akan dicatat dan berapa stok yang akan kembali — menyetujui gerbang untuk
+sesuatu yang baru dijelaskan di layar berikutnya. Void mengubah stok dan uang,
+dan di sinilah PIN betul-betul menjaga sesuatu, jadi yang dijaga harus terbaca
+saat gerbangnya dilewati.
+
+**PIN sengaja tidak auto-submit di sheet ini.** `PinVerifySheet` mengirim PIN
+begitu angka ke-6 ditekan; di sini tidak. Tombol "Void transaksi" yang memicu,
+karena:
+
+1. alasan wajib terisi dan auto-submit membuat PIN bisa benar sementara alasan
+   masih kosong, dan
+2. pemilik harus tetap bisa batal **setelah** mengetik PIN — di alur lama,
+   angka ke-6 langsung melewati gerbang.
+
+Tombolnya mati sampai alasan terisi **dan** enam angka lengkap.
+
+**Yang tidak berubah, dan harus tetap begitu.** `PinBloc`/`PinRepository` tidak
+disentuh: jeda bertingkat, hitungan gagal, dan hash di secure storage tetap
+sama, buktinya 9 tes `pin_repository_impl_test` hijau tanpa diubah. Sheet ini
+mem-`pop` **alasannya**, bukan mem-void sendiri; `voidTransaction` tetap
+dipanggil `TransactionDetailScreen`, jadi validasi repository (alasan kosong
+ditolak, transaksi yang sudah void ditolak) tetap jaring terakhir dan tes void
+di repository tetap hijau tanpa diubah.
+
+**`PinGate.hasPinOrWarn` dibuka.** Sheet ini memasang keypad-nya sendiri
+sehingga tidak lewat `PinGate.require`, tapi pemeriksaan "PIN belum pernah
+dibuat" tidak boleh disalin: kalau gerbangnya nanti berubah, salinan itu yang
+akan ketinggalan. `require` sekarang memanggil helper yang sama.
+
+**Chip alasan menggantikan ketik bebas, tapi tidak menghapusnya.** `Lainnya`
+tetap membuka kolom teks: `voidReason` wajib terisi dan alasan di luar tiga
+pilihan itu harus tetap bisa dicatat.
+
+Cross-link: ADR-049 (PIN jadi sheet; sheet ini pengecualian yang memasang
+keypad sendiri), ADR-028 (empat pemanggil `PinGate` tidak berubah), ADR-051
+(tombol di sheet ini dipatok `SizedBox`, bukan dibiarkan `Column` mengambil
+ruang).
+
+---
+
+## ADR-055 — `pop()` dari dalam listener barcode wajib menutup celah `await` lebih dulu
+
+**Keputusan.** Mode `BarcodeScannerScreen(returnsCode: true)` men-set
+`_isBusy = true` **sebelum** `await` apa pun, bukan sesudah.
+
+**Bug yang melahirkannya** (ditemukan pemilik saat verifikasi D6, hanya untuk
+produk yang **sudah terdaftar**):
+
+```
+Exception caught by widgets library
+'package:flutter/src/widgets/navigator.dart': Failed assertion:
+line 4128 pos 12: '!_debugLocked': is not true.
+```
+
+**Penyebabnya.** `!_debugLocked` berarti `Navigator.pop()` dipanggil sementara
+`pop()` lain masih mengubah widget tree. Urutannya: barcode terbaca →
+`await HapticFeedback.mediumImpact()` → **deteksi kedua masuk di celah await
+itu** → lolos semua penjaga → `pop()` kedua jatuh di tengah `pop()` pertama.
+
+**Kenapa hanya produk terdaftar.** Bukan karena lookup produknya — di mode ini
+tidak ada lookup sama sekali. Produk terdaftar punya barcode **cetak asli**
+yang dikenali kamera berkali-kali per detik; kode uji yang belum terdaftar
+biasanya terbaca sekali, jadi celahnya tidak pernah terisi. Gejala yang
+seolah-olah berkaitan dengan status pendaftaran sebenarnya berkaitan dengan
+**laju deteksi**.
+
+**Kenapa jalur keranjang tidak pernah kena.** Penjaganya sudah ada sejak awal:
+`_onDetect` dibuka `if (_isBusy) return;`, dan jalur keranjang men-set
+`_isBusy = true` sebelum `await` lookup database. Early-return mode
+`returnsCode` ditulis **di atas** blok `setState` itu, jadi satu-satunya
+mekanisme yang membuat `pop` di file ini aman justru terlewat. Perbaikannya
+memakai penjaga yang sama, bukan mekanisme baru.
+
+**Aturan umumnya, untuk setiap `pop` berikutnya di layar ini.** Antara deteksi
+dan `pop` tidak boleh ada `await` yang belum dilindungi `_isBusy` — termasuk
+`await` yang kelihatan tidak berbahaya seperti haptic.
+
+**Tidak bisa dijaga tes otomatis, dan jangan dipaksakan.** `_onDetect` hidup di
+dalam `State` yang membuat `MobileScannerController`, dan controller itu butuh
+platform channel kamera yang tidak ada di `flutter test`
+(`MissingPluginException`); memalsukannya berarti memalsukan plugin di kode
+produksi, yang dilarang ADR-012. Tes yang mem-pop dua kali lewat `Navigator`
+biasa hanya menguji ulang Flutter, bukan kode ini. Penggantinya pemeriksaan
+manual yang spesifik: tahan barcode terdaftar 2–3 detik di depan kamera dari
+**Produk → scan**, ulangi 3–4 kali — menahannyalah yang memicu deteksi
+berturut, dan sekali lolos belum berarti sembuh.
+
+Cross-link: ADR-012 (batas tes widget; ini kasus yang benar-benar di luar
+jangkauannya, berbeda dari ADR-051 yang justru bisa diuji), ADR-043 (layar
+scanner yang sama), ADR-025 (aturan operasional yang harus ikut ditulis di
+`AGENTS.md`, bukan hanya di ADR).
+
+---
+
+## ADR-056 — Preset laporan terpanjang adalah bulan **kalender**, bukan 30 hari bergulir
+
+**Keputusan.** Chip ketiga di Laporan berbunyi "Bulan ini" dan rentangnya
+tanggal 1 bulan berjalan sampai akhir hari ini. Preset "30 hari" yang ada sejak
+langkah 12 dihapus, bukan ditambahi.
+
+**Kenapa, dan kenapa ini pertanyaan untuk pemilik.** Mockup v2 menulis
+"30 hari" sementara `docs/implementasi_design.md` tidak menyebut keduanya, jadi
+kode lama dan gambar baru saling bertentangan tanpa satu pun yang berwenang.
+Pemilik memilih bulan kalender: angka yang dipakainya adalah setoran bulanan,
+dan "30 hari terakhir" pada tanggal 5 menjawab pertanyaan yang tidak pernah
+ditanyakan — ia mencampur dua bulan.
+
+**Konsekuensi yang diterima.** Tanggal 1, "Bulan ini" hanya memuat satu hari
+dan grafiknya satu titik. Itu benar, bukan bug: bulan itu memang baru satu
+hari. Dan panjang periode sekarang berubah-ubah 28–31 hari, jadi
+`ReportPeriod.days` yang tetap **dihapus**; penghitung hari diturunkan dari
+rentangnya (`_daily` menerima `start` dan `end`, bukan jumlah hari). Satu
+konstanta yang tidak bisa lagi benar lebih berbahaya daripada tidak ada
+konstanta.
+
+**Batas hari kalender tetap sama seperti sebelumnya.** `end` = awal hari esok
+minus satu mikrodetik, dan perulangan harinya memakai `DateTime(y, m, d + i)`,
+bukan `add(Duration(days: i))`, supaya pergantian DST tidak menggeser ember
+harian. Aturan yang sama dipakai `historyRange` di Riwayat.
+
+Cross-link: ADR-032 (agregasi laporan masih di memori; preset terpanjang
+sekarang sebulan, bukan 30 hari), ADR-047 (Dasbor dibuang, jadi Laporan satu-
+satunya tempat angka periode).
+
+---
+
+## ADR-057 — Laba kotor: angkanya dihilangkan dari widget tree sampai PIN benar
+
+**Keputusan.** Nilai laba kotor di Laporan ditampilkan `••••••` + ikon kunci.
+Setelah `PinGate.require` sukses, baru `formatRupiah(report.grossProfit)` yang
+dirender. Sebelum itu angkanya **tidak pernah masuk widget tree**.
+
+**Kenapa dipilih pemilik, dari tiga pilihan.** Rencana sengaja menyisakan
+pertanyaan ini. Pilihan "biarkan terbuka" ditolak pemilik; pilihan "tutup
+dengan blur/opacity" ditolak di sini karena menyembunyikan dengan `Opacity`
+atau warna transparan hanya menipu mata: angkanya tetap ada di tree, terbaca
+oleh screen reader, dan ikut tertangkap screenshot tool atau dump widget.
+Ambang yang dipakai: **tidak ada di tree** = benar-benar tidak ada.
+
+**Kapan terkunci lagi.** Dua pemicu, keduanya disengaja:
+
+1. ganti chip periode — angka periode baru belum pernah dibuka;
+2. `didChangeAppLifecycleState != resumed` — HP dikunci atau aplikasi
+   ditinggalkan.
+
+**Yang tidak dibangun, dan konsekuensinya.** Tidak ada timeout. Selama layarnya
+tetap terbuka dan aplikasi tetap di depan, angkanya terlihat sampai pemilik
+pindah periode. Kalau HP berpindah tangan dalam keadaan itu, angkanya terbaca.
+Diterima: ini satu HP satu pemilik (PRD §1.6), dan timeout yang mengunci
+sendiri saat pemilik sedang membaca lebih mengganggu daripada melindungi.
+
+**`PinGate` dibuka ke pemakai kelima tanpa diubah.** Jalurnya sama dengan void,
+restore, dan ubah harga/modal — tidak ada mekanisme PIN baru, tidak ada
+`PinBloc` kedua. Yang bertambah hanya satu `reason` baru.
+
+**Dijaga tes, dan ini bagian yang mudah rusak tanpa sadar.**
+`test/features/report/report_profit_lock_test.dart` memastikan `Rp 312.000`
+`findsNothing` sementara omzet dan jumlah transaksi `findsOneWidget`. Siapa pun
+yang nanti mengganti cara menyembunyikannya dengan trik visual akan
+menjatuhkan tes itu — itu memang tujuannya. Yang **tidak** diuji: jalur PIN
+benar, karena `PinGate` memanggil `sl<PinRepository>()` yang tidak dipalsukan
+di tes itu.
+
+Cross-link: ADR-028 (empat pemanggil `PinGate` sebelumnya), ADR-049 (PIN jadi
+sheet), ADR-054 (pengecualian: void memasang keypad sendiri), ADR-012 (batas
+tes widget — geometri dan visibilitas bisa diuji, DB tidak).
+
+---
+
+## ADR-058 — `CrossAxisAlignment.stretch` di dalam area yang bisa di-scroll wajib dibungkus `IntrinsicHeight`
+
+**Keputusan.** Dua kartu angka berdampingan di Laporan dibungkus
+`IntrinsicHeight`, bukan dibiarkan `Row(crossAxisAlignment: stretch)` saja.
+
+**Bug yang melahirkannya.** Versi pertama D8 crash begitu Laporan dibuka:
+
+```
+BoxConstraints forces an infinite height.
+The offending constraints were:
+  BoxConstraints(0.0<=w<=Infinity, h=Infinity)
+```
+
+**Penyebabnya.** `stretch` meminta anak setinggi batas atas tinggi `Row`.
+Di dalam `ListView` batas itu tak terbatas, jadi anaknya diminta setinggi
+infinity. `IntrinsicHeight` yang mengukur anak tertinggi lebih dulu dan
+memberi `Row` tinggi nyata.
+
+**Kenapa bukan dengan membuang `stretch`.** Keduanya memang harus sama tinggi:
+ikon kunci 16 px di kartu laba membuat sisi itu beberapa piksel lebih tinggi
+dari kartu Transaksi, dan dua kartu berdampingan yang beda tinggi beberapa
+piksel terlihat seperti salah render. `IntrinsicHeight` satu baris; mematok
+tinggi dengan angka tetap akan patah begitu ukuran font sistem dinaikkan.
+
+**Yang menarik: ini ditemukan suite, bukan HP.** Tes widget yang ditulis untuk
+alasan lain (kunci laba, ADR-057) yang menjatuhkannya. Pasangan ADR ini yang
+menandai batas tes widget di proyek ini dengan tepat: **geometri bisa diuji**
+(ADR-058 dan ADR-051 sama-sama soal constraint), **kamera tidak** (ADR-055).
+Jangan pakai ADR-055 sebagai alasan melewatkan tes layout.
+
+**Aturan umumnya,** ikut ditulis di `AGENTS.md` §3 karena harus dipatuhi saat
+menulis kode: `stretch` hanya aman kalau tinggi induknya sudah pasti. Di dalam
+`ListView`, `Column` yang bisa di-scroll, atau `SingleChildScrollView`,
+bungkus `IntrinsicHeight` atau patok `SizedBox`.
+
+Cross-link: ADR-051 (keluarga bug yang sama dari sisi lain: slot dengan
+constraint longgar di `bottomNavigationBar`), ADR-012, ADR-057 (tes yang
+menemukannya).
+
+---
+
+## ADR-059 — `styleFrom(...).copyWith(backgroundColor:)` wajib menangani `WidgetState.disabled`
+
+**Keputusan.** Cabang `disabled → AppColor.surfaceMuted` di
+`elevatedButtonTheme` bukan hiasan; tanpa itu tema ini salah.
+
+**Kenapa.** `ElevatedButton.styleFrom` mengisi warna disabled sendiri, tapi
+`copyWith(backgroundColor: ...)` menggantinya untuk **semua** `WidgetState`
+sekaligus — termasuk disabled. Jadi menambahkan warna tekan (`primaryPressed`,
+D9) ikut menghidupkan kembali tampilan tombol yang sedang mati: "Menyimpan..."
+saat form sedang menyimpan dan "Bayar" saat uang belum cukup akan tampak bisa
+ditekan padahal `onPressed` null. Pemilik akan menekannya berulang dan menyimpulkan
+aplikasinya menggantung.
+
+**Konsekuensi.** Setiap penambahan state ke `backgroundColor` tombol di tema
+ini harus menyebut `disabled` secara eksplisit, karena `resolveWith` tidak
+mewarisi apa pun dari `styleFrom`. Aturan ini ikut ditulis di `AGENTS.md` §3.
+
+**Ditemukan saat memperbaiki kesalahan lain** (splice tema D9 meninggalkan koma
+nyasar), bukan oleh tes: warna tombol mati tidak dijaga tes mana pun, dan
+menulisnya berarti menguji ulang Material. Penggantinya aturan di atas.
+
+Cross-link: ADR-046 (lapisan token v2; `primaryPressed` lahir di sana tanpa
+pemakai sampai D9).

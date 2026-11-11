@@ -1,18 +1,15 @@
 import 'package:go_router/go_router.dart';
 import 'package:henshin/app.dart';
 import 'package:henshin/core/utils/page_routes.dart';
-import 'package:henshin/features/dashboard/presentation/screens/dashboard_screen.dart';
-import 'package:henshin/features/product/presentation/screens/low_stock_screen.dart';
 import 'package:henshin/features/product/presentation/screens/product_list_screen.dart';
 import 'package:henshin/features/report/presentation/screens/report_screen.dart';
 import 'package:henshin/features/setting/presentation/screens/pin_create_screen.dart';
-import 'package:henshin/features/setting/presentation/screens/pin_verify_screen.dart';
 import 'package:henshin/features/setting/presentation/screens/setting_screen.dart';
 import 'package:henshin/features/transaction/presentation/screens/transaction_history_screen.dart';
 import 'package:henshin/features/transaction/presentation/screens/cashier_screen.dart';
 
 final GoRouter appRouter = GoRouter(
-  initialLocation: PageRoutes.dashboard,
+  initialLocation: PageRoutes.kasir,
   debugLogDiagnostics: true,
   routes: [
     StatefulShellRoute.indexedStack(
@@ -20,13 +17,15 @@ final GoRouter appRouter = GoRouter(
         return AppScreen(navigationShell: navigationShell);
       },
       branches: [
-        // branch dashboard
+        // branch kasir — tab pertama dan layar pembuka. CartBloc-nya di
+        // main.dart, di atas shell ini, supaya keranjang tidak hilang saat
+        // pemilik pindah tab di tengah transaksi (ADR-048).
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: PageRoutes.dashboard,
-              name: PageRoutes.dashboardName,
-              builder: (context, state) => DashboardScreen(),
+              path: PageRoutes.kasir,
+              name: PageRoutes.kasirName,
+              builder: (context, state) => const CashierScreen(),
             ),
           ],
         ),
@@ -53,54 +52,30 @@ final GoRouter appRouter = GoRouter(
           ],
         ),
 
-        // brach setting
+        // branch laporan
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: PageRoutes.setting,
-              name: PageRoutes.settingName,
-              builder: (context, state) => SettingScreen(),
+              path: PageRoutes.laporan,
+              name: PageRoutes.laporanName,
+              builder: (context, state) => const ReportScreen(),
             ),
           ],
         ),
       ],
     ),
 
-    // branch dll.
-    // 
-    // Kasir: keranjang + bayar. Scanner di-push dari dalam sini dengan
-    // BlocProvider.value, bukan rute sendiri, karena butuh CartBloc yang sama.
+    // Pengaturan bukan tab lagi: dibuka dari ikon gear di app bar Laporan.
     GoRoute(
-      path: PageRoutes.mulaiTransaksi,
-      name: PageRoutes.mulaiTransaksiName,
-      builder: (context, state) => const CashierScreen(),
-    ),
-
-
-    GoRoute(
-      path: PageRoutes.laporan,
-      name: PageRoutes.laporanName,
-      builder: (context, state) => const ReportScreen(),
-    ),
-
-    GoRoute(
-      path: PageRoutes.perluRestok,
-      name: PageRoutes.perluRestokName,
-      builder: (context, state) => const LowStockScreen(),
+      path: PageRoutes.setting,
+      name: PageRoutes.settingName,
+      builder: (context, state) => SettingScreen(),
     ),
 
     GoRoute(
       path: PageRoutes.aturPin,
       name: PageRoutes.aturPinName,
       builder: (context, state) => const PinCreateScreen(),
-    ),
-
-    // dipanggil lewat PinGate.require, bukan langsung
-    GoRoute(
-      path: PageRoutes.verifikasiPin,
-      name: PageRoutes.verifikasiPinName,
-      builder: (context, state) =>
-          PinVerifyScreen(reason: state.uri.queryParameters['reason']),
     ),
   ],
 );

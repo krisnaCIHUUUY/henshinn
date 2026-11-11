@@ -17,7 +17,10 @@ abstract class TransactionRepository {
 
   /// Riwayat transaksi terbaru duluan, termasuk yang sudah void (jejak audit).
   /// `since` null berarti seluruh riwayat.
-  Stream<List<TransactionSummary>> watchHistory({DateTime? since});
+  Stream<List<TransactionSummary>> watchHistory({
+    DateTime? since,
+    DateTime? until,
+  });
 
   /// Void transaksi: status jadi `voided` + alasan, stok item dikembalikan dan
   /// tercatat di ledger. Tidak pernah menghapus baris (PRD §2.4). Alasan wajib

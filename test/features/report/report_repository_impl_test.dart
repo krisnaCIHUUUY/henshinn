@@ -97,9 +97,26 @@ void main() {
       expect(start, DateTime(2026, 10, 26)); // 1 Nov − 6 hari
     });
 
-    test('30 hari = hari ini + 29 hari sebelumnya', () {
-      final (start, _) = ReportPeriod.tigaPuluhHari.rangeFrom(now);
-      expect(start, DateTime(2026, 10, 3));
+    test('bulan ini = tanggal 1 bulan berjalan, bukan 30 hari bergulir', () {
+      final (start, end) = ReportPeriod.bulanIni.rangeFrom(now);
+      expect(start, DateTime(2026, 11, 1));
+      expect(end.isBefore(DateTime(2026, 11, 2)), isTrue);
+    });
+
+    test('bulan ini di tengah bulan tetap mulai tanggal 1', () {
+      final (start, end) = ReportPeriod.bulanIni.rangeFrom(
+        DateTime(2026, 11, 15, 12),
+      );
+      expect(start, DateTime(2026, 11, 1));
+      expect(end.isAfter(DateTime(2026, 11, 15, 23, 59)), isTrue);
+    });
+
+    test('bulan ini tidak ikut memuat sisa bulan lalu', () {
+      // 15 Maret: "30 hari" akan mundur ke 14 Februari, "Bulan ini" tidak.
+      final (start, _) = ReportPeriod.bulanIni.rangeFrom(
+        DateTime(2026, 3, 15, 12),
+      );
+      expect(start, DateTime(2026, 3, 1));
     });
   });
 
@@ -159,7 +176,26 @@ void main() {
 
       expect((await report(ReportPeriod.hariIni)).itemCount, 1);
       expect((await report(ReportPeriod.tujuhHari)).itemCount, 1);
-      expect((await report(ReportPeriod.tigaPuluhHari)).itemCount, 5);
+      // "sekarang" dikunci 1 November, jadi penjualan 10 hari lalu (22 Oktober)
+      // jatuh di bulan **lalu** dan sengaja tidak ikut. Dengan preset lama
+      // "30 hari" angkanya 5 — inilah bedanya (ADR-056).
+      expect((await report(ReportPeriod.bulanIni)).itemCount, 1);
+    });
+
+    test('bulan ini memuat hari lain di bulan yang sama', () async {
+      final kopi = await addProduct('Kopi');
+      // Jam dikunci 15 November: 2 November masih bulan ini, 31 Oktober tidak,
+      // walau keduanya kurang dari 30 hari ke belakang.
+      final pertengahan = DateTime(2026, 11, 15, 12);
+      await sellOn(DateTime(2026, 11, 2, 9), [CartItem(product: kopi, qty: 3)]);
+      await sellOn(DateTime(2026, 10, 31, 9), [CartItem(product: kopi, qty: 7)]);
+
+      final r = await ReportRepositoryImpl(
+        ReportDao(db),
+        now: () => pertengahan,
+      ).getReport(ReportPeriod.bulanIni);
+
+      expect(r.getOrElse(() => throw StateError('gagal')).itemCount, 3);
     });
 
     test('laba memakai harga snapshot, bukan harga produk sekarang', () async {

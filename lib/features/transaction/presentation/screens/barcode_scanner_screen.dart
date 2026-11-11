@@ -18,8 +18,16 @@ import 'package:permission_handler/permission_handler.dart';
 /// Scan berturut: kamera tetap hidup, tiap barcode yang dikenali langsung
 /// masuk keranjang. Harus di-push dengan `BlocProvider.value` dari kasir
 /// supaya memakai `CartBloc` yang sama — bukan rute top-level.
+///
+/// Dengan `returnsCode: true` layar ini tidak menyentuh keranjang sama sekali:
+/// barcode pertama yang terbaca di-pop sebagai `String` dan layarnya tutup.
+/// Mode itu dipakai layar Produk, yang tidak punya `CartBloc` di atasnya —
+/// jadi di mode itu tidak boleh ada satu pun `context.read<CartBloc>()`.
 class BarcodeScannerScreen extends StatefulWidget {
-  const BarcodeScannerScreen({super.key});
+  const BarcodeScannerScreen({super.key, this.returnsCode = false});
+
+  /// `true`: pop barcode-nya, jangan cari produknya dan jangan isi keranjang.
+  final bool returnsCode;
 
   @override
   State<BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
@@ -126,6 +134,21 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     if (code == null) return;
     if (_isDuplicate(code)) return;
 
+    // Mode "kembalikan barcode": berhenti di sini — tidak ada lookup produk,
+    // tidak ada keranjang. Pemanggilnya yang memutuskan arti barcode itu.
+    if (widget.returnsCode) {
+      // `_isBusy` wajib diset SEBELUM await: barcode yang jelas terbaca
+      // berkali-kali per detik, dan deteksi kedua yang jatuh di celah await
+      // akan memanggil pop() di tengah pop pertama — assert `!_debugLocked`
+      // di navigator.dart, bukan sekadar pop ganda yang tidak kelihatan.
+      // Penjaga ini yang dipakai jalur keranjang di bawah; di sini sempat
+      // terlewat (ADR-055).
+      setState(() => _isBusy = true);
+      await HapticFeedback.mediumImpact();
+      if (mounted) Navigator.of(context).pop(code);
+      return;
+    }
+
     setState(() {
       _isBusy = true;
       _lastCode = code;
@@ -174,7 +197,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       ..showSnackBar(
         SnackBar(
           duration: const Duration(seconds: 4),
-          backgroundColor: AppColor.error,
+          backgroundColor: AppColor.danger,
           content: Text(message, style: const TextStyle(color: Colors.white)),
         ),
       );
@@ -227,6 +250,12 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     }
   }
 
+  // Layar ini sengaja TIDAK memakai token warna. Isinya gambar kamera, bukan
+  // permukaan aplikasi: scrim harus hitam transparan sungguhan dan garis bidik
+  // harus putih supaya terlihat di atas apa pun yang sedang disorot. Token v2
+  // (`ink`, `surface`) adalah warna untuk kertas aplikasi dan akan membuat
+  // overlay-nya lebih terang dari gambar di belakangnya. Design system v2 tidak
+  // mencakup overlay kamera.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -252,7 +281,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             left: 0,
             right: 0,
             bottom: 0,
-            child: const _CartSummaryBar(),
+            child: widget.returnsCode
+                ? const SizedBox.shrink()
+                : const _CartSummaryBar(),
           ),
           if (_isBusy)
             const ColoredBox(

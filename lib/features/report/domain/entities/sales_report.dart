@@ -1,28 +1,41 @@
 import 'package:equatable/equatable.dart';
 
 /// Preset laporan. Rentang bebas sengaja tidak ada: itu garis potong PRD §3.2
-/// supaya MVP selesai 8 minggu.
+/// supaya MVP selesai 8 minggu — chip "Pilih" di mockup v2 tidak dibangun.
 enum ReportPeriod {
-  hariIni('Hari ini', 1),
-  tujuhHari('7 hari', 7),
-  tigaPuluhHari('30 hari', 30);
+  hariIni('Hari ini'),
+  tujuhHari('7 hari'),
 
-  const ReportPeriod(this.label, this.days);
+  /// Bulan **kalender** berjalan: tanggal 1 sampai akhir hari ini. Menggantikan
+  /// "30 hari" bergulir atas keputusan pemilik — pembukuan warung dihitung per
+  /// bulan, jadi "30 hari" selalu mencampur sisa bulan lalu (ADR-056).
+  bulanIni('Bulan ini');
+
+  const ReportPeriod(this.label);
 
   final String label;
-  final int days;
 
   /// Rentang periode dalam waktu **lokal**: dari tengah malam hari pertama
   /// sampai akhir hari ini. Pemilik menghitung "hari ini" sebagai satu hari
   /// kalender, bukan 24 jam ke belakang.
+  ///
+  /// Panjangnya tidak lagi bisa disimpan sebagai satu angka `days`: bulan
+  /// kalender panjangnya 28–31 hari dan berubah tiap tanggal. Yang butuh
+  /// jumlah hari menghitungnya dari rentang ini.
   (DateTime start, DateTime end) rangeFrom(DateTime now) {
     final today = DateTime(now.year, now.month, now.day);
-    return (
-      today.subtract(Duration(days: days - 1)),
-      today.add(const Duration(days: 1)).subtract(
-        const Duration(microseconds: 1),
+    final end = today
+        .add(const Duration(days: 1))
+        .subtract(const Duration(microseconds: 1));
+
+    return switch (this) {
+      ReportPeriod.hariIni => (today, end),
+      ReportPeriod.tujuhHari => (
+        today.subtract(const Duration(days: 6)),
+        end,
       ),
-    );
+      ReportPeriod.bulanIni => (DateTime(now.year, now.month), end),
+    };
   }
 }
 
