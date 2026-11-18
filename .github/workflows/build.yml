@@ -1,20 +1,27 @@
 name: Build APK
 
+# Hanya saat ada PR yang di-merge ke main. Bukan `push`: main juga menerima
+# edit langsung lewat web GitHub (README dsb.) yang tidak perlu APK baru.
 on:
-  push:
-    branches: [main, develop]
   pull_request:
-    branches: [main, develop]
+    types: [closed]
+    branches: [main]
 
 permissions:
   contents: write   # gh release create
 
 jobs:
   build:
+    # `closed` juga terpicu oleh PR yang ditutup tanpa merge.
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
+        with:
+          # Saat merge, GITHUB_SHA masih commit uji-merge GitHub, bukan commit
+          # yang benar-benar masuk main (beda untuk squash/rebase merge).
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -30,11 +37,11 @@ jobs:
       - run: flutter test
       - run: flutter build apk --release
       - name: Publish GitHub Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mv build/app/outputs/flutter-apk/app-release.apk henshin-${{ github.run_number }}.apk
           gh release create "build-${{ github.run_number }}" henshin-${{ github.run_number }}.apk \
-            --target "$GITHUB_SHA" --title "Henshin build #${{ github.run_number }}" \
+            --target "${{ github.event.pull_request.merge_commit_sha }}" \
+            --title "Henshin build #${{ github.run_number }}" \
             --prerelease --generate-notes
