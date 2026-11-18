@@ -86,6 +86,12 @@ flutter test                            # whole suite; the stale counter templat
                                         # break this was deleted in design-v2 step D9
 flutter test test/some_file_test.dart   # single file
 dart run drift_dev make-migrations      # schema snapshot + migration steps + test template
+dart run flutter_launcher_icons         # regenerate app icons after changing assets/henshin-logo
+                                        # or the pubspec config; CI does not run it, commit the output
+                                        # It also corrupts ios/Runner.xcodeproj/project.pbxproj
+                                        # (GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES -> AppIcon).
+                                        # Always undo that afterwards — HEAD already has APPICON_NAME = AppIcon:
+git checkout -- ios/Runner.xcodeproj/project.pbxproj
 flutter build apk --release
 ```
 
