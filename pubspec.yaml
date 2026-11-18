@@ -80,6 +80,36 @@ dev_dependencies:
   drift_dev: ^2.34.5
   freezed: ^4.0.0
   json_serializable: ^6.14.1
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  image_path: "assets/henshin-logo/png/henshin-app-icon-1024.png"
+
+  android: true # timpa ic_launcher bawaan, manifest tidak berubah
+  min_sdk_android: 25 # sama dengan android/app/build.gradle.kts
+  adaptive_icon_background: "#006565" # token primary
+  adaptive_icon_foreground: "assets/henshin-logo/android/res/mipmap-xxxhdpi/ic_launcher_foreground.png"
+  adaptive_icon_monochrome: "assets/henshin-logo/android/res/mipmap-xxxhdpi/ic_launcher_monochrome.png"
+  # 0, bukan default 16: foreground logo pack sudah menaruh H di zona aman 66dp,
+  # inset default akan mengecilkannya dua kali.
+  adaptive_icon_foreground_inset: 0
+
+  ios: true
+  # kotak penuh tanpa alpha: tile 1024 bersudut transparan meninggalkan garis hijau
+  # di tepi sudut setelah remove_alpha_ios, dan mask iOS lebih rapat dari sudut tile.
+  image_path_ios: "assets/henshin-logo/png/playstore-icon-512.png"
+  remove_alpha_ios: true # App Store menolak ikon beralpha
+  background_color_ios: "#006565"
+
+  web:
+    generate: true
+    background_color: "#006565"
+    theme_color: "#006565"
+  windows:
+    generate: true
+    icon_size: 48 # min:48, max:256, default: 48
+  macos:
+    generate: true
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
